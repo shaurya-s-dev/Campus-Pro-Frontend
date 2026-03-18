@@ -1,412 +1,710 @@
-import { useState } from 'react';
-import { useRouter } from 'next/router';
 import Head from 'next/head';
+import Link from 'next/link';
+import { useEffect, useRef, useState } from 'react';
 
-export default function Login() {
-  const router = useRouter();
-  const [account, setAccount] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPass, setShowPass] = useState(false);
-  const [error, setError] = useState('');
-  const [status, setStatus] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [sessionLimit, setSessionLimit] = useState(null);
+/* ── Mini Icon Components ────────────────────────── */
+const Icon = ({ path, size = 18, stroke = 'currentColor', fill = 'none', sw = 1.6 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke={stroke} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round">
+    {path}
+  </svg>
+);
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
+const FEATURES = [
+  {
+    icon: <Icon path={<><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></>} />,
+    label: 'Attendance Tracker',
+    desc: 'Track attendance per subject. Know how many classes you can safely skip — or need to attend.',
+    color: '#5b5ef4',
+    tag: 'Smart Alerts',
+    stat: '< 75%',
+    statLabel: 'instant warning',
+  },
+  {
+    icon: <Icon path={<><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></>} />,
+    label: 'Marks Analytics',
+    desc: 'Visualize your test performance with animated charts and spot weak areas instantly.',
+    color: '#00d4ff',
+    tag: 'Live Charts',
+    stat: '10+',
+    statLabel: 'tests tracked',
+  },
+  {
+    icon: <Icon path={<><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></>} />,
+    label: 'Smart Calendar',
+    desc: 'Academic calendar with day orders, holidays, and exam dates color-coded for instant clarity.',
+    color: '#10b981',
+    tag: 'Day Orders',
+    stat: '∞',
+    statLabel: 'events tracked',
+  },
+  {
+    icon: <Icon path={<><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></>} />,
+    label: 'GPA Calculator',
+    desc: 'Calculate SGPA & CGPA using SRM\'s exact grading system. Add subjects, see results instantly.',
+    color: '#f59e0b',
+    tag: 'SRM Grading',
+    stat: '10.0',
+    statLabel: 'max CGPA',
+  },
+];
 
-    try {
-      setStatus('Signing in...');
-      const loginRes = await fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ account, password }),
-      });
-      const loginData = await loginRes.json();
+const STATS = [
+  { val: '8,000+', label: 'Students' },
+  { val: '99.9%', label: 'Uptime' },
+  { val: '< 2s',  label: 'Load time' },
+  { val: '4.9★',  label: 'Rating' },
+];
 
-      if (loginData.status === 429 || loginData.session?.sessionLimit) {
-        setSessionLimit(loginData.session?.redirectUrl);
-        setLoading(false);
-        return;
+/* ── Canvas Particle Mesh ────────────────────────── */
+function ParticleMesh() {
+  const canvasRef = useRef(null);
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let raf, particles = [], w, h;
+
+    const resize = () => {
+      w = canvas.width = canvas.offsetWidth;
+      h = canvas.height = canvas.offsetHeight;
+    };
+    resize();
+    window.addEventListener('resize', resize);
+
+    class Particle {
+      constructor() { this.reset(); }
+      reset() {
+        this.x = Math.random() * w;
+        this.y = Math.random() * h;
+        this.vx = (Math.random() - 0.5) * 0.3;
+        this.vy = (Math.random() - 0.5) * 0.3;
+        this.r = Math.random() * 1.5 + 0.5;
+        this.a = Math.random() * 0.5 + 0.2;
       }
-
-      if (!loginData.authenticated || !loginData.cookies) {
-        setError(loginData.message || 'Login failed. Check your credentials.');
-        setStatus('');
-        setLoading(false);
-        return;
+      update() {
+        this.x += this.vx; this.y += this.vy;
+        if (this.x < 0 || this.x > w) this.vx *= -1;
+        if (this.y < 0 || this.y > h) this.vy *= -1;
       }
-
-      const token = loginData.cookies;
-
-      setStatus('Fetching your data...');
-      const dataRes = await fetch('/api/academia', {
-        headers: { 'X-CSRF-Token': token },
-      });
-      const academiaData = await dataRes.json();
-
-      if (academiaData.tokenInvalid || academiaData.error) {
-        setError(academiaData.error || academiaData.message || 'Session expired. Please try again.');
-        setLoading(false);
-        return;
+      draw() {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(91,94,244,${this.a})`;
+        ctx.fill();
       }
-
-      localStorage.setItem('csrf_token', token);
-      sessionStorage.setItem('academia_data', JSON.stringify(academiaData));
-      router.push('/dashboard');
-
-    } catch {
-      setError('Cannot reach server. Please try again.');
-      setLoading(false);
     }
-  };
+
+    for (let i = 0; i < 60; i++) particles.push(new Particle());
+
+    const loop = () => {
+      ctx.clearRect(0, 0, w, h);
+      particles.forEach(p => { p.update(); p.draw(); });
+      particles.forEach((a, i) => {
+        particles.slice(i + 1).forEach(b => {
+          const d = Math.hypot(a.x - b.x, a.y - b.y);
+          if (d < 130) {
+            ctx.beginPath();
+            ctx.strokeStyle = `rgba(91,94,244,${0.12 * (1 - d / 130)})`;
+            ctx.lineWidth = 0.8;
+            ctx.moveTo(a.x, a.y);
+            ctx.lineTo(b.x, b.y);
+            ctx.stroke();
+          }
+        });
+      });
+      raf = requestAnimationFrame(loop);
+    };
+    loop();
+    return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', resize); };
+  }, []);
+
+  return <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }} />;
+}
+
+/* ── Animated Counter ────────────────────────────── */
+function Counter({ target, suffix = '' }) {
+  const [val, setVal] = useState(0);
+  const ref = useRef(null);
+  useEffect(() => {
+    const observer = new IntersectionObserver(([e]) => {
+      if (!e.isIntersecting) return;
+      observer.disconnect();
+      const num = parseFloat(target.replace(/[^0-9.]/g, ''));
+      const dur = 1200, steps = 40;
+      let step = 0;
+      const timer = setInterval(() => {
+        step++;
+        setVal(+(num * (step / steps)).toFixed(1));
+        if (step >= steps) { clearInterval(timer); setVal(num); }
+      }, dur / steps);
+    }, { threshold: 0.5 });
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, [target]);
+  const prefix = target.match(/^[^0-9]*/)?.[0] || '';
+  const suf = target.match(/[^0-9.]+$/)?.[0] || suffix;
+  return <span ref={ref}>{prefix}{val}{suf}</span>;
+}
+
+/* ── Attendance Preview Card ─────────────────────── */
+const PREVIEW_ATT = [
+  { name: 'Data Structures', pct: 91, color: '#10b981' },
+  { name: 'OOPS with Java', pct: 76, color: '#f59e0b' },
+  { name: 'Digital Electronics', pct: 68, color: '#f43f5e' },
+  { name: 'Mathematics III', pct: 84, color: '#10b981' },
+  { name: 'Computer Networks', pct: 73, color: '#f59e0b' },
+];
+
+function PreviewCard() {
+  return (
+    <div className="preview-card glass-strong">
+      <div className="preview-header">
+        <div className="preview-dot-wrap">
+          {['#f43f5e','#f59e0b','#10b981'].map((c,i) => (
+            <div key={i} className="preview-dot" style={{ background: c }} />
+          ))}
+        </div>
+        <span className="preview-title">campuspro · attendance</span>
+      </div>
+      <div className="preview-inner">
+        <div className="preview-top-row">
+          <div className="preview-stat">
+            <div className="preview-stat-val" style={{ color:'#10b981' }}>80.4%</div>
+            <div className="preview-stat-lbl">Average</div>
+          </div>
+          <div className="preview-stat">
+            <div className="preview-stat-val" style={{ color:'#f43f5e' }}>1</div>
+            <div className="preview-stat-lbl">Danger</div>
+          </div>
+          <div className="preview-stat">
+            <div className="preview-stat-val" style={{ color:'#5b5ef4' }}>5</div>
+            <div className="preview-stat-lbl">Subjects</div>
+          </div>
+        </div>
+        <div className="preview-list">
+          {PREVIEW_ATT.map((a, i) => (
+            <div key={i} className="preview-row" style={{ animationDelay: `${i * 0.08}s` }}>
+              <div className="preview-row-info">
+                <span className="preview-row-name">{a.name}</span>
+                <div className="progress-track" style={{ flex:1, minWidth:80 }}>
+                  <div className="progress-fill" style={{ width:`${a.pct}%`, background:a.color, animationDelay:`${i*0.15}s` }} />
+                </div>
+              </div>
+              <span className="preview-row-pct" style={{ color: a.color }}>{a.pct}%</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Main Component ──────────────────────────────── */
+export default function HomePage() {
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', onScroll);
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   return (
     <>
       <Head>
-        <title>CampusPro — Login</title>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+        <title>CampusPro — The Ultimate SRM Student Hub</title>
+        <meta name="description" content="Track attendance, marks, timetable, and GPA — all in one elegant dashboard built for SRM students." />
+        <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <div className="root">
-        <div className="bg-base" />
-        <div className="grid-lines" />
-        <div className="scanlines" />
-        <div className="orb orb-a" />
-        <div className="orb orb-b" />
-
-        <div className="page-col">
-
-          {/* ══ ORBITAL LOGO ══ */}
-          <div className="orbital-wrap">
-            <div className="ring ring-outer">
-              <div className="ring-ball ball-outer" />
-            </div>
-            <div className="ring ring-inner">
-              <div className="ring-ball ball-inner" />
-            </div>
-            <div className="orbital-core">
-              <svg width="34" height="34" viewBox="0 0 40 40" fill="none">
-                <circle cx="20" cy="8"  r="3" fill="white"/>
-                <circle cx="8"  cy="28" r="3" fill="white"/>
-                <circle cx="32" cy="28" r="3" fill="white"/>
-                <circle cx="20" cy="20" r="4.5" fill="white" opacity="0.95"/>
-                <line x1="20" y1="8"  x2="20" y2="20" stroke="white" strokeWidth="1.5" opacity="0.75"/>
-                <line x1="8"  y1="28" x2="20" y2="20" stroke="white" strokeWidth="1.5" opacity="0.75"/>
-                <line x1="32" y1="28" x2="20" y2="20" stroke="white" strokeWidth="1.5" opacity="0.75"/>
-                <line x1="8"  y1="28" x2="32" y2="28" stroke="white" strokeWidth="1.5" opacity="0.32"/>
-                <line x1="20" y1="8"  x2="8"  y2="28" stroke="white" strokeWidth="1.5" opacity="0.32"/>
-                <line x1="20" y1="8"  x2="32" y2="28" stroke="white" strokeWidth="1.5" opacity="0.32"/>
-              </svg>
-            </div>
+      {/* ── NAV ────────────────────────────────────── */}
+      <nav className={`nav ${scrolled ? 'nav-scrolled' : ''}`}>
+        <div className="nav-inner">
+          <div className="nav-brand">
+            <div className="nav-logo">⬡</div>
+            <span className="nav-wordmark">Campus<strong>Pro</strong></span>
           </div>
-
-          {/* ══ BRAND ══ */}
-          <div className="brand-block">
-            <div className="brand-name">
-              <span className="b-campus">Campus</span><span className="b-pro">Pro</span>
-            </div>
-            <div className="brand-sub">THE ULTIMATE SRM STUDENT HUB</div>
+          <div className="nav-links">
+            <a href="#features" className="nav-link">Features</a>
+            <a href="#stats" className="nav-link">Stats</a>
+            <Link href="/calculator" className="nav-link">GPA Calc</Link>
           </div>
-
-          {/* ══ CARD ══ */}
-          <div className="card">
-            <div className="corner tl" /><div className="corner tr" />
-            <div className="corner bl" /><div className="corner br" />
-
-            <div className="card-header">
-              <div className="card-title">Welcome back</div>
-              <div className="card-sub">Sign in to your SRM Academia Portal</div>
-            </div>
-
-            {sessionLimit && (
-              <div className="session-warn">
-                <span>⚠ Session limit reached.</span>
-                <a href={sessionLimit} target="_blank" rel="noreferrer">Manage sessions →</a>
-              </div>
-            )}
-
-            <form onSubmit={handleLogin}>
-              <div className="field-group">
-                <label className="field-label">Student ID / Email</label>
-                <div className="field-wrap">
-                  <svg className="field-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                    <circle cx="12" cy="7" r="4"/>
-                  </svg>
-                  <input type="text" placeholder="NetID or SRM Email"
-                    value={account} onChange={e => setAccount(e.target.value)}
-                    required autoComplete="username" />
-                </div>
-              </div>
-
-              <div className="field-group" style={{ marginBottom: 26 }}>
-                <label className="field-label">Academia Password</label>
-                <div className="field-wrap">
-                  <svg className="field-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                    <rect x="3" y="11" width="18" height="11" rx="2"/>
-                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                  </svg>
-                  <input type={showPass ? 'text' : 'password'} placeholder="••••••••••••"
-                    value={password} onChange={e => setPassword(e.target.value)}
-                    required autoComplete="current-password" />
-                  <button type="button" className="eye-btn" onClick={() => setShowPass(v => !v)}>
-                    {showPass ? (
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
-                        <line x1="1" y1="1" x2="23" y2="23"/>
-                      </svg>
-                    ) : (
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                        <circle cx="12" cy="12" r="3"/>
-                      </svg>
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {error && <div className="err-box">{error}</div>}
-
-              <button type="submit" className="btn-submit" disabled={loading}>
-                {loading ? (
-                  <span className="btn-loading">
-                    <span className="spinner" />
-                    {status}
-                  </span>
-                ) : 'Login Now →'}
-              </button>
-            </form>
-
-            {loading && (
-              <div className="progress-bar"><div className="progress-fill" /></div>
-            )}
-
-            <div className="status-badge">
-              <div className="status-dot" />
-              All systems operational
-            </div>
+          <div className="nav-cta">
+            <Link href="/login" className="btn btn-ghost" style={{ padding:'8px 18px', fontSize:13 }}>Sign In</Link>
+            <Link href="/login" className="btn btn-primary" style={{ padding:'8px 18px', fontSize:13 }}>Get Started →</Link>
           </div>
-
-          <div className="footer-note">
-            SRM Institute of Science and Technology &nbsp;·&nbsp; Secure Portal
-          </div>
-
         </div>
-      </div>
+      </nav>
+
+      <main>
+        {/* ── HERO ───────────────────────────────────── */}
+        <section className="hero">
+          <div className="hero-bg">
+            <ParticleMesh />
+            <div className="orb orb-a" />
+            <div className="orb orb-b" />
+            <div className="orb orb-c" />
+            <div className="grid-overlay" />
+          </div>
+
+          <div className="hero-inner">
+            <div className="hero-left animate-fade-up">
+              <div className="hero-badge tag tag-accent">
+                <div className="live-dot" />
+                Built for SRM · KTR Campus
+              </div>
+
+              <h1 className="hero-h1">
+                Your Academic<br />
+                <span className="grad-text">Command Center</span>
+              </h1>
+
+              <p className="hero-sub">
+                Real-time attendance, marks analytics, smart timetable, and GPA calculation.
+                Everything you need to stay ahead — in one obsidian interface.
+              </p>
+
+              <div className="hero-actions">
+                <Link href="/login" className="btn btn-primary" style={{ fontSize:14, padding:'13px 28px' }}>
+                  Launch Dashboard →
+                </Link>
+                <Link href="/calculator" className="btn btn-ghost" style={{ fontSize:14, padding:'13px 28px' }}>
+                  GPA Calculator
+                </Link>
+              </div>
+
+              <div className="hero-micro">
+                <span className="hero-micro-dot" style={{ background:'#10b981' }} />
+                <span className="hero-micro-text">Free to use · No data stored · SRM Academia powered</span>
+              </div>
+            </div>
+
+            <div className="hero-right animate-fade-up delay-2">
+              <div className="hero-card-float">
+                <PreviewCard />
+                <div className="hero-badge-floating badge-f1">
+                  <span style={{ fontSize:18 }}>🎯</span>
+                  <div>
+                    <div className="hbf-label">Safe to miss</div>
+                    <div className="hbf-val">3 more classes</div>
+                  </div>
+                </div>
+                <div className="hero-badge-floating badge-f2">
+                  <span style={{ fontSize:18 }}>⚠️</span>
+                  <div>
+                    <div className="hbf-label">Digital Electronics</div>
+                    <div className="hbf-val" style={{ color:'#f43f5e' }}>Below 75% !</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── STATS ──────────────────────────────────── */}
+        <section className="stats-band" id="stats">
+          <div className="container">
+            <div className="stats-grid">
+              {STATS.map((s, i) => (
+                <div key={i} className="stat-item animate-fade-up" style={{ animationDelay: `${i * 0.1}s` }}>
+                  <div className="stat-val font-mono">
+                    <Counter target={s.val} />
+                  </div>
+                  <div className="stat-label">{s.label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── FEATURES ───────────────────────────────── */}
+        <section className="features-section" id="features">
+          <div className="container">
+            <div className="section-head animate-fade-up">
+              <div className="tag tag-accent" style={{ marginBottom:16 }}>Core Features</div>
+              <h2 className="section-title">Everything you need<br />to ace this semester</h2>
+              <p className="section-sub">Scraped live from SRM Academia. No manual input required.</p>
+            </div>
+
+            <div className="features-grid">
+              {FEATURES.map((f, i) => (
+                <div key={i} className="feature-card glass animate-fade-up" style={{ animationDelay: `${i * 0.1}s` }}>
+                  <div className="feat-top">
+                    <div className="feat-icon" style={{ color: f.color, background:`${f.color}12`, border:`1px solid ${f.color}22` }}>
+                      {f.icon}
+                    </div>
+                    <span className="tag" style={{ background:`${f.color}12`, color:f.color, border:`1px solid ${f.color}20`, fontSize:10 }}>
+                      {f.tag}
+                    </span>
+                  </div>
+                  <div className="feat-label">{f.label}</div>
+                  <p className="feat-desc">{f.desc}</p>
+                  <div className="feat-divider" />
+                  <div className="feat-stat">
+                    <span className="feat-stat-val font-mono" style={{ color: f.color }}>{f.stat}</span>
+                    <span className="feat-stat-label">{f.statLabel}</span>
+                  </div>
+                  <div className="feat-glow" style={{ background: `radial-gradient(circle at top left, ${f.color}08, transparent 60%)` }} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── CTA BAND ───────────────────────────────── */}
+        <section className="cta-band">
+          <div className="cta-inner glass-strong">
+            <div className="cta-orb cta-orb-a" />
+            <div className="cta-orb cta-orb-b" />
+            <div className="cta-content">
+              <h2 className="cta-title">Ready to level up<br /><span className="grad-text">your academics?</span></h2>
+              <p className="cta-sub">Sign in with your SRM Academia credentials. We never store your password.</p>
+              <div className="cta-actions">
+                <Link href="/login" className="btn btn-primary" style={{ fontSize:15, padding:'14px 36px' }}>
+                  Open Dashboard →
+                </Link>
+                <Link href="/calculator" className="btn btn-ghost" style={{ fontSize:15, padding:'14px 36px' }}>
+                  Try GPA Calculator
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      {/* ── FOOTER ─────────────────────────────────── */}
+      <footer className="footer">
+        <div className="footer-inner">
+          <div className="nav-brand">
+            <div className="nav-logo" style={{ fontSize:12 }}>⬡</div>
+            <span className="nav-wordmark" style={{ fontSize:14 }}>Campus<strong>Pro</strong></span>
+          </div>
+          <p className="footer-note">
+            SRM Institute of Science and Technology · KTR Campus
+            · Unofficial student tool · Not affiliated with SRMIST
+          </p>
+          <div className="footer-links">
+            <Link href="/login" className="footer-link">Dashboard</Link>
+            <Link href="/calculator" className="footer-link">GPA Calc</Link>
+            <Link href="/calendar" className="footer-link">Calendar</Link>
+          </div>
+        </div>
+      </footer>
 
       <style jsx global>{`
-        * { box-sizing:border-box; margin:0; padding:0; }
-        html,body { height:100%; }
-        body { font-family:'Space Grotesk',sans-serif; background:#03050a; overflow:hidden; }
+        body { background: var(--bg-void); overflow-x: hidden; }
       `}</style>
 
       <style jsx>{`
-        .root {
-          min-height:100vh; display:flex; align-items:center; justify-content:center;
-          padding:20px; position:relative; overflow:hidden;
+        /* NAV */
+        .nav {
+          position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+          transition: all 0.3s var(--ease-smooth);
+          padding: 0 24px;
         }
+        .nav-scrolled {
+          background: rgba(7,7,16,0.88);
+          border-bottom: 1px solid var(--border);
+          backdrop-filter: blur(24px);
+        }
+        .nav-inner {
+          max-width: 1200px; margin: 0 auto;
+          display: flex; align-items: center;
+          height: 64px; gap: 32px;
+        }
+        .nav-brand {
+          display: flex; align-items: center; gap: 8px; flex: 0 0 auto;
+        }
+        .nav-logo {
+          font-size: 22px; color: var(--accent);
+          filter: drop-shadow(0 0 8px var(--accent-glow));
+        }
+        .nav-wordmark {
+          font-family: var(--font-display); font-size: 16px; color: var(--text-1);
+          letter-spacing: -0.3px;
+        }
+        .nav-wordmark strong { color: var(--accent); }
+        .nav-links {
+          display: flex; align-items: center; gap: 4px; flex: 1;
+          justify-content: center;
+        }
+        .nav-link {
+          padding: 6px 14px; border-radius: var(--radius-sm);
+          color: var(--text-2); font-size: 13.5px; font-weight: 450;
+          transition: all 0.15s;
+        }
+        .nav-link:hover { color: var(--text-1); background: var(--bg-elevated); }
+        .nav-cta { display: flex; gap: 8px; align-items: center; }
 
-        /* background */
-        .bg-base {
-          position:fixed; inset:0; z-index:0;
-          background:
-            radial-gradient(ellipse 70% 55% at 50% 0%, rgba(0,245,255,0.05) 0%, transparent 65%),
-            radial-gradient(ellipse 50% 60% at 85% 100%, rgba(255,107,43,0.04) 0%, transparent 60%),
-            #03050a;
+        /* HERO */
+        .hero {
+          position: relative; min-height: 100vh;
+          display: flex; align-items: center;
+          overflow: hidden; padding-top: 64px;
         }
-        .grid-lines {
-          position:fixed; inset:0; z-index:0;
+        .hero-bg {
+          position: absolute; inset: 0;
+        }
+        .orb {
+          position: absolute; border-radius: 50%;
+          filter: blur(100px); pointer-events: none;
+          animation: orbDrift 10s ease-in-out infinite alternate;
+        }
+        .orb-a {
+          width: 600px; height: 600px;
+          background: radial-gradient(circle, rgba(91,94,244,0.12), transparent 70%);
+          top: -200px; left: -100px;
+        }
+        .orb-b {
+          width: 400px; height: 400px;
+          background: radial-gradient(circle, rgba(0,212,255,0.07), transparent 70%);
+          bottom: -100px; right: 10%;
+          animation-delay: -4s; animation-duration: 14s;
+        }
+        .orb-c {
+          width: 300px; height: 300px;
+          background: radial-gradient(circle, rgba(245,158,11,0.05), transparent 70%);
+          top: 40%; left: 40%;
+          animation-delay: -7s; animation-duration: 18s;
+        }
+        .grid-overlay {
+          position: absolute; inset: 0;
           background-image:
-            linear-gradient(rgba(0,245,255,0.022) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(0,245,255,0.022) 1px, transparent 1px);
-          background-size:55px 55px;
-          animation:gridDrift 24s linear infinite;
+            linear-gradient(rgba(91,94,244,0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(91,94,244,0.03) 1px, transparent 1px);
+          background-size: 60px 60px;
+          animation: gridFlow 30s linear infinite;
         }
-        @keyframes gridDrift { 0%{transform:translateY(0)} 100%{transform:translateY(55px)} }
-        .scanlines {
-          position:fixed; inset:0; z-index:0; pointer-events:none;
-          background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.015) 2px,rgba(0,0,0,0.015) 4px);
+        .hero-inner {
+          position: relative; max-width: 1200px; margin: 0 auto;
+          padding: 80px 24px;
+          display: grid; grid-template-columns: 1fr 1fr;
+          gap: 64px; align-items: center; width: 100%;
         }
-        .orb { position:fixed; border-radius:50%; filter:blur(90px); pointer-events:none; z-index:0; animation:orbDrift 12s ease-in-out infinite alternate; }
-        .orb-a { width:500px; height:500px; background:rgba(0,245,255,0.035); top:-180px; left:-120px; }
-        .orb-b { width:380px; height:380px; background:rgba(255,107,43,0.035); bottom:-100px; right:-80px; animation-delay:-5s; animation-duration:15s; }
-        @keyframes orbDrift { from{transform:translate(0,0)} to{transform:translate(22px,16px)} }
+        .hero-badge {
+          display: inline-flex; align-items: center; gap: 7px;
+          margin-bottom: 28px; font-size: 11.5px; font-weight: 600;
+          letter-spacing: 0.4px;
+        }
+        .live-dot {
+          width: 6px; height: 6px; border-radius: 50%;
+          background: var(--emerald);
+          box-shadow: 0 0 6px var(--emerald);
+          animation: pulse 2s ease-in-out infinite;
+        }
+        .hero-h1 {
+          font-family: var(--font-display);
+          font-size: clamp(40px, 5vw, 62px);
+          font-weight: 800; line-height: 1.08;
+          letter-spacing: -1.5px; color: var(--text-1);
+          margin-bottom: 22px;
+        }
+        .hero-sub {
+          font-size: 16px; line-height: 1.65;
+          color: var(--text-2); margin-bottom: 36px;
+          max-width: 440px;
+        }
+        .hero-actions { display: flex; gap: 12px; margin-bottom: 28px; }
+        .hero-micro {
+          display: flex; align-items: center; gap: 8px;
+        }
+        .hero-micro-dot {
+          width: 5px; height: 5px; border-radius: 50%;
+        }
+        .hero-micro-text { font-size: 12px; color: var(--text-3); }
 
-        /* layout */
-        .page-col { position:relative; z-index:10; display:flex; flex-direction:column; align-items:center; }
-
-        /* ── orbital ── */
-        .orbital-wrap {
-          position:relative; width:120px; height:120px;
-          display:flex; align-items:center; justify-content:center;
-          margin-bottom:20px;
-          animation:fadeUp 0.7s cubic-bezier(0.16,1,0.3,1) both;
+        /* PREVIEW CARD */
+        .hero-card-float {
+          position: relative; animation: float 6s ease-in-out infinite;
         }
-        .ring { position:absolute; border-radius:50%; border:1px solid transparent; }
-        .ring-outer { width:120px; height:120px; border-color:rgba(0,245,255,0.18); animation:spinCW 5s linear infinite; }
-        .ring-inner { width:78px; height:78px; border-color:rgba(255,107,43,0.22); animation:spinCCW 3.5s linear infinite; }
-        .ring-ball { position:absolute; border-radius:50%; top:50%; left:50%; }
-        .ball-outer {
-          width:8px; height:8px; background:#00f5ff;
-          box-shadow:0 0 10px #00f5ff,0 0 22px rgba(0,245,255,0.5);
-          transform:translate(-50%,-50%) translateY(-60px);
+        .preview-card {
+          border-radius: var(--radius-xl);
+          overflow: hidden;
+          box-shadow: 0 30px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(91,94,244,0.12);
         }
-        .ball-inner {
-          width:7px; height:7px; background:#ff6b2b;
-          box-shadow:0 0 10px #ff6b2b,0 0 22px rgba(255,107,43,0.5);
-          transform:translate(-50%,-50%) translateY(-39px);
+        .preview-header {
+          display: flex; align-items: center; gap: 10px;
+          padding: 12px 16px;
+          background: rgba(255,255,255,0.02);
+          border-bottom: 1px solid var(--border);
         }
-        @keyframes spinCW  { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
-        @keyframes spinCCW { from{transform:rotate(0deg)} to{transform:rotate(-360deg)} }
-        .orbital-core {
-          position:relative; z-index:2; width:52px; height:52px;
-          background:linear-gradient(135deg,#ff6b2b,#c43200);
-          border-radius:14px; display:flex; align-items:center; justify-content:center;
-          box-shadow:0 0 0 1px rgba(255,107,43,0.32),0 0 28px rgba(255,107,43,0.28),inset 0 1px 0 rgba(255,255,255,0.16);
+        .preview-dot-wrap { display: flex; gap: 5px; }
+        .preview-dot {
+          width: 9px; height: 9px; border-radius: 50%;
+          opacity: 0.7;
         }
-        .orbital-core::before {
-          content:''; position:absolute; inset:0; border-radius:14px;
-          background:linear-gradient(135deg,rgba(255,255,255,0.12),transparent);
+        .preview-title {
+          font-family: var(--font-mono); font-size: 10px;
+          color: var(--text-3); letter-spacing: 0.5px;
         }
-        .orbital-core svg { position:relative; z-index:1; }
-
-        /* brand */
-        .brand-block { text-align:center; margin-bottom:26px; animation:fadeUp 0.7s 0.08s cubic-bezier(0.16,1,0.3,1) both; }
-        .brand-name { font-family:'Bebas Neue',sans-serif; font-size:54px; letter-spacing:3px; line-height:1; }
-        .b-campus { color:#fff; }
-        .b-pro {
-          background:linear-gradient(90deg,#00f5ff 0%,#ffffff 38%,#ff6b2b 68%,#00f5ff 100%);
-          background-size:200% auto;
-          -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
-          animation:shimmer 2.6s linear infinite;
+        .preview-inner { padding: 18px; }
+        .preview-top-row {
+          display: grid; grid-template-columns: repeat(3,1fr);
+          gap: 8px; margin-bottom: 18px;
         }
-        @keyframes shimmer { 0%{background-position:200% center} 100%{background-position:-200% center} }
-        .brand-sub { font-size:9px; font-weight:500; letter-spacing:4px; text-transform:uppercase; color:rgba(220,235,255,0.24); margin-top:5px; }
-
-        /* card */
-        .card {
-          width:408px; padding:36px 34px 30px;
-          background:rgba(5,9,17,0.94);
-          border:1px solid rgba(0,245,255,0.09);
-          border-radius:22px; backdrop-filter:blur(28px);
-          box-shadow:0 0 0 1px rgba(0,245,255,0.03),0 40px 80px rgba(0,0,0,0.72),inset 0 1px 0 rgba(255,255,255,0.03);
-          position:relative; overflow:hidden;
-          animation:fadeUp 0.7s 0.14s cubic-bezier(0.16,1,0.3,1) both;
+        .preview-stat {
+          background: var(--bg-elevated); border: 1px solid var(--border);
+          border-radius: var(--radius-md); padding: 10px;
+          text-align: center;
         }
-        @keyframes fadeUp { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
-        .card::before {
-          content:''; position:absolute; top:0; left:0; right:0; height:1px;
-          background:linear-gradient(90deg,transparent,rgba(0,245,255,0.4),transparent);
+        .preview-stat-val {
+          font-family: var(--font-mono); font-size: 18px; font-weight: 700;
         }
-
-        /* corners */
-        .corner { position:absolute; width:15px; height:15px; z-index:2; }
-        .tl { top:11px; left:11px; border-top:1.5px solid rgba(0,245,255,0.35); border-left:1.5px solid rgba(0,245,255,0.35); }
-        .tr { top:11px; right:11px; border-top:1.5px solid rgba(0,245,255,0.35); border-right:1.5px solid rgba(0,245,255,0.35); }
-        .bl { bottom:11px; left:11px; border-bottom:1.5px solid rgba(0,245,255,0.35); border-left:1.5px solid rgba(0,245,255,0.35); }
-        .br { bottom:11px; right:11px; border-bottom:1.5px solid rgba(0,245,255,0.35); border-right:1.5px solid rgba(0,245,255,0.35); }
-
-        /* card header */
-        .card-header { margin-bottom:26px; }
-        .card-title { font-size:20px; font-weight:600; color:#d8e8f8; letter-spacing:-0.3px; }
-        .card-sub { font-size:12px; color:rgba(210,230,255,0.3); margin-top:4px; }
-
-        /* session warn */
-        .session-warn {
-          display:flex; gap:8px; align-items:center; flex-wrap:wrap;
-          background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.2);
-          border-radius:9px; padding:9px 12px; margin-bottom:16px;
-          font-size:12px; color:#fde68a;
+        .preview-stat-lbl {
+          font-size: 9px; color: var(--text-3);
+          text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px;
         }
-        .session-warn a { color:#fbbf24; font-weight:600; text-decoration:none; }
-
-        /* fields */
-        .field-group { margin-bottom:18px; }
-        .field-label { display:block; font-size:9px; font-weight:600; letter-spacing:2.5px; text-transform:uppercase; color:rgba(210,230,255,0.28); margin-bottom:7px; }
-        .field-wrap { position:relative; display:flex; align-items:center; }
-        .field-icon { position:absolute; left:13px; color:rgba(210,230,255,0.22); pointer-events:none; transition:color 0.22s; z-index:1; }
-        .field-wrap:focus-within .field-icon { color:#00f5ff; }
-        .field-wrap input {
-          width:100%; padding:12px 13px 12px 38px;
-          background:rgba(0,245,255,0.02);
-          border:1px solid rgba(0,245,255,0.08);
-          border-radius:10px; color:#d8e8f8;
-          font-family:'Space Grotesk',sans-serif; font-size:13.5px; font-weight:400;
-          outline:none; transition:all 0.22s; caret-color:#00f5ff;
+        .preview-list { display: flex; flex-direction: column; gap: 9px; }
+        .preview-row {
+          display: flex; align-items: center; gap: 10px;
+          animation: fadeUp 0.4s var(--ease-out) both;
         }
-        .field-wrap input::placeholder { color:rgba(210,230,255,0.14); }
-        .field-wrap input:focus {
-          border-color:rgba(0,245,255,0.3);
-          background:rgba(0,245,255,0.035);
-          box-shadow:0 0 0 3px rgba(0,245,255,0.055);
+        .preview-row-info {
+          flex: 1; display: flex; flex-direction: column; gap: 5px;
         }
-        .eye-btn {
-          position:absolute; right:12px;
-          background:none; border:none; color:rgba(210,230,255,0.22);
-          cursor:pointer; padding:4px; display:flex; align-items:center; transition:color 0.22s;
+        .preview-row-name {
+          font-size: 11px; color: var(--text-2); white-space: nowrap;
+          overflow: hidden; text-overflow: ellipsis;
         }
-        .eye-btn:hover { color:#00f5ff; }
-
-        /* error */
-        .err-box {
-          background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.22);
-          border-radius:9px; padding:9px 12px; margin-bottom:14px;
-          color:#fca5a5; font-size:12px;
+        .preview-row-pct {
+          font-family: var(--font-mono); font-size: 13px; font-weight: 600;
+          flex-shrink: 0; min-width: 40px; text-align: right;
         }
 
-        /* button */
-        .btn-submit {
-          width:100%; padding:13px;
-          background:linear-gradient(135deg,#ff6b2b,#d43200);
-          border:none; border-radius:10px; color:#fff;
-          font-family:'Space Grotesk',sans-serif; font-size:12px; font-weight:700;
-          letter-spacing:2.5px; text-transform:uppercase;
-          cursor:pointer; position:relative; overflow:hidden; transition:all 0.22s;
-          box-shadow:0 8px 24px rgba(255,107,43,0.22);
+        /* FLOATING BADGES */
+        .hero-badge-floating {
+          position: absolute;
+          display: flex; align-items: center; gap: 10px;
+          background: rgba(16,16,36,0.92);
+          border: 1px solid var(--border-strong);
+          border-radius: var(--radius-md);
+          padding: 10px 14px;
+          backdrop-filter: blur(16px);
+          box-shadow: 0 8px 32px rgba(0,0,0,0.4);
         }
-        .btn-submit:not(:disabled):hover { transform:translateY(-2px); box-shadow:0 12px 32px rgba(255,107,43,0.36); }
-        .btn-submit:disabled { opacity:0.58; cursor:not-allowed; }
-        .btn-submit::after {
-          content:''; position:absolute; top:0; left:-100%; width:100%; height:100%;
-          background:linear-gradient(90deg,transparent,rgba(255,255,255,0.1),transparent);
-          transition:left 0.45s;
+        .badge-f1 { bottom: -24px; left: -28px; animation: float 7s 1s ease-in-out infinite; }
+        .badge-f2 { top: -20px; right: -24px; animation: float 8s 2s ease-in-out infinite; }
+        .hbf-label { font-size: 10px; color: var(--text-3); }
+        .hbf-val { font-size: 12px; color: var(--text-1); font-weight: 600; margin-top: 1px; }
+
+        /* STATS BAND */
+        .stats-band {
+          padding: 48px 24px;
+          border-top: 1px solid var(--border);
+          border-bottom: 1px solid var(--border);
+          background: rgba(91,94,244,0.03);
         }
-        .btn-submit:not(:disabled):hover::after { left:100%; }
-        .btn-loading { display:flex; align-items:center; justify-content:center; gap:9px; }
-        .spinner {
-          width:14px; height:14px; flex-shrink:0;
-          border:2px solid rgba(255,255,255,0.26); border-top-color:#fff;
-          border-radius:50%; animation:spin 0.7s linear infinite;
+        .container { max-width: 1200px; margin: 0 auto; }
+        .stats-grid {
+          display: grid; grid-template-columns: repeat(4,1fr);
+          gap: 32px;
         }
-        @keyframes spin { to{transform:rotate(360deg)} }
+        .stat-item { text-align: center; }
+        .stat-val {
+          font-size: 42px; font-weight: 600; color: var(--text-1);
+          letter-spacing: -1px; line-height: 1;
+        }
+        .stat-label { font-size: 12px; color: var(--text-3); margin-top: 6px; text-transform: uppercase; letter-spacing: 1px; }
 
-        /* progress */
-        .progress-bar { height:2px; background:rgba(0,245,255,0.06); border-radius:2px; margin-top:13px; overflow:hidden; }
-        .progress-fill { height:100%; width:35%; background:linear-gradient(90deg,#00f5ff,#ff6b2b); animation:progSlide 1.2s ease-in-out infinite; }
-        @keyframes progSlide { 0%{transform:translateX(-170%)} 100%{transform:translateX(400%)} }
+        /* FEATURES */
+        .features-section { padding: 100px 24px; }
+        .section-head { text-align: center; margin-bottom: 64px; }
+        .section-title {
+          font-family: var(--font-display); font-size: clamp(28px, 4vw, 46px);
+          font-weight: 800; letter-spacing: -1px; color: var(--text-1);
+          line-height: 1.12; margin-bottom: 16px;
+        }
+        .section-sub { color: var(--text-2); font-size: 15px; }
+        .features-grid {
+          display: grid; grid-template-columns: repeat(auto-fill, minmax(260px,1fr));
+          gap: 16px;
+        }
+        .feature-card {
+          border-radius: var(--radius-lg); padding: 24px;
+          position: relative; overflow: hidden;
+          transition: transform 0.25s var(--ease-smooth), border-color 0.25s, box-shadow 0.25s;
+        }
+        .feature-card:hover {
+          transform: translateY(-5px);
+          border-color: var(--border-strong);
+          box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+        }
+        .feat-glow {
+          position: absolute; inset: 0; pointer-events: none;
+        }
+        .feat-top {
+          display: flex; justify-content: space-between; align-items: flex-start;
+          margin-bottom: 16px;
+        }
+        .feat-icon {
+          width: 40px; height: 40px; border-radius: 10px;
+          display: flex; align-items: center; justify-content: center;
+        }
+        .feat-label {
+          font-family: var(--font-display); font-size: 17px; font-weight: 700;
+          color: var(--text-1); margin-bottom: 10px;
+        }
+        .feat-desc { font-size: 13px; color: var(--text-2); line-height: 1.65; }
+        .feat-divider { height: 1px; background: var(--border); margin: 18px 0; }
+        .feat-stat { display: flex; align-items: baseline; gap: 6px; }
+        .feat-stat-val { font-size: 24px; font-weight: 700; }
+        .feat-stat-label { font-size: 11px; color: var(--text-3); }
 
-        /* status */
-        .status-badge { display:flex; align-items:center; gap:6px; justify-content:center; margin-top:15px; font-size:10px; color:rgba(210,230,255,0.22); letter-spacing:0.7px; }
-        .status-dot { width:5px; height:5px; border-radius:50%; background:#22c55e; box-shadow:0 0 6px #22c55e; animation:pulse 2.2s ease-in-out infinite; }
-        @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.72)} }
+        /* CTA BAND */
+        .cta-band { padding: 80px 24px; }
+        .cta-inner {
+          max-width: 900px; margin: 0 auto;
+          border-radius: 28px; padding: 64px;
+          position: relative; overflow: hidden;
+          text-align: center;
+          box-shadow: 0 0 0 1px var(--accent-border), var(--shadow-accent);
+        }
+        .cta-orb {
+          position: absolute; border-radius: 50%; filter: blur(80px);
+          pointer-events: none;
+        }
+        .cta-orb-a {
+          width: 300px; height: 300px;
+          background: radial-gradient(circle, rgba(91,94,244,0.18), transparent 70%);
+          top: -100px; left: -100px;
+        }
+        .cta-orb-b {
+          width: 250px; height: 250px;
+          background: radial-gradient(circle, rgba(0,212,255,0.1), transparent 70%);
+          bottom: -80px; right: -60px;
+        }
+        .cta-content { position: relative; z-index: 1; }
+        .cta-title {
+          font-family: var(--font-display); font-size: clamp(28px, 4vw, 42px);
+          font-weight: 800; letter-spacing: -0.8px; margin-bottom: 16px;
+        }
+        .cta-sub { color: var(--text-2); font-size: 15px; margin-bottom: 36px; }
+        .cta-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
 
-        /* footer */
-        .footer-note { margin-top:18px; font-size:10px; letter-spacing:0.7px; color:rgba(210,230,255,0.14); text-align:center; animation:fadeUp 0.7s 0.22s cubic-bezier(0.16,1,0.3,1) both; }
+        /* FOOTER */
+        .footer { padding: 40px 24px; border-top: 1px solid var(--border); }
+        .footer-inner {
+          max-width: 1200px; margin: 0 auto;
+          display: flex; flex-direction: column; align-items: center;
+          gap: 16px; text-align: center;
+        }
+        .footer-note { font-size: 12px; color: var(--text-3); max-width: 480px; }
+        .footer-links { display: flex; gap: 24px; }
+        .footer-link { font-size: 12px; color: var(--text-3); transition: color 0.15s; }
+        .footer-link:hover { color: var(--text-1); }
 
-        /* mobile */
-        @media (max-width:460px) {
-          .card { width:calc(100vw - 26px); padding:30px 20px 26px; }
-          .brand-name { font-size:44px; }
-          .orbital-wrap { width:100px; height:100px; }
-          .ring-outer { width:100px; height:100px; }
-          .ring-inner { width:66px; height:66px; }
-          .ball-outer { transform:translate(-50%,-50%) translateY(-50px); }
-          .ball-inner { transform:translate(-50%,-50%) translateY(-33px); }
+        /* Responsive */
+        @media (max-width: 900px) {
+          .hero-inner { grid-template-columns: 1fr; gap: 48px; padding: 60px 20px; }
+          .hero-right { display: none; }
+          .stats-grid { grid-template-columns: repeat(2,1fr); }
+          .cta-inner { padding: 40px 24px; }
+        }
+        @media (max-width: 600px) {
+          .nav-links { display: none; }
+          .features-grid { grid-template-columns: 1fr; }
+          .stats-grid { grid-template-columns: repeat(2,1fr); gap: 20px; }
+          .hero-actions { flex-direction: column; }
         }
       `}</style>
     </>
