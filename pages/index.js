@@ -43,10 +43,10 @@ export default function Login() {
       const academiaData = await dataRes.json();
 
       if (academiaData.tokenInvalid || academiaData.error) {
-        setError('Session expired. Please try again.');
-        setLoading(false);
-        return;
-      }
+  setError(academiaData.error || academiaData.message || 'Session expired. Please try again.');
+  setLoading(false);
+  return;
+}
 
       // Step 3: Store and redirect to dashboard
       sessionStorage.setItem('academia_data', JSON.stringify(academiaData));
