@@ -3,109 +3,134 @@ import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { TokenStore, DataStore } from '@/lib/security';
 
-// SRM Academia session management URL (same for all SRM KTR users)
-const ACADEMIA_SESSION_URL = 'https://academia.srmist.edu.in/49910842/portal/academia-academic-services/myProfile';
+const ACADEMIA_SESSIONS_URL =
+  'https://academia.srmist.edu.in/accounts/p/10002227248/announcement/sessions-reminder?servicename=ZohoCreator&serviceurl=https://academia.srmist.edu.in/portal/academia-academic-services/redirectFromLogin&service_language=en';
 
+/* ── Session limit screen (too many concurrent sessions) ─── */
 function SessionLimitScreen({ redirectUrl, onBack }) {
   return (
-    <div className="session-screen">
-      <div className="session-icon">⚠️</div>
-      <div className="session-title">Session Limit Reached</div>
-      <div className="session-desc">
-        SRM Academia only allows <strong>2 active sessions</strong> at a time. You have hit the limit.
-        <br /><br />
-        Go to your Academia profile, scroll to <strong>Active Sessions</strong>, and terminate the old ones. Then come back and log in.
+    <div className="info-screen">
+      <div className="info-icon">🔒</div>
+      <div className="info-title">Too Many Active Sessions</div>
+      <div className="info-desc">
+        SRM Academia limits you to <strong>2 active sessions</strong> at once.
+        You need to terminate your old sessions before logging in here.
       </div>
       <a
-        href={redirectUrl || ACADEMIA_SESSION_URL}
+        href={redirectUrl || ACADEMIA_SESSIONS_URL}
         target="_blank"
         rel="noreferrer"
-        className="session-btn-primary"
+        className="info-btn-primary"
       >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
           <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
           <polyline points="15 3 21 3 21 9"/>
           <line x1="10" y1="14" x2="21" y2="3"/>
         </svg>
-        Open Academia &amp; Terminate Sessions
+        Open Academia — Manage Sessions
       </a>
-      <button className="session-btn-back" onClick={onBack}>
-        ← Back to Login
-      </button>
-      <div className="session-steps">
-        <div className="step"><span className="step-n">1</span>Click the button above to open Academia</div>
-        <div className="step"><span className="step-n">2</span>Scroll down to <em>Active Sessions</em></div>
+      <button className="info-btn-back" onClick={onBack}>← Back to Login</button>
+      <div className="info-steps">
+        <div className="step"><span className="step-n">1</span>Click above to open Academia</div>
+        <div className="step"><span className="step-n">2</span>Scroll to <em>Active Sessions</em></div>
         <div className="step"><span className="step-n">3</span>Click <em>Terminate</em> on old sessions</div>
-        <div className="step"><span className="step-n">4</span>Come back here and log in again</div>
+        <div className="step"><span className="step-n">4</span>Return here and log in again</div>
       </div>
-
       <style jsx>{`
-        .session-screen { display:flex; flex-direction:column; align-items:center; text-align:center; padding:8px 0 4px; }
-        .session-icon { font-size:40px; margin-bottom:14px; }
-        .session-title { font-family:'Space Grotesk',sans-serif; font-size:20px; font-weight:700; color:#fde68a; margin-bottom:12px; }
-        .session-desc { font-size:13px; color:rgba(210,230,255,0.55); line-height:1.7; margin-bottom:22px; }
-        .session-desc strong { color:rgba(210,230,255,0.85); }
-        .session-btn-primary {
-          display:flex; align-items:center; gap:8px;
-          width:100%; padding:13px 16px; border-radius:10px;
-          background:linear-gradient(135deg,#f59e0b,#d97706);
-          color:#fff; font-family:'Space Grotesk',sans-serif;
-          font-size:13px; font-weight:700; letter-spacing:0.3px;
-          text-decoration:none; justify-content:center;
-          box-shadow:0 8px 24px rgba(245,158,11,0.25);
-          transition:all 0.2s; margin-bottom:10px;
-        }
-        .session-btn-primary:hover { transform:translateY(-2px); box-shadow:0 12px 32px rgba(245,158,11,0.4); }
-        .session-btn-back {
-          width:100%; padding:11px; border-radius:10px;
-          background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1);
-          color:rgba(210,230,255,0.4); font-family:'Space Grotesk',sans-serif;
-          font-size:13px; cursor:pointer; transition:all 0.2s; margin-bottom:22px;
-        }
-        .session-btn-back:hover { background:rgba(255,255,255,0.07); color:rgba(210,230,255,0.7); }
-        .session-steps {
-          display:flex; flex-direction:column; gap:8px; width:100%;
-          background:rgba(0,245,255,0.03); border:1px solid rgba(0,245,255,0.08);
-          border-radius:10px; padding:14px; text-align:left;
-        }
-        .step { display:flex; align-items:center; gap:10px; font-size:12px; color:rgba(210,230,255,0.45); }
-        .step em { color:rgba(0,245,255,0.7); font-style:normal; font-weight:600; }
-        .step-n {
-          width:20px; height:20px; border-radius:50%;
-          background:rgba(0,245,255,0.1); border:1px solid rgba(0,245,255,0.2);
-          color:#00f5ff; font-size:10px; font-weight:700;
-          display:flex; align-items:center; justify-content:center; flex-shrink:0;
-        }
+        .info-screen { display:flex; flex-direction:column; align-items:center; text-align:center; padding:4px 0; }
+        .info-icon { font-size:38px; margin-bottom:12px; }
+        .info-title { font-family:'Space Grotesk',sans-serif; font-size:19px; font-weight:700; color:#fde68a; margin-bottom:10px; }
+        .info-desc { font-size:13px; color:rgba(210,230,255,0.5); line-height:1.7; margin-bottom:20px; }
+        .info-desc strong { color:rgba(210,230,255,0.82); }
+        .info-btn-primary { display:flex; align-items:center; gap:8px; width:100%; padding:12px 16px; border-radius:10px; background:linear-gradient(135deg,#f59e0b,#d97706); color:#fff; font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:700; text-decoration:none; justify-content:center; box-shadow:0 8px 24px rgba(245,158,11,0.25); transition:all 0.2s; margin-bottom:9px; }
+        .info-btn-primary:hover { transform:translateY(-2px); box-shadow:0 12px 32px rgba(245,158,11,0.4); }
+        .info-btn-back { width:100%; padding:10px; border-radius:10px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); color:rgba(210,230,255,0.4); font-family:'Space Grotesk',sans-serif; font-size:13px; cursor:pointer; transition:all 0.2s; margin-bottom:20px; }
+        .info-btn-back:hover { background:rgba(255,255,255,0.07); color:rgba(210,230,255,0.7); }
+        .info-steps { display:flex; flex-direction:column; gap:7px; width:100%; background:rgba(0,245,255,0.03); border:1px solid rgba(0,245,255,0.08); border-radius:10px; padding:14px; text-align:left; }
+        .step { display:flex; align-items:center; gap:10px; font-size:12px; color:rgba(210,230,255,0.42); }
+        .step em { color:rgba(0,245,255,0.65); font-style:normal; font-weight:600; }
+        .step-n { width:20px; height:20px; border-radius:50%; background:rgba(0,245,255,0.1); border:1px solid rgba(0,245,255,0.2); color:#00f5ff; font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
       `}</style>
     </div>
   );
 }
 
+/* ── Daily login limit screen (20 logins/day exceeded) ───── */
+function DailyLimitScreen({ onBack }) {
+  return (
+    <div className="info-screen">
+      <div className="info-icon">🌙</div>
+      <div className="info-title">Daily Login Limit Reached</div>
+      <div className="info-desc">
+        SRM Academia allows only <strong>20 sign-ins per day</strong>.
+        You have reached this limit for today.
+        <br /><br />
+        You will be able to sign in again from <strong>12:00 AM tomorrow</strong>.
+        This is a restriction set by SRM — there is nothing you can do right now.
+      </div>
+      <div className="daily-notice">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        Come back after midnight to use CampusPro
+      </div>
+      <button className="info-btn-back" onClick={onBack}>← Back to Login</button>
+      <style jsx>{`
+        .info-screen { display:flex; flex-direction:column; align-items:center; text-align:center; padding:4px 0; }
+        .info-icon { font-size:38px; margin-bottom:12px; }
+        .info-title { font-family:'Space Grotesk',sans-serif; font-size:19px; font-weight:700; color:#a5b4fc; margin-bottom:10px; }
+        .info-desc { font-size:13px; color:rgba(210,230,255,0.5); line-height:1.7; margin-bottom:20px; }
+        .info-desc strong { color:rgba(210,230,255,0.82); }
+        .daily-notice { display:flex; align-items:center; gap:8px; width:100%; background:rgba(99,102,241,0.08); border:1px solid rgba(99,102,241,0.18); border-radius:10px; padding:12px 14px; font-size:12.5px; color:#a5b4fc; margin-bottom:16px; text-align:left; }
+        .info-btn-back { width:100%; padding:10px; border-radius:10px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); color:rgba(210,230,255,0.4); font-family:'Space Grotesk',sans-serif; font-size:13px; cursor:pointer; transition:all 0.2s; }
+        .info-btn-back:hover { background:rgba(255,255,255,0.07); color:rgba(210,230,255,0.7); }
+      `}</style>
+    </div>
+  );
+}
+
+/* ── Detection helpers ────────────────────────────────────── */
+function detectDailyLimit(data) {
+  const msg = (data?.message || data?.error || '').toLowerCase();
+  return (
+    msg.includes('daily limit') ||
+    msg.includes('20 sign') ||
+    msg.includes('12:00 am') ||
+    msg.includes('tomorrow') ||
+    msg.includes('daily')
+  );
+}
+
+function detectSessionLimit(data) {
+  if (!data) return false;
+  if (data.session?.sessionLimit) return true;
+  const msg = (data?.message || data?.error || '').toLowerCase();
+  return (
+    (msg.includes('session') && (msg.includes('limit') || msg.includes('exceeded') || msg.includes('maximum'))) ||
+    (msg.includes('too many') && msg.includes('session')) ||
+    msg.includes('concurrent session') ||
+    data.status === 429
+  );
+}
+
+function getRedirectUrl(data) {
+  return data?.session?.redirectUrl || ACADEMIA_SESSIONS_URL;
+}
+
+/* ── Main Login ───────────────────────────────────────────── */
 export default function Login() {
   const router = useRouter();
-  const [account, setAccount]         = useState('');
-  const [password, setPassword]       = useState('');
-  const [showPass, setShowPass]       = useState(false);
-  const [error, setError]             = useState('');
-  const [status, setStatus]           = useState('');
-  const [loading, setLoading]         = useState(false);
-  const [sessionLimitUrl, setSessionLimitUrl] = useState(null);
-
-  // Detect session limit from any backend response shape
-  function detectSessionLimit(data) {
-    if (!data) return false;
-    if (data.session?.sessionLimit) return true;
-    const msg = (data.message || data.error || '').toLowerCase();
-    if (msg.includes('session') && (msg.includes('limit') || msg.includes('exceeded') || msg.includes('maximum'))) return true;
-    if (msg.includes('too many') && msg.includes('session')) return true;
-    if (msg.includes('concurrent session')) return true;
-    if (data.status === 429) return true;
-    return false;
-  }
-
-  function getRedirectUrl(data) {
-    return data?.session?.redirectUrl || ACADEMIA_SESSION_URL;
-  }
+  const [account, setAccount]   = useState('');
+  const [password, setPassword] = useState('');
+  const [showPass, setShowPass] = useState(false);
+  const [error, setError]       = useState('');
+  const [status, setStatus]     = useState('');
+  const [loading, setLoading]   = useState(false);
+  // null = show login | 'session' = session limit | 'daily' = daily limit
+  const [screen, setScreen]     = useState(null);
+  const [sessionRedirectUrl, setSessionRedirectUrl] = useState(null);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -121,8 +146,17 @@ export default function Login() {
       });
       const loginData = await loginRes.json();
 
+      // Check daily limit first (more specific)
+      if (detectDailyLimit(loginData)) {
+        setScreen('daily');
+        setLoading(false);
+        return;
+      }
+
+      // Check session limit
       if (detectSessionLimit(loginData)) {
-        setSessionLimitUrl(getRedirectUrl(loginData));
+        setSessionRedirectUrl(getRedirectUrl(loginData));
+        setScreen('session');
         setLoading(false);
         return;
       }
@@ -142,8 +176,14 @@ export default function Login() {
       });
       const academiaData = await dataRes.json();
 
+      if (detectDailyLimit(academiaData)) {
+        setScreen('daily');
+        setLoading(false);
+        return;
+      }
       if (detectSessionLimit(academiaData)) {
-        setSessionLimitUrl(getRedirectUrl(academiaData));
+        setSessionRedirectUrl(getRedirectUrl(academiaData));
+        setScreen('session');
         setLoading(false);
         return;
       }
@@ -164,6 +204,8 @@ export default function Login() {
     }
   };
 
+  const goBack = () => { setScreen(null); setError(''); };
+
   return (
     <>
       <Head>
@@ -181,6 +223,7 @@ export default function Login() {
         <div className="orb orb-b" />
 
         <div className="page-col">
+          {/* ══ ORBITAL LOGO ══ */}
           <div className="orbital-wrap">
             <div className="ring ring-outer"><div className="ring-ball ball-outer" /></div>
             <div className="ring ring-inner"><div className="ring-ball ball-inner" /></div>
@@ -200,21 +243,26 @@ export default function Login() {
             </div>
           </div>
 
+          {/* ══ BRAND ══ */}
           <div className="brand-block">
             <div className="brand-name"><span className="b-campus">Campus</span><span className="b-pro">Pro</span></div>
             <div className="brand-sub">THE ULTIMATE SRM STUDENT HUB</div>
           </div>
 
+          {/* ══ CARD ══ */}
           <div className="card">
             <div className="corner tl" /><div className="corner tr" />
             <div className="corner bl" /><div className="corner br" />
 
-            {sessionLimitUrl !== null ? (
-              <SessionLimitScreen
-                redirectUrl={sessionLimitUrl}
-                onBack={() => { setSessionLimitUrl(null); setError(''); }}
-              />
-            ) : (
+            {screen === 'session' && (
+              <SessionLimitScreen redirectUrl={sessionRedirectUrl} onBack={goBack} />
+            )}
+
+            {screen === 'daily' && (
+              <DailyLimitScreen onBack={goBack} />
+            )}
+
+            {screen === null && (
               <>
                 <div className="card-header">
                   <div className="card-title">Welcome back</div>
@@ -225,16 +273,26 @@ export default function Login() {
                   <div className="field-group">
                     <label className="field-label">Student ID / Email</label>
                     <div className="field-wrap">
-                      <svg className="field-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                      <input type="text" placeholder="NetID or SRM Email" value={account} onChange={e => setAccount(e.target.value)} required autoComplete="username" />
+                      <svg className="field-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                        <circle cx="12" cy="7" r="4"/>
+                      </svg>
+                      <input type="text" placeholder="NetID or SRM Email"
+                        value={account} onChange={e => setAccount(e.target.value)}
+                        required autoComplete="username" />
                     </div>
                   </div>
 
-                  <div className="field-group" style={{ marginBottom:26 }}>
+                  <div className="field-group" style={{ marginBottom: 26 }}>
                     <label className="field-label">Academia Password</label>
                     <div className="field-wrap">
-                      <svg className="field-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                      <input type={showPass ? 'text' : 'password'} placeholder="••••••••••••" value={password} onChange={e => setPassword(e.target.value)} required autoComplete="current-password" />
+                      <svg className="field-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                        <rect x="3" y="11" width="18" height="11" rx="2"/>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                      </svg>
+                      <input type={showPass ? 'text' : 'password'} placeholder="••••••••••••"
+                        value={password} onChange={e => setPassword(e.target.value)}
+                        required autoComplete="current-password" />
                       <button type="button" className="eye-btn" onClick={() => setShowPass(v => !v)}>
                         {showPass
                           ? <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
