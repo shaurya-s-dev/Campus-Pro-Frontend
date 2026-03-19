@@ -1,18 +1,8 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
-import Sidebar from '@/components/Sidebar';
-import TimetableView from '@/components/TimetableView';
-import { DataStore, requireAuth, logout, sanitizeObject } from '@/lib/security';
-import MarksSection from '@/components/MarksSection';
 
-/* ── Small helpers ───────────────────────────────── */
-const Ico = ({ d, size = 16, sw = 1.7 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
-    stroke="currentColor" strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round">
-    <path d={d} />
-  </svg>
-);
+const DAY_NAMES = ['Mon','Tue','Wed','Thu','Fri'];
 
 function hexA(hex, a) {
   const r = parseInt(hex.slice(1,3),16);
@@ -20,461 +10,487 @@ function hexA(hex, a) {
   const b = parseInt(hex.slice(5,7),16);
   return `rgba(${r},${g},${b},${a})`;
 }
+
 function scoreColor(pct) {
-  return pct >= 80 ? 'var(--emerald)' : pct >= 60 ? 'var(--amber)' : 'var(--rose)';
-}
-function attColor(pct) {
-  return pct >= 85 ? 'var(--emerald)' : pct >= 75 ? 'var(--amber)' : 'var(--rose)';
+  return pct >= 80 ? '#10b981' : pct >= 60 ? '#f59e0b' : '#ef4444';
 }
 
-/* ── Circular SVG progress ───────────────────────── */
-function CircleProgress({ pct, color = 'var(--accent)', size = 60 }) {
-  const r = size / 2 - 6;
-  const circ = 2 * Math.PI * r;
-  const dash = circ * Math.min(pct / 100, 1);
-  return (
-    <svg width={size} height={size} style={{ transform:'rotate(-90deg)', flexShrink:0 }} className="no-transition">
-      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(255,255,255,.05)" strokeWidth={5} />
-      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={5}
-        strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
-        style={{ transition:'stroke-dasharray 1.1s cubic-bezier(.4,0,.2,1)', filter:`drop-shadow(0 0 4px ${color})` }}
-      />
-    </svg>
-  );
-}
-
-/* ── Animated marks sparkline ────────────────────── */
-function MiniSparkline({ tests, color }) {
+function GlowLineChart({ tests }) {
   const canvasRef = useRef(null);
   useEffect(() => {
-    if (!tests?.length) return;
+    if (!tests || tests.length === 0) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    const W = canvas.offsetWidth || 200; const H = 52;
+    const W = canvas.offsetWidth || 360;
+    const H = 140;
     const dpr = window.devicePixelRatio || 1;
-    canvas.width = W * dpr; canvas.height = H * dpr;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
     ctx.scale(dpr, dpr);
 
-    const pts = tests.map((t, i) => {
+    const pad = { top:30, right:16, bottom:26, left:38 };
+    const cW = W - pad.left - pad.right;
+    const cH = H - pad.top - pad.bottom;
+
+    const pts = tests.map((t,i) => {
       const s = parseFloat(t.marks?.scored) || 0;
       const tot = parseFloat(t.marks?.total) || 1;
-      const pct = (s / tot) * 100;
-      return { x: (i / Math.max(tests.length - 1, 1)) * W, y: H - (pct / 100) * H * 0.85 - 4, pct };
+      const pct = (s/tot)*100;
+      return {
+        x: pad.left + (i/Math.max(tests.length-1,1))*cW,
+        y: pad.top + cH - (pct/100)*cH,
+        pct, label:`${s}/${tot}`, xLabel:t.test, color:scoreColor(pct),
+      };
     });
 
-    let prog = 0; const start = performance.now();
+    let prog = 0;
+    const start = performance.now();
+
     function draw(now) {
-      prog = Math.min((now - start) / 900, 1);
-      const ease = 1 - Math.pow(1 - prog, 3);
-      ctx.clearRect(0, 0, W, H);
-      const count = Math.ceil(pts.length * ease);
-      const vis = pts.slice(0, count);
-      if (vis.length < 2) { if (prog < 1) requestAnimationFrame(draw); return; }
+      prog = Math.min((now-start)/1000,1);
+      const ease = 1-Math.pow(1-prog,4);
+      ctx.clearRect(0,0,W,H);
+
+      [0,25,50,75,100].forEach(v => {
+        const y = pad.top+cH-(v/100)*cH;
+        ctx.beginPath(); ctx.strokeStyle='rgba(255,255,255,0.05)'; ctx.lineWidth=1;
+        ctx.moveTo(pad.left,y); ctx.lineTo(pad.left+cW,y); ctx.stroke();
+        ctx.fillStyle='rgba(255,255,255,0.18)'; ctx.font='9px DM Sans,sans-serif';
+        ctx.textAlign='right'; ctx.fillText(v+'%',pad.left-5,y+3);
+      });
+
+      if (pts.length < 1) return;
+      const totalLen = Math.max(pts.length-1,1);
+      const drawTo = ease*totalLen;
+      const fullSeg = Math.floor(drawTo);
+      const partial = drawTo-fullSeg;
+      const animPts = pts.slice(0,fullSeg+1);
+      if (fullSeg < pts.length-1 && partial>0) {
+        const a=pts[fullSeg],b=pts[fullSeg+1];
+        animPts.push({x:a.x+(b.x-a.x)*partial,y:a.y+(b.y-a.y)*partial,color:a.color,partial:true});
+      }
+      if (animPts.length < 2) { if(prog<1) requestAnimationFrame(draw); return; }
+
+      const domColor = pts[pts.length-1]?.color||'#6366f1';
 
       ctx.beginPath();
-      ctx.moveTo(vis[0].x, H);
-      ctx.lineTo(vis[0].x, vis[0].y);
-      for (let i = 1; i < vis.length; i++) {
-        const p = vis[i-1], c = vis[i];
-        ctx.bezierCurveTo((p.x+c.x)/2, p.y, (p.x+c.x)/2, c.y, c.x, c.y);
+      ctx.moveTo(animPts[0].x,pad.top+cH);
+      ctx.lineTo(animPts[0].x,animPts[0].y);
+      for(let i=1;i<animPts.length;i++){
+        const prev=animPts[i-1],cur=animPts[i];
+        const cpx=(prev.x+cur.x)/2;
+        ctx.bezierCurveTo(cpx,prev.y,cpx,cur.y,cur.x,cur.y);
       }
-      ctx.lineTo(vis[vis.length-1].x, H);
+      ctx.lineTo(animPts[animPts.length-1].x,pad.top+cH);
       ctx.closePath();
-      const grad = ctx.createLinearGradient(0, 0, 0, H);
-      grad.addColorStop(0, color.replace(')', ', .22)').replace('var(--emerald)', 'rgba(16,185,129,.22)').replace('var(--amber)', 'rgba(245,158,11,.22)').replace('var(--rose)', 'rgba(244,63,94,.22)') || 'rgba(99,102,241,.22)');
-      grad.addColorStop(1, 'transparent');
-      ctx.fillStyle = grad; ctx.fill();
+      const fillGrad=ctx.createLinearGradient(0,pad.top,0,pad.top+cH);
+      fillGrad.addColorStop(0,hexA(domColor,0.3));
+      fillGrad.addColorStop(1,hexA(domColor,0.01));
+      ctx.fillStyle=fillGrad; ctx.fill();
 
       ctx.beginPath();
-      ctx.moveTo(vis[0].x, vis[0].y);
-      for (let i = 1; i < vis.length; i++) {
-        const p = vis[i-1], c = vis[i];
-        ctx.bezierCurveTo((p.x+c.x)/2, p.y, (p.x+c.x)/2, c.y, c.x, c.y);
+      ctx.moveTo(animPts[0].x,animPts[0].y);
+      for(let i=1;i<animPts.length;i++){
+        const prev=animPts[i-1],cur=animPts[i];
+        const cpx=(prev.x+cur.x)/2;
+        ctx.bezierCurveTo(cpx,prev.y,cpx,cur.y,cur.x,cur.y);
       }
-      ctx.strokeStyle = '#6366f1'; ctx.lineWidth = 2;
-      ctx.shadowColor = '#6366f1'; ctx.shadowBlur = 7;
-      ctx.stroke(); ctx.shadowBlur = 0;
-      if (prog < 1) requestAnimationFrame(draw);
+      ctx.strokeStyle=domColor; ctx.lineWidth=2.5;
+      ctx.lineJoin='round'; ctx.lineCap='round';
+      ctx.shadowColor=domColor; ctx.shadowBlur=10;
+      ctx.stroke(); ctx.shadowBlur=0;
+
+      pts.forEach((p,i) => {
+        const frac=Math.min(ease*totalLen-i+0.5,1);
+        if(frac<=0) return;
+        const r=5*Math.min(frac*2,1);
+        ctx.beginPath(); ctx.arc(p.x,p.y,r+4,0,Math.PI*2);
+        ctx.fillStyle=hexA(p.color,0.15); ctx.fill();
+        ctx.beginPath(); ctx.arc(p.x,p.y,r,0,Math.PI*2);
+        ctx.fillStyle=p.color; ctx.shadowColor=p.color; ctx.shadowBlur=12;
+        ctx.fill(); ctx.shadowBlur=0;
+        ctx.strokeStyle='#0d0d14'; ctx.lineWidth=2; ctx.stroke();
+        if(frac>=0.85){
+          ctx.font='bold 10px DM Sans,sans-serif';
+          const tw=ctx.measureText(p.label).width+12;
+          const bx=p.x-tw/2,by=p.y-24;
+          ctx.fillStyle=hexA(p.color,0.18);
+          ctx.beginPath();
+          if(ctx.roundRect) ctx.roundRect(bx,by,tw,14,4); else ctx.rect(bx,by,tw,14);
+          ctx.fill();
+          ctx.fillStyle=p.color; ctx.textAlign='center';
+          ctx.fillText(p.label,p.x,by+10);
+        }
+        ctx.fillStyle='rgba(255,255,255,0.28)';
+        ctx.font='9px DM Sans,sans-serif'; ctx.textAlign='center';
+        ctx.fillText(p.xLabel,p.x,H-4);
+      });
+      if(prog<1) requestAnimationFrame(draw);
     }
     requestAnimationFrame(draw);
-  }, [tests, color]);
+  },[tests]);
 
-  return <canvas ref={canvasRef} style={{ width:'100%', height:52, display:'block' }} className="no-transition" />;
+  return <canvas ref={canvasRef} style={{width:'100%',height:140,display:'block'}} />;
 }
 
-/* ── KPI Card ────────────────────────────────────── */
-function KPICard({ label, value, sub, color, icon, delay }) {
-  return (
-    <div className="kpi-card glass animate-up" style={{ animationDelay:`${delay}ms` }}>
-      <div className="kpi-top">
-        <div className="kpi-icon" style={{ color, background:`${color}12`, border:`1px solid ${color}1a` }}>
-          <Ico d={icon} size={14} />
-        </div>
-        <span className="kpi-label">{label}</span>
-      </div>
-      <div className="kpi-val" style={{ color }}>{value}</div>
-      {sub && <div className="kpi-sub">{sub}</div>}
-      <div className="kpi-glow" style={{ background:`radial-gradient(circle at bottom right, ${color}08, transparent 65%)` }} />
-      <style jsx>{`
-        .kpi-card { border-radius:var(--radius-lg); padding:18px; position:relative; overflow:hidden; transition:transform .2s,box-shadow .2s; }
-        .kpi-card:hover { transform:translateY(-3px); box-shadow:var(--shadow-md); }
-        .kpi-glow { position:absolute; inset:0; pointer-events:none; }
-        .kpi-top { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
-        .kpi-icon { width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; }
-        .kpi-label { font-size:11px; color:var(--text-3); text-transform:uppercase; letter-spacing:.5px; font-weight:600; }
-        .kpi-val { font-family:var(--font-mono); font-size:26px; font-weight:700; }
-        .kpi-sub { font-size:11px; color:var(--text-3); margin-top:5px; }
-      `}</style>
-    </div>
-  );
-}
-
-/* ── Greeting ────────────────────────────────────── */
-function greeting() {
-  const h = new Date().getHours();
-  return h < 12 ? 'Good Morning' : h < 17 ? 'Good Afternoon' : 'Good Evening';
-}
-
-/* ════════════════════════════════════════════════════
-   MAIN DASHBOARD
-   ════════════════════════════════════════════════════ */
 export default function Dashboard() {
   const router = useRouter();
-  const [data, setData]     = useState(null);
-  const [tab, setTab]       = useState('overview');
+  const [data,setData] = useState(null);
+  const [tab,setTab] = useState('attendance');
 
   useEffect(() => {
-    if (!requireAuth(router)) return;
-    const raw = DataStore.get();
-    if (!raw) { router.replace('/login'); return; }
-    setData(sanitizeObject(raw));
-  }, []);
+    const stored = sessionStorage.getItem('academia_data');
+    if(!stored){router.push('/');return;}
+    setData(JSON.parse(stored));
+  },[]);
 
-  // Respect ?tab= query param
-  useEffect(() => {
-    if (router.query.tab) setTab(router.query.tab);
-  }, [router.query.tab]);
+  const logout = () => { localStorage.clear(); sessionStorage.clear(); router.push('/'); };
 
-  if (!data) return (
-    <div style={{ minHeight:'100vh', background:'var(--bg-void)', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:16 }}>
-      <div className="spinner" style={{ width:32, height:32 }} />
-      <p style={{ color:'var(--text-3)', fontSize:13 }}>Loading your workspace…</p>
+  if(!data) return (
+    <div style={{minHeight:'100vh',background:'#0a0a0f',display:'flex',alignItems:'center',justifyContent:'center'}}>
+      <div style={{width:32,height:32,border:'3px solid rgba(99,102,241,0.15)',borderTopColor:'#6366f1',borderRadius:'50%',animation:'spin 0.8s linear infinite'}}/>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
 
-  const user        = data?.user        || {};
-  const attendance  = data?.attendance?.attendance || [];
-  const marks       = data?.marks?.marks           || [];
-  const timetable   = data?.timetable              || null;
-  const courses     = data?.courses?.courses       || [];
+  const user = data?.user||{};
+  const attendance = data?.attendance?.attendance||[];
+  const marks = data?.marks?.marks||[];
+  const timetable = data?.timetable?.schedule||[];
+  const courses = data?.courses?.courses||[];
+  const avgAtt = attendance.length
+    ? (attendance.reduce((s,a)=>s+parseFloat(a.attendancePercentage||0),0)/attendance.length).toFixed(1)
+    : '—';
+  const below75 = attendance.filter(a=>parseFloat(a.attendancePercentage)<75).length;
 
-  const avgAtt   = attendance.length
-    ? (attendance.reduce((s, a) => s + parseFloat(a.attendancePercentage || 0), 0) / attendance.length).toFixed(1)
-    : 0;
-  const below75  = attendance.filter(a => parseFloat(a.attendancePercentage) < 75).length;
-  const safeAtt  = attendance.filter(a => parseFloat(a.attendancePercentage) >= 75).length;
-  const avgScore = marks.length
-    ? (marks.reduce((s, m) => {
-        const sc  = parseFloat(m.overall?.scored) || 0;
-        const tot = parseFloat(m.overall?.total)  || 1;
-        return s + (sc / tot) * 100;
-      }, 0) / marks.length).toFixed(1)
-    : 0;
-
-  /* ─────────────────── RENDER ─────────────────── */
   return (
     <>
-      <Head><title>CampusPro — {user.name || 'Dashboard'}</title></Head>
-
-      <div className="app-shell">
-        {/* New premium sidebar */}
-        <Sidebar
-          activeTab={tab}
-          onTabChange={setTab}
-          user={user}
-          below75={below75}
-        />
-
-        {/* Main content */}
-        <main className="main-content">
-
-          {/* ── OVERVIEW ──────────────────────────── */}
-          {tab === 'overview' && (
-            <div className="tab-panel animate-in">
-              <div className="page-header">
-                <div>
-                  <h1 className="page-title">{greeting()}, <span className="grad-text">{user.name?.split(' ')[0] || 'Student'}</span> 👋</h1>
-                  <p className="page-sub">{user.department?.replace(/\(.*\)/,'').trim()} · {user.section} Section · Year {user.year}</p>
-                </div>
-              </div>
-
-              <div className="kpi-grid">
-                <KPICard label="Attendance"  value={`${avgAtt}%`} color="var(--accent-light)" icon="M22 12l-4 4m0 0l-4-4m4 4V8M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16z" sub={`${safeAtt} safe, ${below75} danger`} delay={0} />
-                <KPICard label="Avg Score"   value={`${avgScore}%`} color={scoreColor(parseFloat(avgScore))} icon="M18 20V10m-6 10V4M6 20v-6" sub={`${marks.length} subjects tracked`} delay={70} />
-                <KPICard label="Subjects"    value={courses.length} color="var(--cyan)" icon="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" sub={`${courses.filter(c=>c.slotType==='Theory').length} theory · ${courses.filter(c=>c.slotType==='Practical').length} lab`} delay={140} />
-                <KPICard label="Semester"    value={user.semester}  color="var(--amber)"  icon="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" sub={user.program?.slice(0,22)} delay={210} />
-              </div>
-
-              {below75 > 0 && (
-                <div className="alert-banner animate-up">
-                  <Ico d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zm0-7v-2m0-4h.01" />
-                  <strong>{below75} subject{below75 > 1 ? 's' : ''}</strong> below 75% attendance — immediate action needed.
-                  <button className="alert-action" onClick={() => setTab('attendance')}>View →</button>
-                </div>
-              )}
-
-              <div className="section-row">
-                <h2 className="section-label">Attendance Overview</h2>
-                <button className="see-all" onClick={() => setTab('attendance')}>View all →</button>
-              </div>
-
-              <div className="att-mini-grid">
-                {attendance.slice(0, 6).map((a, i) => {
-                  const pct = parseFloat(a.attendancePercentage);
-                  const clr = attColor(pct);
-                  const conducted = parseFloat(a.hoursConducted) || 0;
-                  const absent    = parseFloat(a.hoursAbsent) || 0;
-                  const attended  = conducted - absent;
-                  const canMiss   = Math.floor(attended - 0.75 * conducted);
-                  return (
-                    <div key={i} className="att-mini-card glass animate-up" style={{ animationDelay:`${i * 55}ms` }}>
-                      <div className="att-mini-row">
-                        <CircleProgress pct={pct} color={clr} size={50} />
-                        <div className="att-mini-info">
-                          <div className="att-mini-name">{a.courseTitle}</div>
-                          <div className="att-mini-code">{a.courseCode}</div>
-                          <div className="att-mini-pct" style={{ color:clr }}>{a.attendancePercentage}%</div>
-                        </div>
-                      </div>
-                      <div className="att-mini-hrs">{attended}/{conducted} hrs</div>
-                      <div className="att-mini-tag" style={{
-                        color:canMiss>=0?'var(--emerald)':'var(--rose)',
-                        background:canMiss>=0?'var(--emerald-dim)':'var(--rose-dim)',
-                        border:`1px solid ${canMiss>=0?'var(--emerald-border)':'rgba(244,63,94,.18)'}`,
-                      }}>
-                        {canMiss >= 0 ? `✓ Miss ${canMiss} more` : `⚠ Need ${Math.abs(canMiss)} classes`}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+      <Head><title>CampusPro — {user.name||'Dashboard'}</title></Head>
+      <div className="app">
+        <aside className="sidebar">
+          <div className="brand">⬡ CAMPUS<strong>PRO</strong></div>
+          <div className="user-box">
+            <div className="avatar">{(user.name||'S')[0]}</div>
+            <div>
+              <div className="uname">{user.name}</div>
+              <div className="ureg">{user.regNumber}</div>
+              <div className="udept">{user.department?.replace(/\(.*\)/,'').trim()}</div>
             </div>
-          )}
+          </div>
+          <div className="stats-mini">
+            <div className="sm"><div className="smv">{user.semester}</div><div className="sml">Sem</div></div>
+            <div className="sm"><div className="smv" style={{color:below75>0?'#ef4444':'#10b981'}}>{below75}</div><div className="sml">&lt;75%</div></div>
+            <div className="sm"><div className="smv">{avgAtt}%</div><div className="sml">Avg</div></div>
+          </div>
+          <nav>
+            {[
+              {id:'attendance',label:'Attendance'},
+              {id:'marks',label:'Marks'},
+              {id:'timetable',label:'Timetable'},
+              {id:'courses',label:'Courses'},
+            ].map(t=>(
+              <button key={t.id} className={`nb${tab===t.id?' nba':''}`} onClick={()=>setTab(t.id)}>{t.label}</button>
+            ))}
+          </nav>
+          <button className="logout" onClick={logout}>↩ Sign out</button>
+        </aside>
 
-          {/* ── ATTENDANCE ────────────────────────── */}
-          {tab === 'attendance' && (
-            <div className="tab-panel animate-in">
-              <div className="page-header">
-                <h1 className="page-title">Attendance</h1>
-              </div>
-              <div className="sum-row">
+        <main className="main">
+
+          {tab==='attendance' && (
+            <section>
+              <h2 className="title">Attendance</h2>
+              <div className="sum-cards">
                 {[
-                  { v:`${avgAtt}%`, l:'Average', c:'var(--accent-light)' },
-                  { v:safeAtt,     l:'Safe ≥ 75%', c:'var(--emerald)' },
-                  { v:below75,     l:'Danger < 75%', c:'var(--rose)' },
-                  { v:attendance.length, l:'Total', c:'var(--amber)' },
-                ].map((s, i) => (
-                  <div key={i} className="sum-card glass">
-                    <div className="sum-val" style={{ color:s.c }}>{s.v}</div>
-                    <div className="sum-lbl">{s.l}</div>
+                  {label:'Average',val:avgAtt+'%',color:'#a5b4fc'},
+                  {label:'Safe ≥ 75%',val:attendance.filter(a=>parseFloat(a.attendancePercentage)>=75).length,color:'#6ee7b7'},
+                  {label:'Danger < 75%',val:below75,color:'#fca5a5'},
+                  {label:'Subjects',val:attendance.length,color:'#fde68a'},
+                ].map((c,i)=>(
+                  <div key={i} className="sc">
+                    <div className="scv" style={{color:c.color}}>{c.val}</div>
+                    <div className="scl">{c.label}</div>
                   </div>
                 ))}
               </div>
               <div className="att-list">
-                {attendance.map((a, i) => {
-                  const pct = parseFloat(a.attendancePercentage);
-                  const clr = attColor(pct);
-                  const conducted = parseFloat(a.hoursConducted) || 0;
-                  const absent    = parseFloat(a.hoursAbsent) || 0;
-                  const attended  = conducted - absent;
-                  const canMiss   = Math.floor(attended - 0.75 * conducted);
+                {attendance.map((a,i)=>{
+                  const pct=parseFloat(a.attendancePercentage);
+                  const clr=pct>=85?'#10b981':pct>=75?'#f59e0b':'#ef4444';
+                  const conducted=parseFloat(a.hoursConducted)||0;
+                  const absent=parseFloat(a.hoursAbsent)||0;
+                  const attended=conducted-absent;
+                  const canMiss=Math.floor(attended-0.75*conducted);
                   return (
-                    <div key={i} className="att-row glass animate-up" style={{ animationDelay:`${i * 40}ms` }}>
-                      <CircleProgress pct={pct} color={clr} size={56} />
-                      <div className="att-row-info">
-                        <div className="att-row-name">{a.courseTitle}</div>
-                        <div className="att-row-meta">{a.courseCode} · {a.category} · {a.facultyName?.split('(')[0]?.trim()}</div>
-                        <div className="progress-track" style={{ marginTop:8 }}>
-                          <div className="progress-fill" style={{ width:`${Math.min(pct,100)}%`, background:clr, animationDelay:`${i*.1}s` }} />
-                        </div>
+                    <div key={i} className="att-row">
+                      <div className="att-info">
+                        <div className="att-name">{a.courseTitle}</div>
+                        <div className="att-meta">{a.courseCode} · {a.category} · {a.facultyName?.split('(')[0]?.trim()}</div>
+                        <div className="bbar"><div className="bfill" style={{width:`${Math.min(pct,100)}%`,background:clr}}/></div>
                       </div>
-                      <div className="att-row-right">
-                        <div className="att-pct-big" style={{ color:clr }}>{a.attendancePercentage}%</div>
-                        <div className="att-hrs-label">{attended}/{conducted} hrs</div>
-                        <div className="att-tag" style={{
-                          color:canMiss>=0?'var(--emerald)':'var(--rose)',
-                          background:canMiss>=0?'var(--emerald-dim)':'var(--rose-dim)',
-                          border:`1px solid ${canMiss>=0?'var(--emerald-border)':'rgba(244,63,94,.18)'}`,
-                        }}>
-                          {canMiss >= 0 ? `Can skip ${canMiss} more` : `Need ${Math.abs(canMiss)} more`}
+                      <div className="att-right">
+                        <div className="att-pct" style={{color:clr}}>{a.attendancePercentage}%</div>
+                        <div className="att-hrs">{attended}/{conducted} hrs</div>
+                        <div className="att-tag" style={{color:canMiss>=0?'#6ee7b7':'#fca5a5',background:canMiss>=0?'rgba(16,185,129,0.08)':'rgba(239,68,68,0.08)'}}>
+                          {canMiss>=0?`Miss ${canMiss} more`:`Need ${Math.abs(canMiss)} more`}
                         </div>
                       </div>
                     </div>
                   );
                 })}
               </div>
-            </div>
+            </section>
           )}
 
-          {/* ── MARKS ─────────────────────────────── */}
-          {tab === 'marks' && (
-            <div className="tab-panel animate-in">
-              <div className="page-header" style={{ marginBottom:20 }}>
-                <h1 className="page-title">Marks</h1>
-                <span className="tag tag-accent">{marks.length} subjects</span>
-              </div>
-              <MarksSection marks={marks} />
-            </div>
-          )}
-
-          {/* ── TIMETABLE ─────────────────────────── */}
-          {tab === 'timetable' && (
-            <div className="tab-panel animate-in">
-              <TimetableView timetableData={timetable} />
-            </div>
-          )}
-
-          {/* ── COURSES ───────────────────────────── */}
-          {tab === 'courses' && (
-            <div className="tab-panel animate-in">
-              <div className="page-header">
-                <h1 className="page-title">Courses</h1>
-                <span className="tag tag-accent">{courses.length} enrolled</span>
-              </div>
-              <div className="courses-grid">
-                {courses.map((c, i) => (
-                  <div key={i} className="cc-card glass animate-up" style={{ animationDelay:`${i * 45}ms` }}>
-                    <div className="cc-top">
-                      <span className="cc-code">{c.code}</span>
-                      <span className={`tag ${c.slotType === 'Theory' ? 'tag-accent' : 'tag-emerald'}`} style={{ fontSize:9.5 }}>
-                        {c.slotType || '—'}
-                      </span>
-                    </div>
-                    <div className="cc-title">{c.title}</div>
-                    <div className="divider" style={{ margin:'12px 0' }} />
-                    <div className="cc-meta">
-                      <div className="cc-meta-row">
-                        <span>👤</span><span>{c.faculty?.split('(')[0]?.trim() || '—'}</span>
+          {tab==='marks' && (
+            <section>
+              <h2 className="title">Marks</h2>
+              <div className="marks-grid">
+                {marks.map((m,i)=>{
+                  const sc=parseFloat(m.overall?.scored)||0;
+                  const tot=parseFloat(m.overall?.total)||0;
+                  const pct=tot>0?(sc/tot)*100:0;
+                  const clr=scoreColor(pct);
+                  const tests=(m.testPerformance||[]).slice().reverse();
+                  return (
+                    <div key={i} className="mk-card">
+                      <div className="mk-head">
+                        <div>
+                          <div className="mk-code">{m.courseCode}</div>
+                          <div className="mk-name">{m.courseName}</div>
+                          <div className="mk-type">{m.courseType}</div>
+                        </div>
+                        <div className="mk-score-block">
+                          <div className="mk-score" style={{color:clr}}>{sc.toFixed(2)}</div>
+                          <div className="mk-denom">/ {tot.toFixed(2)}</div>
+                          <div className="mk-badge" style={{color:clr,background:hexA(clr,0.1),border:`1px solid ${hexA(clr,0.25)}`}}>{pct.toFixed(1)}%</div>
+                        </div>
                       </div>
-                      <div className="cc-meta-row">
-                        <span>🏫</span><span>{c.room} · {c.slot} · ⭐ {c.credit} cr</span>
+                      {tests.length>0
+                        ? <div className="mk-chart"><GlowLineChart tests={tests}/></div>
+                        : <div className="mk-empty">No test data</div>
+                      }
+                      <div className="mk-footer">
+                        <div className="mk-bar-label">
+                          <span>Total: {sc.toFixed(2)} / {tot.toFixed(2)}</span>
+                          <span style={{color:clr}}>{pct.toFixed(1)}%</span>
+                        </div>
+                        <div className="bbar">
+                          <div className="bfill" style={{width:`${Math.min(pct,100)}%`,background:clr,boxShadow:`0 0 6px ${hexA(clr,0.5)}`}}/>
+                        </div>
                       </div>
                     </div>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
+          {tab==='timetable' && (
+            <section>
+              <h2 className="title">Timetable</h2>
+              <div style={{overflowX:'auto'}}>
+                <table className="tt">
+                  <thead>
+                    <tr>
+                      <th style={{width:46}}></th>
+                      {['8:00','8:50','9:45','10:40','11:35','12:30','1:15','2:10','3:05','4:00'].map((s,i)=><th key={i}>{s}</th>)}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {timetable.map((d,di)=>(
+                      <tr key={di}>
+                        <td className="tt-day">{DAY_NAMES[d.day-1]||d.day}</td>
+                        {(d.table||[]).map((slot,si)=>(
+                          <td key={si} className="tt-cell">
+                            {slot&&<div className={`slot ${slot.courseType==='Practical'?'sp':'st'}`}>
+                              <div className="slot-c">{slot.code}</div>
+                              <div className="slot-r">{slot.roomNo}</div>
+                            </div>}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+
+          {tab==='courses' && (
+            <section>
+              <div className="courses-header">
+                <h2 className="title" style={{margin:0}}>Courses</h2>
+                <div className="courses-count">{courses.length} enrolled</div>
+              </div>
+
+              {/* Summary strip */}
+              <div className="courses-strip">
+                {[
+                  {label:'Theory',    val:courses.filter(c=>c.slotType==='Theory').length,    color:'#818cf8'},
+                  {label:'Practical', val:courses.filter(c=>c.slotType==='Practical').length, color:'#6ee7b7'},
+                  {label:'Total Credits', val:courses.reduce((s,c)=>s+(parseFloat(c.credit)||0),0), color:'#fde68a'},
+                ].map((s,i)=>(
+                  <div key={i} className="cs-pill">
+                    <span className="cs-val" style={{color:s.color}}>{s.val}</span>
+                    <span className="cs-lbl">{s.label}</span>
                   </div>
                 ))}
               </div>
-            </div>
+
+              <div className="courses-grid">
+                {courses.map((c,i)=>{
+                  const isTheory = c.slotType==='Theory';
+                  const faculty = c.faculty?.split('(')[0]?.trim()||'—';
+                  const accentColor = isTheory ? '#818cf8' : '#6ee7b7';
+                  const accentBg   = isTheory ? 'rgba(99,102,241,0.08)' : 'rgba(16,185,129,0.06)';
+                  // Parse room and slot from combined string e.g. "904 B" or separate fields
+                  const roomPart = c.room||'';
+                  const slotPart = c.slot||'';
+                  return (
+                    <div key={i} className="cc" style={{'--accent':accentColor,'--accentBg':accentBg}}>
+                      {/* Top accent bar */}
+                      <div className="cc-bar" style={{background:accentColor}}/>
+
+                      {/* Header */}
+                      <div className="cc-head">
+                        <div>
+                          <div className="cc-code">{c.code}</div>
+                          <div className="cc-title">{c.title}</div>
+                        </div>
+                        <div className={`cc-badge ${isTheory?'cb-t':'cb-p'}`}>{c.slotType||'—'}</div>
+                      </div>
+
+                      {/* Faculty */}
+                      <div className="cc-faculty">
+                        <div className="cc-fav">{faculty[0]||'?'}</div>
+                        <div className="cc-fname">{faculty}</div>
+                      </div>
+
+                      {/* Info grid */}
+                      <div className="cc-info">
+                        <div className="ci-box">
+                          <div className="ci-icon">🏫</div>
+                          <div className="ci-val">{roomPart||'—'}</div>
+                          <div className="ci-lbl">Room</div>
+                        </div>
+                        <div className="ci-box">
+                          <div className="ci-icon">🕐</div>
+                          <div className="ci-val">{slotPart||'—'}</div>
+                          <div className="ci-lbl">Slot</div>
+                        </div>
+                        <div className="ci-box">
+                          <div className="ci-icon">⭐</div>
+                          <div className="ci-val">{c.credit||'0'}</div>
+                          <div className="ci-lbl">Credits</div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
           )}
+
         </main>
       </div>
 
       <style jsx global>{`
-        body { background: var(--bg-void); overflow-x: hidden; }
+        @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap');
+        *{box-sizing:border-box;margin:0;padding:0}
+        body{background:#0a0a0f;color:#e2e8f0;font-family:'DM Sans',sans-serif}
+        @keyframes spin{to{transform:rotate(360deg)}}
       `}</style>
 
       <style jsx>{`
-        /* Shell */
-        .app-shell { display:flex; min-height:100vh; }
-        .main-content { flex:1; padding:32px 36px; min-width:0; overflow-y:auto; }
-
-        /* Page header */
-        .page-header { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:24px; flex-wrap:wrap; }
-        .page-title { font-family:var(--font-display); font-size:26px; font-weight:800; color:var(--text-1); letter-spacing:-.5px; }
-        .page-sub { font-size:13px; color:var(--text-3); margin-top:3px; }
-
-        /* KPI */
-        .kpi-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:20px; }
-
-        /* Alert */
-        .alert-banner {
-          display:flex; align-items:center; gap:10px;
-          background:var(--rose-dim); border:1px solid rgba(244,63,94,.22);
-          border-radius:var(--radius-md); padding:12px 16px;
-          font-size:13px; color:var(--rose); margin-bottom:20px;
-        }
-        .alert-banner strong { color:var(--rose); font-weight:700; }
-        .alert-action { margin-left:auto; background:none; border:1px solid rgba(244,63,94,.3); color:var(--rose); border-radius:6px; padding:4px 10px; font-size:12px; cursor:pointer; transition:all .15s; }
-        .alert-action:hover { background:rgba(244,63,94,.12); }
-
-        /* Section row */
-        .section-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
-        .section-label { font-family:var(--font-display); font-size:15px; font-weight:700; color:var(--text-1); }
-        .see-all { background:none; border:none; color:var(--accent-light); font-size:12px; cursor:pointer; }
-        .see-all:hover { text-decoration:underline; }
-
-        /* Attendance mini grid */
-        .att-mini-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:10px; }
-        .att-mini-card { border-radius:var(--radius-md); padding:14px; transition:transform .2s; }
-        .att-mini-card:hover { transform:translateY(-2px); }
-        .att-mini-row { display:flex; gap:12px; align-items:flex-start; margin-bottom:8px; }
-        .att-mini-info { flex:1; min-width:0; }
-        .att-mini-name { font-size:12px; font-weight:500; color:var(--text-1); line-height:1.3; }
-        .att-mini-code { font-family:var(--font-mono); font-size:10px; color:var(--text-3); margin-top:2px; }
-        .att-mini-pct { font-family:var(--font-mono); font-size:18px; font-weight:700; margin-top:5px; }
-        .att-mini-hrs { font-size:11px; color:var(--text-3); margin-bottom:7px; }
-        .att-mini-tag { font-size:10px; font-weight:600; padding:3px 9px; border-radius:5px; display:inline-block; }
-
-        /* Attendance list */
-        .sum-row { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:20px; }
-        .sum-card { border-radius:var(--radius-md); padding:16px; text-align:center; }
-        .sum-val { font-family:var(--font-mono); font-size:24px; font-weight:700; }
-        .sum-lbl { font-size:11px; color:var(--text-3); text-transform:uppercase; letter-spacing:.5px; margin-top:4px; }
-
-        .att-list { display:flex; flex-direction:column; gap:8px; }
-        .att-row { display:flex; align-items:center; gap:16px; border-radius:var(--radius-md); padding:14px 16px; transition:transform .18s; }
-        .att-row:hover { transform:translateX(4px); }
-        .att-row-info { flex:1; min-width:0; }
-        .att-row-name { font-size:13.5px; font-weight:500; color:var(--text-1); }
-        .att-row-meta { font-size:11px; color:var(--text-3); margin-top:2px; }
-        .att-row-right { text-align:right; flex-shrink:0; }
-        .att-pct-big { font-family:var(--font-mono); font-size:22px; font-weight:700; }
-        .att-hrs-label { font-size:11px; color:var(--text-3); margin:2px 0 7px; }
-        .att-tag { font-size:10px; font-weight:600; padding:3px 9px; border-radius:5px; display:inline-block; }
-
-        /* Marks */
-        .marks-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(290px,1fr)); gap:14px; }
-        .mk-card { border-radius:var(--radius-lg); padding:18px; display:flex; flex-direction:column; gap:10px; transition:transform .22s,box-shadow .22s; }
-        .mk-card:hover { transform:translateY(-4px); box-shadow:var(--shadow-md); }
-        .mk-head { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
-        .mk-code { font-family:var(--font-mono); font-size:10px; color:var(--accent-light); margin-bottom:4px; }
-        .mk-name { font-size:13px; font-weight:600; color:var(--text-1); line-height:1.35; }
-        .mk-score-block { text-align:right; flex-shrink:0; }
-        .mk-score { font-family:var(--font-mono); font-size:26px; font-weight:700; line-height:1; }
-        .mk-denom { font-size:11px; color:var(--text-3); margin-top:1px; }
-        .mk-pct-badge { font-size:11px; font-weight:600; padding:3px 8px; border-radius:5px; margin-top:5px; display:inline-block; }
-        .mk-chart-wrap { background:rgba(0,0,0,.15); border-radius:8px; padding:6px 4px 2px; }
-        .mk-empty { font-size:12px; color:var(--text-4); text-align:center; padding:18px 0; }
-
-        /* Courses */
-        .courses-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(270px,1fr)); gap:12px; }
-        .cc-card { border-radius:var(--radius-md); padding:16px; transition:transform .2s; }
-        .cc-card:hover { transform:translateY(-2px); }
-        .cc-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
-        .cc-code { font-family:var(--font-mono); font-size:11px; color:var(--accent-light); }
-        .cc-title { font-size:13px; font-weight:600; color:var(--text-1); line-height:1.4; }
-        .cc-meta { display:flex; flex-direction:column; gap:4px; }
-        .cc-meta-row { display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-3); }
-
-        /* Tab panel */
-        .tab-panel { display:flex; flex-direction:column; gap:20px; }
-
-        /* Animations */
-        .animate-in { animation: fadeIn .35s cubic-bezier(.4,0,.2,1) both; }
-        @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
-
-        /* Responsive */
-        @media (max-width: 1100px) { .kpi-grid { grid-template-columns:repeat(2,1fr); } }
-        @media (max-width: 860px) {
-          .main-content { padding:58px 16px 24px; }
-          .kpi-grid { grid-template-columns:repeat(2,1fr); }
-          .sum-row { grid-template-columns:repeat(2,1fr); }
-        }
-        @media (max-width: 520px) {
-          .kpi-grid { grid-template-columns:1fr 1fr; }
-          .att-mini-grid { grid-template-columns:1fr; }
-          .marks-grid { grid-template-columns:1fr; }
-        }
+        .app{display:flex;min-height:100vh}
+        .sidebar{width:220px;min-height:100vh;background:rgba(255,255,255,0.025);border-right:1px solid rgba(255,255,255,0.06);padding:22px 14px;display:flex;flex-direction:column;gap:16px;position:sticky;top:0;height:100vh;overflow-y:auto;flex-shrink:0}
+        .brand{font-family:'Space Mono',monospace;font-size:15px;color:#fff}
+        .brand strong{color:#6366f1}
+        .user-box{display:flex;gap:10px;align-items:flex-start;background:rgba(99,102,241,0.07);border:1px solid rgba(99,102,241,0.12);border-radius:10px;padding:12px}
+        .avatar{width:34px;height:34px;background:#6366f1;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0}
+        .uname{font-size:12px;font-weight:500;color:#fff;line-height:1.3}
+        .ureg{font-size:10px;color:rgba(255,255,255,0.35);font-family:'Space Mono',monospace;margin-top:2px}
+        .udept{font-size:10px;color:rgba(255,255,255,0.28);margin-top:3px;line-height:1.4}
+        .stats-mini{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+        .sm{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:7px;text-align:center}
+        .smv{font-family:'Space Mono',monospace;font-size:13px;font-weight:700;color:#fff}
+        .sml{font-size:9px;color:rgba(255,255,255,0.28);margin-top:2px;text-transform:uppercase;letter-spacing:0.5px}
+        nav{display:flex;flex-direction:column;gap:2px;flex:1}
+        .nb{background:none;border:none;color:rgba(255,255,255,0.38);text-align:left;padding:9px 10px;border-radius:8px;cursor:pointer;font-size:13px;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:8px;transition:all 0.15s;width:100%}
+        .nb:hover{background:rgba(255,255,255,0.05);color:#e2e8f0}
+        .nba{background:rgba(99,102,241,0.15);color:#a5b4fc}
+        .logout{background:none;border:1px solid rgba(255,255,255,0.07);color:rgba(255,255,255,0.28);padding:9px;border-radius:8px;cursor:pointer;font-size:12px;font-family:'DM Sans',sans-serif;transition:all 0.15s}
+        .logout:hover{border-color:rgba(239,68,68,0.35);color:#fca5a5}
+        .main{flex:1;padding:36px 40px;min-width:0}
+        .title{font-family:'Space Mono',monospace;font-size:18px;color:#fff;margin-bottom:22px;letter-spacing:-0.3px}
+        .sum-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:24px}
+        .sc{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:11px;padding:16px}
+        .scv{font-family:'Space Mono',monospace;font-size:24px;font-weight:700}
+        .scl{font-size:11px;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:0.6px;margin-top:4px}
+        .att-list{display:flex;flex-direction:column;gap:7px}
+        .att-row{background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.055);border-radius:11px;padding:14px 16px;display:flex;gap:14px;align-items:center;transition:border-color 0.15s}
+        .att-row:hover{border-color:rgba(255,255,255,0.12)}
+        .att-info{flex:1;min-width:0}
+        .att-name{font-size:13px;font-weight:500;color:#f1f5f9;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .att-meta{font-size:11px;color:rgba(255,255,255,0.3);margin-bottom:8px}
+        .bbar{height:4px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden}
+        .bfill{height:100%;border-radius:2px;transition:width 1.2s ease}
+        .att-right{text-align:right;flex-shrink:0}
+        .att-pct{font-family:'Space Mono',monospace;font-size:20px;font-weight:700}
+        .att-hrs{font-size:11px;color:rgba(255,255,255,0.3);margin:2px 0 6px}
+        .att-tag{font-size:10px;padding:3px 8px;border-radius:5px;display:inline-block;font-weight:500}
+        .marks-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+        .mk-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:12px;transition:transform 0.2s,border-color 0.2s,box-shadow 0.2s}
+        .mk-card:hover{transform:translateY(-3px);border-color:rgba(99,102,241,0.35);box-shadow:0 8px 30px rgba(0,0,0,0.3)}
+        .mk-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+        .mk-code{font-family:'Space Mono',monospace;font-size:10px;color:#818cf8;margin-bottom:4px}
+        .mk-name{font-size:13px;font-weight:500;color:#f1f5f9;line-height:1.35}
+        .mk-type{font-size:10px;color:rgba(255,255,255,0.28);margin-top:3px;text-transform:uppercase;letter-spacing:0.5px}
+        .mk-score-block{text-align:right;flex-shrink:0}
+        .mk-score{font-family:'Space Mono',monospace;font-size:26px;font-weight:700;line-height:1}
+        .mk-denom{font-size:11px;color:rgba(255,255,255,0.28);margin-top:1px}
+        .mk-badge{font-size:11px;font-weight:600;padding:3px 8px;border-radius:5px;margin-top:5px;display:inline-block}
+        .mk-chart{background:rgba(0,0,0,0.22);border-radius:10px;padding:6px 4px 2px}
+        .mk-empty{font-size:12px;color:rgba(255,255,255,0.2);text-align:center;padding:22px 0}
+        .mk-footer{padding-top:2px}
+        .mk-bar-label{display:flex;justify-content:space-between;font-size:11px;color:rgba(255,255,255,0.35);margin-bottom:5px;font-family:'Space Mono',monospace}
+        .tt{border-collapse:collapse;min-width:860px;width:100%}
+        .tt th{padding:8px 10px;font-size:10px;color:rgba(255,255,255,0.28);border:1px solid rgba(255,255,255,0.05);text-align:center;background:rgba(255,255,255,0.02)}
+        .tt td{border:1px solid rgba(255,255,255,0.04);padding:4px;height:54px;vertical-align:top}
+        .tt-day{font-size:11px;color:rgba(255,255,255,0.45);white-space:nowrap;padding:8px 12px !important;font-weight:500;text-align:center}
+        .tt-cell{min-width:70px}
+        .slot{border-radius:6px;padding:5px 7px;height:100%}
+        .st{background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.18)}
+        .sp{background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.15)}
+        .slot-c{font-size:10px;font-family:'Space Mono',monospace;color:#a5b4fc}
+        .slot-r{font-size:9px;color:rgba(255,255,255,0.28);margin-top:2px}
+        .courses-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+        .courses-count{font-family:'Space Mono',monospace;font-size:11px;color:rgba(255,255,255,0.3);background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);padding:4px 12px;border-radius:20px}
+        .courses-strip{display:flex;gap:10px;margin-bottom:22px}
+        .cs-pill{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:10px 16px}
+        .cs-val{font-family:'Space Mono',monospace;font-size:18px;font-weight:700}
+        .cs-lbl{font-size:11px;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:0.5px}
+        .courses-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px}
+        .cc{background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.07);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;gap:0;transition:transform 0.2s,border-color 0.2s,box-shadow 0.2s;position:relative}
+        .cc:hover{transform:translateY(-3px);border-color:var(--accent,rgba(99,102,241,0.4));box-shadow:0 8px 28px rgba(0,0,0,0.28)}
+        .cc-bar{height:3px;width:100%;flex-shrink:0}
+        .cc-head{display:flex;justify-content:space-between;align-items:flex-start;padding:16px 16px 10px;gap:10px}
+        .cc-code{font-family:'Space Mono',monospace;font-size:10px;color:#818cf8;margin-bottom:5px}
+        .cc-title{font-size:13px;font-weight:500;color:#f1f5f9;line-height:1.4}
+        .cc-badge{font-size:10px;padding:4px 10px;border-radius:6px;font-weight:500;white-space:nowrap;flex-shrink:0}
+        .cb-t{background:rgba(99,102,241,0.12);color:#a5b4fc;border:1px solid rgba(99,102,241,0.2)}
+        .cb-p{background:rgba(16,185,129,0.1);color:#6ee7b7;border:1px solid rgba(16,185,129,0.2)}
+        .cc-faculty{display:flex;align-items:center;gap:9px;padding:0 16px 12px;border-bottom:1px solid rgba(255,255,255,0.05)}
+        .cc-fav{width:24px;height:24px;border-radius:6px;background:var(--accentBg,rgba(99,102,241,0.1));border:1px solid var(--accent,rgba(99,102,241,0.2));display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--accent,#818cf8);flex-shrink:0}
+        .cc-fname{font-size:12px;color:rgba(255,255,255,0.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .cc-info{display:grid;grid-template-columns:repeat(3,1fr);gap:0}
+        .ci-box{display:flex;flex-direction:column;align-items:center;padding:12px 8px;border-right:1px solid rgba(255,255,255,0.05);gap:3px}
+        .ci-box:last-child{border-right:none}
+        .ci-icon{font-size:14px;margin-bottom:2px}
+        .ci-val{font-family:'Space Mono',monospace;font-size:12px;font-weight:700;color:#f1f5f9;text-align:center}
+        .ci-lbl{font-size:9px;color:rgba(255,255,255,0.28);text-transform:uppercase;letter-spacing:0.5px}
       `}</style>
     </>
   );
