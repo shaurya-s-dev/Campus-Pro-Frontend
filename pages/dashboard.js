@@ -15,7 +15,7 @@ const Ico = ({ d, size = 15, sw = 1.8 }) => (
 );
 
 /* ── Color helpers ────────────────────────────────── */
-const attColor  = p => p >= 85 ? 'var(--emerald)' : p >= 75 ? 'var(--amber)' : 'var(--rose)';
+const attColor  = p => p >= 75 ? 'var(--emerald)' : 'var(--rose)';
 const scoreColor= p => p >= 80 ? 'var(--emerald)' : p >= 60 ? 'var(--amber)' : 'var(--rose)';
 
 /* ── Greeting ─────────────────────────────────────── */
@@ -290,18 +290,13 @@ export default function Dashboard() {
                       const absent     = parseFloat(a.hoursAbsent) || 0;
                       const attended   = conducted - absent;
 
-                      // How many more to attend to reach 75 / 85
-                      // Formula: need x such that (attended+x)/(conducted+x) >= threshold
-                      // => x >= (threshold*conducted - attended) / (1-threshold)
+                      // Classes needed to reach 75% / classes that can be skipped
                       const toReach75 = Math.ceil((0.75 * conducted - attended) / 0.25);
-                      const toReach85 = Math.ceil((0.85 * conducted - attended) / 0.15);
                       const canSkip75 = Math.floor((attended - 0.75 * conducted) / 0.75);
-                      const canSkip85 = Math.floor((attended - 0.85 * conducted) / 0.85);
 
                       const status =
-                        pct >= 85 ? { label: 'Excellent', clr: 'var(--emerald)' } :
-                        pct >= 75 ? { label: 'Safe',      clr: 'var(--amber)'  } :
-                                    { label: 'At Risk',   clr: 'var(--rose)'   };
+                        pct >= 75 ? { label: 'Safe',    clr: 'var(--emerald)' } :
+                                    { label: 'At Risk', clr: 'var(--rose)'    };
 
                       const facultyName = a.facultyName?.split('(')[0]?.trim() || '—';
 
@@ -351,11 +346,7 @@ export default function Dashboard() {
                                   <div className="ac-marker-line" />
                                   <span className="ac-marker-lbl">75%</span>
                                 </div>
-                                {/* 85% threshold marker */}
-                                <div className="ac-marker" style={{ left: '85%' }} title="85% threshold">
-                                  <div className="ac-marker-line" style={{ background: 'var(--emerald)' }} />
-                                  <span className="ac-marker-lbl" style={{ color: 'var(--emerald)' }}>85%</span>
-                                </div>
+
                               </div>
                             </div>
 
@@ -378,20 +369,12 @@ export default function Dashboard() {
                               <div className="ac-stat-sep" />
 
                               {/* Smart advice cell */}
-                              {pct >= 85 ? (
+                              {pct >= 75 ? (
                                 <div className="ac-advice safe">
                                   <span className="adv-ico">✓</span>
                                   <div>
-                                    <div className="adv-main">Can skip <strong>{canSkip85}</strong> more</div>
-                                    <div className="adv-sub">and stay above 85%</div>
-                                  </div>
-                                </div>
-                              ) : pct >= 75 ? (
-                                <div className="ac-advice warn">
-                                  <span className="adv-ico">⚠</span>
-                                  <div>
-                                    <div className="adv-main">Skip max <strong>{canSkip75}</strong></div>
-                                    <div className="adv-sub">Attend <strong>{toReach85 > 0 ? toReach85 : 0}</strong> more for 85%</div>
+                                    <div className="adv-main">Can skip <strong>{canSkip75}</strong> more</div>
+                                    <div className="adv-sub">and stay above 75%</div>
                                   </div>
                                 </div>
                               ) : (
