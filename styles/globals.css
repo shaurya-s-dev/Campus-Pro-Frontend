@@ -224,19 +224,48 @@ aside, nav, main, section, header, footer,
 canvas, svg * { transition: none !important; }
 
 /* ── Sidebar nav link fix ─────────────────────── */
-/* Next.js Link renders <a> — force same style as button nav items */
+/* Next.js Link renders <a> — match button.nav-item exactly */
 a.nav-item {
   display: flex !important;
-  align-items: center;
+  align-items: center !important;
+  gap: 10px !important;
+  width: 100% !important;
+  padding: 9px 10px !important;
+  border-radius: 10px !important;
+  background: none !important;
   color: var(--nav-text-default) !important;
   font-size: 13.5px !important;
   font-family: var(--font-body) !important;
   font-weight: 450 !important;
   text-decoration: none !important;
-  line-height: 1.4;
+  line-height: 1.4 !important;
+  box-sizing: border-box !important;
+  transition: all 0.16s cubic-bezier(.4,0,.2,1) !important;
+  position: relative !important;
+  overflow: hidden !important;
 }
-a.nav-item:hover { color: var(--text-2) !important; }
-a.nav-active    { color: var(--nav-text-active) !important; font-weight: 600 !important; }
-a.profile-btn   { color: var(--text-3) !important; text-decoration: none !important; font-size: 13px !important; font-family: var(--font-body) !important; }
-a.profile-btn:hover { color: var(--text-1) !important; }
-a.profile-active { color: var(--nav-text-active) !important; font-weight: 600 !important; }
+a.nav-item:hover {
+  background: var(--nav-item-hover) !important;
+  color: var(--text-2) !important;
+}
+a.nav-active {
+  background: var(--nav-item-active) !important;
+  color: var(--nav-text-active) !important;
+  font-weight: 600 !important;
+}
+a.profile-btn {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  width: 100% !important;
+  padding: 9px 10px !important;
+  border-radius: 10px !important;
+  color: var(--text-3) !important;
+  font-size: 13px !important;
+  font-family: var(--font-body) !important;
+  text-decoration: none !important;
+  transition: all 0.16s !important;
+  box-sizing: border-box !important;
+}
+a.profile-btn:hover { background: var(--nav-item-hover) !important; color: var(--text-1) !important; }
+a.profile-active { background: var(--nav-item-active) !important; color: var(--nav-text-active) !important; font-weight: 600 !important; }
