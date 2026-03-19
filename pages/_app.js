@@ -2,6 +2,7 @@ import '@/styles/globals.css';
 import Head from 'next/head';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { SpeedInsights } from '@vercel/speed-insights/next';
+import { Analytics } from '@vercel/analytics/react';
 
 export default function App({ Component, pageProps }) {
   return (
@@ -14,6 +15,7 @@ export default function App({ Component, pageProps }) {
       </Head>
       <Component {...pageProps} />
       <SpeedInsights />
+      <Analytics />
     </ThemeProvider>
   );
 }
