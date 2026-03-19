@@ -81,45 +81,18 @@ function KPICard({ label, value, sub, color, icon, delay = 0 }) {
 }
 
 /* ══════════════════════════════════════════════════
-   Skeleton loader
-   ══════════════════════════════════════════════════ */
-function SkeletonCard({ h = 100 }) {
-  return (
-    <div className="skeleton" style={{ height: h, borderRadius: 'var(--radius-lg)' }} />
-  );
-}
-
-function SkeletonDashboard() {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <div className="skeleton" style={{ height: 48, width: '55%', borderRadius: 10 }} />
-      <div className="skeleton" style={{ height: 18, width: '35%', borderRadius: 6 }} />
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12 }}>
-        {[1,2,3,4].map(i => <SkeletonCard key={i} h={110} />)}
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(230px,1fr))', gap: 10 }}>
-        {[1,2,3,4,5,6].map(i => <SkeletonCard key={i} h={130} />)}
-      </div>
-    </div>
-  );
-}
-
-/* ══════════════════════════════════════════════════
    DASHBOARD
    ══════════════════════════════════════════════════ */
 export default function Dashboard() {
   const router = useRouter();
   const [data, setData] = useState(null);
   const [tab, setTab]   = useState('overview');
-  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     if (!requireAuth(router)) return;
     const raw = DataStore.get();
     if (!raw) { router.replace('/'); return; }
     setData(sanitizeObject(raw));
-    // slight delay to let CSS paint first
-    requestAnimationFrame(() => setReady(true));
   }, []);
 
   useEffect(() => {
@@ -150,12 +123,13 @@ export default function Dashboard() {
     <>
       <Head><title>CampusPro — {user.name || 'Dashboard'}</title></Head>
 
-      {/* ── Ambient background blobs ──────────── */}
-      <div className="bg-mesh" aria-hidden>
-        <div className="bg-blob bg-blob-1" />
-        <div className="bg-blob bg-blob-2" />
-        <div className="bg-blob bg-blob-3" />
-        <div className="bg-grid" />
+      {/* ── Animated ambient background ──────── */}
+      <div className="dash-bg" aria-hidden="true">
+        <div className="dash-bg-grid" />
+        <div className="dash-blob-1" />
+        <div className="dash-blob-2" />
+        <div className="dash-blob-3" />
+        <div className="dash-bg-vignette" />
       </div>
 
       <div className="app-shell">
@@ -537,12 +511,103 @@ export default function Dashboard() {
       </div>
 
       <style jsx global>{`
-        body { background: var(--bg-void); overflow-x: hidden; }
+        body { background: #05060f; overflow-x: hidden; }
+
+        /* ── Animated ambient blobs ─────────────────────────── */
+        @keyframes floatBlob {
+          0%,100% { transform: translate(0,0) scale(1); }
+          33%     { transform: translate(40px,-28px) scale(1.06); }
+          66%     { transform: translate(-24px,18px) scale(0.96); }
+        }
+        @keyframes floatBlob2 {
+          0%,100% { transform: translate(0,0) scale(1); }
+          40%     { transform: translate(-35px,22px) scale(1.04); }
+          70%     { transform: translate(28px,-15px) scale(0.98); }
+        }
+        @keyframes floatBlob3 {
+          0%,100% { transform: translate(0,0) scale(1); }
+          50%     { transform: translate(20px,30px) scale(1.07); }
+        }
+        @keyframes gridDrift {
+          from { transform: translateY(0); }
+          to   { transform: translateY(48px); }
+        }
+
+        .dash-bg {
+          position: fixed;
+          inset: 0;
+          z-index: 0;
+          pointer-events: none;
+          overflow: hidden;
+        }
+
+        /* Dot grid */
+        .dash-bg-grid {
+          position: absolute;
+          inset: -100px;
+          background-image:
+            radial-gradient(circle, rgba(255,255,255,0.09) 1px, transparent 1px);
+          background-size: 28px 28px;
+          animation: gridDrift 14s linear infinite;
+        }
+
+        /* Blob 1 — indigo, top-left */
+        .dash-blob-1 {
+          position: absolute;
+          width: 700px; height: 700px;
+          top: -200px; left: -180px;
+          border-radius: 50%;
+          background: radial-gradient(circle at 40% 40%,
+            rgba(99,102,241,0.18) 0%,
+            rgba(99,102,241,0.06) 45%,
+            transparent 70%);
+          filter: blur(60px);
+          animation: floatBlob 20s ease-in-out infinite;
+          will-change: transform;
+        }
+
+        /* Blob 2 — cyan, bottom-right */
+        .dash-blob-2 {
+          position: absolute;
+          width: 600px; height: 600px;
+          bottom: -150px; right: -150px;
+          border-radius: 50%;
+          background: radial-gradient(circle at 60% 60%,
+            rgba(34,211,238,0.14) 0%,
+            rgba(34,211,238,0.05) 45%,
+            transparent 70%);
+          filter: blur(55px);
+          animation: floatBlob2 24s ease-in-out infinite;
+          will-change: transform;
+        }
+
+        /* Blob 3 — violet, center-right */
+        .dash-blob-3 {
+          position: absolute;
+          width: 420px; height: 420px;
+          top: 38%; left: 52%;
+          border-radius: 50%;
+          background: radial-gradient(circle at 50% 50%,
+            rgba(167,139,250,0.11) 0%,
+            rgba(167,139,250,0.04) 50%,
+            transparent 70%);
+          filter: blur(50px);
+          animation: floatBlob3 16s ease-in-out infinite 4s;
+          will-change: transform;
+        }
+
+        /* Vignette so edges stay dark */
+        .dash-bg-vignette {
+          position: absolute;
+          inset: 0;
+          background:
+            radial-gradient(ellipse 80% 70% at 50% 50%, transparent 50%, rgba(5,6,15,0.55) 100%);
+        }
       `}</style>
 
       <style jsx>{`
         /* ── Shell ────────────────────────────── */
-        .app-shell { display: flex; min-height: 100vh; position: relative; z-index: 1; }
+        .app-shell { display: flex; min-height: 100vh; position: relative; z-index: 1; background: transparent; }
         .main {
           flex: 1;
           padding: 36px 40px;
