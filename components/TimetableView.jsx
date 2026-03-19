@@ -1,1 +1,1 @@
-export { default } from '@/pages/componets/TimetableView';
+export { default } from '@/pages/components/TimetableView';
