@@ -110,7 +110,7 @@ function SkeletonDashboard() {
 export default function Dashboard() {
   const router = useRouter();
   const [data, setData] = useState(null);
-  const [tab, setTab]   = useState('overview');
+  const [tab, setTab]   = useState('Dashboard');
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -172,9 +172,9 @@ export default function Dashboard() {
 
             <>
               {/* ═══════════════════════════════
-                  OVERVIEW TAB
+                  DASHBOARD TAB
               ═══════════════════════════════ */}
-              {tab === 'overview' && (
+              {tab === 'Dashboard' && (
                 <div className="tab-panel animate-in">
 
                   {/* Page header */}
@@ -286,51 +286,150 @@ export default function Dashboard() {
                 <div className="tab-panel animate-in">
                   <div className="page-hd">
                     <h1 className="page-title">Attendance</h1>
+                    <span className="tag tag-accent">{attendance.length} subjects</span>
                   </div>
 
-                  {/* Summary pills */}
+                  {/* ── Summary strip ─────────────────── */}
                   <div className="sum-strip">
                     {[
-                      { v: `${avgAtt}%`, l: 'Average',     c: 'var(--accent-light)' },
-                      { v: safeAtt,      l: 'Safe ≥ 75%',  c: 'var(--emerald)' },
-                      { v: below75,      l: 'At Risk',      c: 'var(--rose)' },
-                      { v: attendance.length, l: 'Subjects',c: 'var(--amber)' },
+                      { v: `${avgAtt}%`, l: 'Average',    c: 'var(--accent-light)', icon: 'M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16z' },
+                      { v: safeAtt,      l: 'Safe ≥ 75%', c: 'var(--emerald)',       icon: 'M22 11.08V12a10 10 0 1 1-5.93-9.14M22 4L12 14.01l-3-3' },
+                      { v: below75,      l: 'At Risk',    c: 'var(--rose)',           icon: 'M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zm0-7v-2m0-4h.01' },
+                      { v: attendance.length, l: 'Subjects', c: 'var(--amber)',      icon: 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z' },
                     ].map((s, i) => (
-                      <div key={i} className="sum-pill glass animate-up" style={{ animationDelay: `${i * 50}ms` }}>
+                      <div key={i} className="sum-pill glass animate-up" style={{ animationDelay: `${i * 45}ms` }}>
+                        <div className="sp-icon" style={{ color: s.c, background: `${s.c}12`, border: `1px solid ${s.c}20` }}>
+                          <Ico d={s.icon} size={13} />
+                        </div>
                         <div className="sum-val" style={{ color: s.c }}>{s.v}</div>
                         <div className="sum-lbl">{s.l}</div>
                       </div>
                     ))}
                   </div>
 
-                  <div className="att-list">
+                  {/* ── Attendance cards ──────────────── */}
+                  <div className="att-cards">
                     {attendance.map((a, i) => {
-                      const pct       = parseFloat(a.attendancePercentage);
-                      const clr       = attColor(pct);
-                      const conducted = parseFloat(a.hoursConducted) || 0;
-                      const absent    = parseFloat(a.hoursAbsent) || 0;
-                      const attended  = conducted - absent;
-                      const canMiss   = Math.floor(attended - 0.75 * conducted);
+                      const pct        = parseFloat(a.attendancePercentage);
+                      const clr        = attColor(pct);
+                      const conducted  = parseFloat(a.hoursConducted) || 0;
+                      const absent     = parseFloat(a.hoursAbsent) || 0;
+                      const attended   = conducted - absent;
+
+                      // How many more to attend to reach 75 / 85
+                      // Formula: need x such that (attended+x)/(conducted+x) >= threshold
+                      // => x >= (threshold*conducted - attended) / (1-threshold)
+                      const toReach75 = Math.ceil((0.75 * conducted - attended) / 0.25);
+                      const toReach85 = Math.ceil((0.85 * conducted - attended) / 0.15);
+                      const canSkip75 = Math.floor((attended - 0.75 * conducted) / 0.75);
+                      const canSkip85 = Math.floor((attended - 0.85 * conducted) / 0.85);
+
+                      const status =
+                        pct >= 85 ? { label: 'Excellent', clr: 'var(--emerald)' } :
+                        pct >= 75 ? { label: 'Safe',      clr: 'var(--amber)'  } :
+                                    { label: 'At Risk',   clr: 'var(--rose)'   };
+
+                      const facultyName = a.facultyName?.split('(')[0]?.trim() || '—';
+
                       return (
-                        <div key={i} className="att-row glass animate-up" style={{ animationDelay: `${i * 35}ms` }}>
-                          <CircleProgress pct={pct} color={clr} size={52} />
-                          <div className="ar-info">
-                            <div className="ar-name">{a.courseTitle}</div>
-                            <div className="ar-meta">{a.courseCode} · {a.category} · {a.facultyName?.split('(')[0]?.trim()}</div>
-                            <div className="progress-track" style={{ marginTop: 8, maxWidth: 240 }}>
-                              <div className="progress-fill" style={{ width: `${Math.min(pct,100)}%`, background: clr }} />
+                        <div key={i} className="att-card glass animate-up" style={{ animationDelay: `${i * 40}ms` }}>
+
+                          {/* Left accent stripe */}
+                          <div className="ac-stripe" style={{ background: clr }} />
+
+                          <div className="ac-body">
+                            {/* ── Row 1: Circle + Course info + % ── */}
+                            <div className="ac-top">
+                              <CircleProgress pct={pct} color={clr} size={58} />
+
+                              <div className="ac-course">
+                                <div className="ac-title">{a.courseTitle}</div>
+                                <div className="ac-meta-row">
+                                  <span className="ac-code">{a.courseCode}</span>
+                                  <span className="ac-dot">·</span>
+                                  <span className={`tag ${a.category === 'Theory' ? 'tag-accent' : 'tag-emerald'}`} style={{ fontSize: 9, padding: '2px 7px' }}>
+                                    {a.category || 'Theory'}
+                                  </span>
+                                  <span className="ac-dot">·</span>
+                                  <span className="ac-faculty">
+                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display:'inline', marginRight:3, verticalAlign:'middle' }}>
+                                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                                    </svg>
+                                    {facultyName}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="ac-pct-block">
+                                <div className="ac-pct" style={{ color: clr }}>{pct}%</div>
+                                <span className="ac-status-tag" style={{ color: status.clr, background: `${status.clr}12`, border: `1px solid ${status.clr}22` }}>
+                                  {status.label}
+                                </span>
+                              </div>
                             </div>
-                          </div>
-                          <div className="ar-right">
-                            <div className="ar-pct" style={{ color: clr }}>{pct}%</div>
-                            <div className="ar-hrs">{attended}/{conducted} hrs</div>
-                            <span className="ar-tag" style={{
-                              color: canMiss >= 0 ? 'var(--emerald)' : 'var(--rose)',
-                              background: canMiss >= 0 ? 'var(--emerald-dim)' : 'var(--rose-dim)',
-                              border: `1px solid ${canMiss >= 0 ? 'var(--emerald-border)' : 'var(--rose-border)'}`,
-                            }}>
-                              {canMiss >= 0 ? `Can skip ${canMiss}` : `Need ${Math.abs(canMiss)} more`}
-                            </span>
+
+                            {/* ── Segmented progress bar ── */}
+                            <div className="ac-bar-wrap">
+                              <div className="ac-bar-bg">
+                                <div className="ac-bar-fill" style={{ width: `${Math.min(pct, 100)}%`, background: `linear-gradient(90deg, ${clr}99, ${clr})` }} />
+                                {/* 75% threshold marker */}
+                                <div className="ac-marker" style={{ left: '75%' }} title="75% threshold">
+                                  <div className="ac-marker-line" />
+                                  <span className="ac-marker-lbl">75%</span>
+                                </div>
+                                {/* 85% threshold marker */}
+                                <div className="ac-marker" style={{ left: '85%' }} title="85% threshold">
+                                  <div className="ac-marker-line" style={{ background: 'var(--emerald)' }} />
+                                  <span className="ac-marker-lbl" style={{ color: 'var(--emerald)' }}>85%</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* ── Stats grid ─── */}
+                            <div className="ac-stats">
+                              <div className="ac-stat">
+                                <span className="ac-stat-v" style={{ color: 'var(--emerald)' }}>{attended}</span>
+                                <span className="ac-stat-l">Attended</span>
+                              </div>
+                              <div className="ac-stat-sep" />
+                              <div className="ac-stat">
+                                <span className="ac-stat-v" style={{ color: absent > 0 ? 'var(--rose)' : 'var(--text-3)' }}>{absent}</span>
+                                <span className="ac-stat-l">Absent</span>
+                              </div>
+                              <div className="ac-stat-sep" />
+                              <div className="ac-stat">
+                                <span className="ac-stat-v">{conducted}</span>
+                                <span className="ac-stat-l">Total hrs</span>
+                              </div>
+                              <div className="ac-stat-sep" />
+
+                              {/* Smart advice cell */}
+                              {pct >= 85 ? (
+                                <div className="ac-advice safe">
+                                  <span className="adv-ico">✓</span>
+                                  <div>
+                                    <div className="adv-main">Can skip <strong>{canSkip85}</strong> more</div>
+                                    <div className="adv-sub">and stay above 85%</div>
+                                  </div>
+                                </div>
+                              ) : pct >= 75 ? (
+                                <div className="ac-advice warn">
+                                  <span className="adv-ico">⚠</span>
+                                  <div>
+                                    <div className="adv-main">Skip max <strong>{canSkip75}</strong></div>
+                                    <div className="adv-sub">Attend <strong>{toReach85 > 0 ? toReach85 : 0}</strong> more for 85%</div>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="ac-advice danger">
+                                  <span className="adv-ico">🚨</span>
+                                  <div>
+                                    <div className="adv-main">Need <strong>{toReach75}</strong> consecutive</div>
+                                    <div className="adv-sub">classes to reach 75%</div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
                       );
@@ -606,6 +705,47 @@ export default function Dashboard() {
         .ci-ico { font-size: 13px; }
         .ci-v { font-family: var(--font-mono); font-size: 11.5px; font-weight: 700; color: var(--text-1); margin-top: 2px; }
         .ci-l { font-size: 9px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.4px; }
+
+        /* ── Rich Attendance Cards ───────────── */
+        .att-cards { display: flex; flex-direction: column; gap: 10px; }
+        .att-card { display: flex; border-radius: var(--radius-lg); overflow: hidden; transition: transform 0.18s, box-shadow 0.18s; }
+        .att-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md), 0 0 0 1px var(--border-strong); }
+        .ac-stripe { width: 3px; flex-shrink: 0; }
+        .ac-body { flex: 1; padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+        .ac-top { display: flex; align-items: center; gap: 16px; }
+        .ac-course { flex: 1; min-width: 0; }
+        .ac-title { font-size: 14.5px; font-weight: 600; color: var(--text-1); line-height: 1.3; margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .ac-meta-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+        .ac-code { font-family: var(--font-mono); font-size: 10px; color: var(--accent-light); }
+        .ac-dot  { color: var(--text-5); font-size: 10px; }
+        .ac-faculty { font-size: 11px; color: var(--text-3); display: flex; align-items: center; }
+        .ac-pct-block { text-align: right; flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+        .ac-pct { font-family: var(--font-mono); font-size: 26px; font-weight: 700; letter-spacing: -1px; line-height: 1; }
+        .ac-status-tag { font-size: 9.5px; font-weight: 700; padding: 2px 9px; border-radius: 20px; letter-spacing: 0.3px; white-space: nowrap; }
+        .ac-bar-wrap { position: relative; padding-bottom: 16px; }
+        .ac-bar-bg { position: relative; height: 5px; background: var(--border); border-radius: 3px; overflow: visible; }
+        .ac-bar-fill { height: 100%; border-radius: 3px; animation: progressBar 1.2s cubic-bezier(.4,0,.2,1) both; position: relative; z-index: 1; }
+        .ac-marker { position: absolute; top: -2px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 4px; z-index: 2; }
+        .ac-marker-line { width: 1.5px; height: 9px; background: var(--amber); border-radius: 1px; }
+        .ac-marker-lbl { position: absolute; top: 11px; font-size: 8.5px; font-weight: 700; color: var(--amber); white-space: nowrap; font-family: var(--font-mono); }
+        .ac-stats { display: flex; align-items: stretch; background: var(--bg-subtle); border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; }
+        .ac-stat { display: flex; flex-direction: column; align-items: center; padding: 10px 20px; gap: 2px; flex-shrink: 0; }
+        .ac-stat-v { font-family: var(--font-mono); font-size: 18px; font-weight: 700; color: var(--text-1); line-height: 1; }
+        .ac-stat-l { font-size: 9px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+        .ac-stat-sep { width: 1px; background: var(--border); flex-shrink: 0; margin: 8px 0; }
+        .ac-advice { flex: 1; display: flex; align-items: center; gap: 10px; padding: 10px 16px; }
+        .ac-advice.safe   { background: var(--emerald-dim); }
+        .ac-advice.warn   { background: var(--amber-dim); }
+        .ac-advice.danger { background: var(--rose-dim); }
+        .adv-ico { font-size: 14px; flex-shrink: 0; }
+        .adv-main { font-size: 12px; font-weight: 500; color: var(--text-1); line-height: 1.3; }
+        .adv-main strong { font-weight: 800; }
+        .adv-sub { font-size: 10.5px; color: var(--text-3); margin-top: 1px; }
+        .adv-sub strong { color: var(--text-2); }
+        .sp-icon { width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 5px; }
+        .sum-pill { border-radius: var(--radius-md); padding: 16px 18px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+        .sum-val  { font-family: var(--font-mono); font-size: 26px; font-weight: 700; line-height: 1; }
+        .sum-lbl  { font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
 
         /* ── Responsive ───────────────────────── */
         @media (max-width: 1200px) {
