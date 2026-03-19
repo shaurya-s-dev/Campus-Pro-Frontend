@@ -164,7 +164,7 @@ function UpcomingStrip() {
           return (
             <div key={i} className="up-card" style={{ '--uc': t.color, '--ubg': t.bg, '--ubdr': t.border }}>
               <div className="up-left">
-                <div className="up-dot" style={{ background: t.color, boxShadow: `0 0 6px ${t.color}` }} />
+                <div className="up-dot" style={{ background: t.color }} />
                 <div>
                   <div className="up-label">{ev.label}</div>
                   <div className="up-meta">{ev.monthKey.split(' ')[0]} {ev.date} · {t.label}</div>
@@ -586,10 +586,10 @@ export default function CalendarPage() {
         @keyframes floatBlob3  { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(20px,30px) scale(1.07)} }
         @keyframes gridDrift   { from{transform:translateY(0)} to{transform:translateY(48px)} }
         .dash-bg { position:fixed; inset:0; z-index:0; pointer-events:none; overflow:hidden; }
-        .dash-bg-grid { position:absolute; inset:-100px; background-image:radial-gradient(circle, rgba(255,255,255,0.075) 1px, transparent 1px); background-size:28px 28px; animation:gridDrift 14s linear infinite; }
-        .dash-blob-1 { position:absolute; width:700px; height:700px; top:-200px; left:-180px; border-radius:50%; background:radial-gradient(circle at 40% 40%, rgba(99,102,241,0.17) 0%, rgba(99,102,241,0.06) 45%, transparent 70%); filter:blur(60px); animation:floatBlob1 20s ease-in-out infinite; will-change:transform; }
-        .dash-blob-2 { position:absolute; width:600px; height:600px; bottom:-150px; right:-150px; border-radius:50%; background:radial-gradient(circle at 60% 60%, rgba(34,211,238,0.13) 0%, rgba(34,211,238,0.05) 45%, transparent 70%); filter:blur(55px); animation:floatBlob2 24s ease-in-out infinite; will-change:transform; }
-        .dash-blob-3 { position:absolute; width:420px; height:420px; top:38%; left:52%; border-radius:50%; background:radial-gradient(circle at 50% 50%, rgba(167,139,250,0.11) 0%, rgba(167,139,250,0.04) 50%, transparent 70%); filter:blur(50px); animation:floatBlob3 16s ease-in-out infinite 4s; will-change:transform; }
+        .dash-bg-grid { position:absolute; inset:-100px; background-image:radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px); background-size:28px 28px; animation:gridDrift 14s linear infinite; }
+        .dash-blob-1 { position:absolute; width:700px; height:700px; top:-200px; left:-180px; border-radius:50%; background:radial-gradient(circle at 40% 40%, rgba(99,102,241,0.10) 0%, rgba(99,102,241,0.04) 45%, transparent 70%); filter:blur(60px); animation:floatBlob1 20s ease-in-out infinite; will-change:transform; }
+        .dash-blob-2 { position:absolute; width:600px; height:600px; bottom:-150px; right:-150px; border-radius:50%; background:radial-gradient(circle at 60% 60%, rgba(34,211,238,0.07) 0%, rgba(34,211,238,0.03) 45%, transparent 70%); filter:blur(55px); animation:floatBlob2 24s ease-in-out infinite; will-change:transform; }
+        .dash-blob-3 { position:absolute; width:420px; height:420px; top:38%; left:52%; border-radius:50%; background:radial-gradient(circle at 50% 50%, rgba(167,139,250,0.07) 0%, rgba(167,139,250,0.03) 50%, transparent 70%); filter:blur(50px); animation:floatBlob3 16s ease-in-out infinite 4s; will-change:transform; }
         .dash-bg-vignette { position:absolute; inset:0; background:radial-gradient(ellipse 80% 70% at 50% 50%, transparent 50%, rgba(5,6,15,0.5) 100%); }
         @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
       `}</style>
@@ -624,7 +624,7 @@ export default function CalendarPage() {
           width: 26px; height: 26px; border-radius: 7px;
           background: linear-gradient(135deg, #6366f1, #4338ca);
           display: flex; align-items: center; justify-content: center;
-          box-shadow: 0 0 12px rgba(99,102,241,0.3);
+          box-shadow: none;
         }
         .top-brand strong { color: var(--accent-light); }
 
@@ -655,7 +655,7 @@ export default function CalendarPage() {
           backdrop-filter: blur(16px);
           transition: transform .18s, box-shadow .18s;
         }
-        .up-card:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
+        .up-card:hover { transform: translateY(-1px); box-shadow: var(--shadow-sm); }
         .up-left { display: flex; align-items: center; gap: 9px; min-width: 0; }
         .up-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
         .up-label { font-size: 12px; font-weight: 600; color: var(--text-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 130px; }
@@ -803,7 +803,7 @@ export default function CalendarPage() {
           border-color: var(--border-strong);
           transform: scale(1.035);
           z-index: 2;
-          box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+          box-shadow: 0 2px 8px rgba(0,0,0,0.28);
         }
 
         /* State modifiers */
@@ -815,7 +815,7 @@ export default function CalendarPage() {
         .day-cell.is-today {
           background: rgba(99,102,241,0.14) !important;
           border-color: var(--accent) !important;
-          box-shadow: 0 0 0 1px var(--accent-border), 0 4px 16px var(--accent-glow);
+          box-shadow: 0 2px 8px rgba(0,0,0,0.3);
         }
         .day-cell.is-today:hover { transform: scale(1.04); }
         .day-cell.is-selected {
@@ -823,7 +823,7 @@ export default function CalendarPage() {
           border-color: var(--accent-light) !important;
           transform: scale(1.04);
           z-index: 2;
-          box-shadow: 0 4px 20px var(--accent-glow);
+          box-shadow: 0 2px 10px rgba(0,0,0,0.3);
         }
 
         /* ── Day number row ── */
@@ -839,16 +839,13 @@ export default function CalendarPage() {
         .today-badge {
           width: 22px; height: 22px; border-radius: 50%;
           background: var(--accent);
-          box-shadow: 0 0 12px var(--accent-glow);
+          box-shadow: 0 1px 4px rgba(0,0,0,0.3);
           display: flex; align-items: center; justify-content: center;
           font-family: var(--font-mono); font-size: 11.5px; font-weight: 800;
           color: #fff; line-height: 1; flex-shrink: 0;
-          animation: todayGlow 2.5s ease-in-out infinite;
+
         }
-        @keyframes todayGlow {
-          0%,100% { box-shadow: 0 0 10px var(--accent-glow); }
-          50%     { box-shadow: 0 0 18px var(--accent-glow); }
-        }
+
 
         /* Day order pill */
         .order-pill {
@@ -885,7 +882,7 @@ export default function CalendarPage() {
           border: 1px solid var(--accent-border);
           border-radius: var(--radius-lg);
           padding: 16px 18px;
-          box-shadow: 0 4px 24px var(--accent-glow);
+          box-shadow: var(--shadow-md);
           animation: fadeUp .25s cubic-bezier(.16,1,.3,1) both;
         }
         .dp-top {
@@ -977,13 +974,13 @@ export default function CalendarPage() {
           background: var(--accent-dim) !important;
           border-color: var(--accent) !important;
           color: var(--accent-light) !important;
-          box-shadow: 0 3px 12px var(--accent-glow);
+          box-shadow: none;
         }
         .ms-curr { border-color: var(--accent-border) !important; }
         .ms-dot {
           position: absolute; top: 4px; right: 4px;
           width: 5px; height: 5px; border-radius: 50%;
-          background: var(--accent); box-shadow: 0 0 4px var(--accent-glow);
+          background: var(--accent);
         }
 
         /* ── LEGEND ──────────────────────────────── */
@@ -995,7 +992,7 @@ export default function CalendarPage() {
         .leg-swatch { width: 8px; height: 8px; border-radius: 50%; }
         .leg-today-swatch {
           width: 16px; height: 16px; border-radius: 50%;
-          background: var(--accent); box-shadow: 0 0 6px var(--accent-glow);
+          background: var(--accent);
         }
 
         /* ── RESPONSIVE ──────────────────────────── */

@@ -36,7 +36,7 @@ function CircleProgress({ pct, color = 'var(--accent)', size = 56 }) {
       <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(255,255,255,.05)" strokeWidth={4.5} />
       <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={4.5}
         strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
-        style={{ transition: 'stroke-dasharray 1.1s cubic-bezier(.4,0,.2,1)', filter: `drop-shadow(0 0 5px ${color})` }}
+        style={{ transition: 'stroke-dasharray 1.1s cubic-bezier(.4,0,.2,1)' }}
       />
     </svg>
   );
@@ -56,8 +56,7 @@ function KPICard({ label, value, sub, color, icon, delay = 0 }) {
       </div>
       <div className="kpi-value" style={{ color }}>{value}</div>
       {sub && <div className="kpi-sub">{sub}</div>}
-      {/* Subtle glow in corner */}
-      <div className="kpi-glow" style={{ background: `radial-gradient(circle at 100% 100%, ${color}09, transparent 65%)` }} />
+
       <style jsx>{`
         .kpi {
           border-radius: var(--radius-lg);
@@ -74,7 +73,7 @@ function KPICard({ label, value, sub, color, icon, delay = 0 }) {
         .kpi-label { font-size: 10.5px; color: var(--text-3); font-weight: 600; letter-spacing: 0.4px; text-transform: uppercase; }
         .kpi-value { font-family: var(--font-mono); font-size: 28px; font-weight: 700; letter-spacing: -1px; line-height: 1; }
         .kpi-sub   { font-size: 11px; color: var(--text-3); margin-top: 6px; }
-        .kpi-glow  { position: absolute; inset: 0; pointer-events: none; }
+
       `}</style>
     </div>
   );
@@ -529,7 +528,7 @@ export default function Dashboard() {
           position: absolute;
           inset: -100px;
           background-image:
-            radial-gradient(circle, rgba(255,255,255,0.09) 1px, transparent 1px);
+            radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px);
           background-size: 28px 28px;
           animation: gridDrift 14s linear infinite;
         }
@@ -541,8 +540,8 @@ export default function Dashboard() {
           top: -200px; left: -180px;
           border-radius: 50%;
           background: radial-gradient(circle at 40% 40%,
-            rgba(99,102,241,0.18) 0%,
-            rgba(99,102,241,0.06) 45%,
+            rgba(99,102,241,0.10) 0%,
+            rgba(99,102,241,0.04) 45%,
             transparent 70%);
           filter: blur(60px);
           animation: floatBlob 20s ease-in-out infinite;
@@ -556,8 +555,8 @@ export default function Dashboard() {
           bottom: -150px; right: -150px;
           border-radius: 50%;
           background: radial-gradient(circle at 60% 60%,
-            rgba(34,211,238,0.14) 0%,
-            rgba(34,211,238,0.05) 45%,
+            rgba(34,211,238,0.07) 0%,
+            rgba(34,211,238,0.03) 45%,
             transparent 70%);
           filter: blur(55px);
           animation: floatBlob2 24s ease-in-out infinite;
@@ -571,8 +570,8 @@ export default function Dashboard() {
           top: 38%; left: 52%;
           border-radius: 50%;
           background: radial-gradient(circle at 50% 50%,
-            rgba(167,139,250,0.11) 0%,
-            rgba(167,139,250,0.04) 50%,
+            rgba(167,139,250,0.07) 0%,
+            rgba(167,139,250,0.03) 50%,
             transparent 70%);
           filter: blur(50px);
           animation: floatBlob3 16s ease-in-out infinite 4s;
@@ -757,7 +756,7 @@ export default function Dashboard() {
         /* ── Rich Attendance Cards ───────────── */
         .att-cards { display: flex; flex-direction: column; gap: 10px; }
         .att-card { display: flex; border-radius: var(--radius-lg); overflow: hidden; transition: transform 0.18s, box-shadow 0.18s; }
-        .att-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md), 0 0 0 1px var(--border-strong); }
+        .att-card:hover { transform: translateY(-1px); box-shadow: var(--shadow-sm); }
         .ac-stripe { width: 3px; flex-shrink: 0; }
         .ac-body { flex: 1; padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
         .ac-top { display: flex; align-items: center; gap: 16px; }

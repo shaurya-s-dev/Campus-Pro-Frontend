@@ -283,7 +283,7 @@ export default function Sidebar({ activeTab, onTabChange, user, below75 }) {
           align-items: center;
           justify-content: center;
           flex-shrink: 0;
-          box-shadow: 0 0 16px rgba(99,102,241,0.3), inset 0 1px 0 rgba(255,255,255,0.12);
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.1);
         }
         .brand-wordmark {
           font-family: var(--font-display);
@@ -342,7 +342,7 @@ export default function Sidebar({ activeTab, onTabChange, user, below75 }) {
           opacity: 0;
           transition: opacity 0.18s;
         }
-        .user-card:hover { border-color: var(--accent); box-shadow: 0 2px 16px var(--accent-glow); }
+        .user-card:hover { border-color: var(--accent-border); box-shadow: var(--shadow-sm); }
         .user-card:hover::before { opacity: 1; }
 
         .avatar {
@@ -358,7 +358,7 @@ export default function Sidebar({ activeTab, onTabChange, user, below75 }) {
           font-size: 13px;
           color: white;
           flex-shrink: 0;
-          box-shadow: 0 3px 10px var(--accent-glow);
+          box-shadow: 0 2px 6px rgba(0,0,0,0.35);
         }
         .avatar-mini {
           display: flex;
@@ -375,10 +375,10 @@ export default function Sidebar({ activeTab, onTabChange, user, below75 }) {
           margin: 0 auto 6px;
           cursor: pointer;
           text-decoration: none;
-          box-shadow: 0 3px 10px var(--accent-glow);
+          box-shadow: 0 2px 6px rgba(0,0,0,0.35);
           transition: transform 0.14s, box-shadow 0.14s;
         }
-        .avatar-mini:hover { transform: scale(1.05); box-shadow: 0 5px 16px var(--accent-glow); }
+        .avatar-mini:hover { transform: scale(1.04); box-shadow: 0 2px 8px rgba(0,0,0,0.4); }
 
         .user-text { flex: 1; min-width: 0; }
         .user-name { font-size: 12px; font-weight: 600; color: var(--text-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -396,7 +396,7 @@ export default function Sidebar({ activeTab, onTabChange, user, below75 }) {
           align-items: center;
           justify-content: center;
           padding: 0 4px;
-          box-shadow: 0 0 8px rgba(244,63,94,0.5);
+          box-shadow: none;
           animation: pulse 2s ease-in-out infinite;
         }
         @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.7;transform:scale(.88)} }
@@ -456,7 +456,7 @@ export default function Sidebar({ activeTab, onTabChange, user, below75 }) {
           color: var(--nav-text-active) !important;
           font-weight: 600;
         }
-        .nav-active .nav-icon { filter: drop-shadow(0 0 5px var(--accent-glow)); }
+        .nav-active .nav-icon { opacity: 1; }
         .item-center { justify-content: center; padding: 8.5px 0; }
 
         .active-bar {
@@ -465,7 +465,7 @@ export default function Sidebar({ activeTab, onTabChange, user, below75 }) {
           width: 2.5px;
           border-radius: 0 3px 3px 0;
           background: linear-gradient(to bottom, var(--accent-light), var(--accent));
-          box-shadow: 1px 0 8px var(--accent-glow);
+          box-shadow: none;
         }
 
         .nav-icon {
@@ -498,7 +498,7 @@ export default function Sidebar({ activeTab, onTabChange, user, below75 }) {
           width: 6px; height: 6px;
           border-radius: 50%;
           background: var(--rose);
-          box-shadow: 0 0 5px var(--rose);
+          box-shadow: none;
           animation: pulse 2s ease-in-out infinite;
         }
 

@@ -40,7 +40,7 @@
   --accent:         #6366f1;
   --accent-light:   #818cf8;
   --accent-vivid:   #7c7fff;
-  --accent-glow:    rgba(99,102,241,0.30);
+  --accent-glow:    rgba(99,102,241,0.12);
   --accent-dim:     rgba(99,102,241,0.12);
   --accent-border:  rgba(99,102,241,0.24);
 
@@ -48,7 +48,7 @@
   --cyan:           #22d3ee;
   --cyan-dim:       rgba(34,211,238,0.10);
   --cyan-border:    rgba(34,211,238,0.20);
-  --cyan-glow:      rgba(34,211,238,0.22);
+  --cyan-glow:      rgba(34,211,238,0.08);
 
   /* ── Tertiary: violet ── */
   --violet:         #a78bfa;
@@ -60,21 +60,21 @@
   --emerald-light:  #34d399;
   --emerald-dim:    rgba(16,185,129,0.13);   /* lifted from 0.09 */
   --emerald-border: rgba(16,185,129,0.24);   /* lifted from 0.18 */
-  --emerald-glow:   rgba(16,185,129,0.20);
+  --emerald-glow:   rgba(16,185,129,0.08);
 
   /* ── Status: rose (danger/at-risk) ── */
   --rose:           #f43f5e;
   --rose-light:     #fb7185;
   --rose-dim:       rgba(244,63,94,0.13);    /* lifted from 0.09 */
   --rose-border:    rgba(244,63,94,0.24);    /* lifted from 0.20 */
-  --rose-glow:      rgba(244,63,94,0.20);
+  --rose-glow:      rgba(244,63,94,0.08);
 
   /* ── Status: amber (warning) ── */
   --amber:          #f59e0b;
   --amber-light:    #fbbf24;
   --amber-dim:      rgba(245,158,11,0.12);   /* lifted from 0.09 */
   --amber-border:   rgba(245,158,11,0.24);
-  --amber-glow:     rgba(245,158,11,0.18);
+  --amber-glow:     rgba(245,158,11,0.07);
 
   /* ── Text: 5-stop opacity scale ── */
   --text-1:         #eef0fc;         /* headings, primary values */
@@ -101,8 +101,7 @@
   --card-bg:            rgba(13,15,29,0.85);
   --card-border:        rgba(255,255,255,0.08);
   --card-hover-border:  rgba(99,102,241,0.28);
-  --card-shadow:        0 1px 0 rgba(255,255,255,0.04),
-                        0 4px 20px rgba(0,0,0,0.55);
+  --card-shadow:        0 1px 0 rgba(255,255,255,0.035), 0 2px 12px rgba(0,0,0,0.45);
 
   /* Raised card — sits on a card */
   --card-raised-bg:     rgba(19,21,40,0.90);
@@ -119,7 +118,7 @@
   --shadow-md:  0 4px 24px rgba(0,0,0,0.65);
   --shadow-lg:  0 8px 48px rgba(0,0,0,0.70);
   --shadow-xl:  0 16px 64px rgba(0,0,0,0.75);
-  --shadow-glow:0 0 32px var(--accent-glow);
+  --shadow-glow:0 2px 8px rgba(0,0,0,0.25);
 
   /* ── Radius scale ── */
   --radius-xs:  4px;
@@ -155,14 +154,14 @@
   --accent:         #4f46e5;
   --accent-light:   #6366f1;
   --accent-vivid:   #5855eb;
-  --accent-glow:    rgba(79,70,229,0.18);
+  --accent-glow:    rgba(79,70,229,0.08);
   --accent-dim:     rgba(79,70,229,0.09);
   --accent-border:  rgba(79,70,229,0.22);
 
   --cyan:           #0891b2;
   --cyan-dim:       rgba(8,145,178,0.09);
   --cyan-border:    rgba(8,145,178,0.20);
-  --cyan-glow:      rgba(8,145,178,0.16);
+  --cyan-glow:      rgba(8,145,178,0.06);
 
   --violet:         #7c3aed;
   --violet-dim:     rgba(124,58,237,0.09);
@@ -172,19 +171,19 @@
   --emerald-light:  #10b981;
   --emerald-dim:    rgba(5,150,105,0.10);
   --emerald-border: rgba(5,150,105,0.22);
-  --emerald-glow:   rgba(5,150,105,0.15);
+  --emerald-glow:   rgba(5,150,105,0.06);
 
   --rose:           #e11d48;
   --rose-light:     #f43f5e;
   --rose-dim:       rgba(225,29,72,0.10);
   --rose-border:    rgba(225,29,72,0.22);
-  --rose-glow:      rgba(225,29,72,0.15);
+  --rose-glow:      rgba(225,29,72,0.06);
 
   --amber:          #d97706;
   --amber-light:    #f59e0b;
   --amber-dim:      rgba(217,119,6,0.10);
   --amber-border:   rgba(217,119,6,0.22);
-  --amber-glow:     rgba(217,119,6,0.15);
+  --amber-glow:     rgba(217,119,6,0.06);
 
   --text-1:         #0c0d1e;
   --text-2:         rgba(12,13,30,0.62);
@@ -206,8 +205,7 @@
   --card-bg:            rgba(255,255,255,0.95);
   --card-border:        rgba(0,0,0,0.08);
   --card-hover-border:  rgba(79,70,229,0.22);
-  --card-shadow:        0 1px 0 rgba(255,255,255,0.9),
-                        0 2px 12px rgba(0,0,0,0.08);
+  --card-shadow:        0 1px 0 rgba(255,255,255,0.7), 0 2px 8px rgba(0,0,0,0.07);
 
   --card-raised-bg:     rgba(248,249,255,0.98);
   --card-raised-border: rgba(0,0,0,0.10);
@@ -221,7 +219,7 @@
   --shadow-md:  0 4px 24px rgba(0,0,0,0.11);
   --shadow-lg:  0 8px 48px rgba(0,0,0,0.13);
   --shadow-xl:  0 16px 64px rgba(0,0,0,0.15);
-  --shadow-glow:0 0 24px rgba(79,70,229,0.14);
+  --shadow-glow:0 2px 6px rgba(0,0,0,0.12);
 }
 
 /* ════════════════════════════════════════════════════════
@@ -339,8 +337,8 @@ a { color: inherit; text-decoration: none; }
 }
 .glass-hover:hover {
   border-color: var(--card-hover-border);
-  box-shadow: var(--shadow-md), 0 0 0 1px var(--accent-border);
-  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
 }
 
 /* Tier 2: Raised — sits on top of a base card */
@@ -389,11 +387,11 @@ a { color: inherit; text-decoration: none; }
 .btn-primary {
   background: linear-gradient(135deg, var(--accent) 0%, #4338ca 100%);
   color: #fff;
-  box-shadow: 0 4px 18px var(--accent-glow), inset 0 1px 0 rgba(255,255,255,0.14);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1);
 }
 .btn-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 8px 28px var(--accent-glow), inset 0 1px 0 rgba(255,255,255,0.14);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.1);
 }
 .btn-primary:active { transform: translateY(0); }
 
@@ -541,7 +539,7 @@ a { color: inherit; text-decoration: none; }
 }
 .form-input:focus {
   border-color: var(--accent-border);
-  box-shadow: 0 0 0 3px var(--accent-dim);
+  box-shadow: 0 0 0 2px var(--accent-dim);
 }
 .form-input::placeholder { color: var(--text-4); }
 
@@ -603,7 +601,7 @@ a { color: inherit; text-decoration: none; }
 .dash-bg-grid {
   position: absolute;
   inset: -100px;
-  background-image: radial-gradient(circle, rgba(255,255,255,0.08) 1px, transparent 1px);
+  background-image: radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px);
   background-size: 28px 28px;
   animation: gridDrift 14s linear infinite;
 }
@@ -611,7 +609,7 @@ a { color: inherit; text-decoration: none; }
 .dash-blob-1 {
   position: absolute; width: 700px; height: 700px;
   top: -200px; left: -180px; border-radius: 50%;
-  background: radial-gradient(circle at 40% 40%, rgba(99,102,241,0.17) 0%, rgba(99,102,241,0.06) 45%, transparent 70%);
+  background: radial-gradient(circle at 40% 40%, rgba(99,102,241,0.10) 0%, rgba(99,102,241,0.04) 45%, transparent 70%);
   filter: blur(60px);
   animation: floatBlob1 20s ease-in-out infinite;
   will-change: transform;
@@ -619,7 +617,7 @@ a { color: inherit; text-decoration: none; }
 .dash-blob-2 {
   position: absolute; width: 600px; height: 600px;
   bottom: -150px; right: -150px; border-radius: 50%;
-  background: radial-gradient(circle at 60% 60%, rgba(34,211,238,0.13) 0%, rgba(34,211,238,0.05) 45%, transparent 70%);
+  background: radial-gradient(circle at 60% 60%, rgba(34,211,238,0.07) 0%, rgba(34,211,238,0.03) 45%, transparent 70%);
   filter: blur(55px);
   animation: floatBlob2 24s ease-in-out infinite;
   will-change: transform;
@@ -627,7 +625,7 @@ a { color: inherit; text-decoration: none; }
 .dash-blob-3 {
   position: absolute; width: 420px; height: 420px;
   top: 38%; left: 52%; border-radius: 50%;
-  background: radial-gradient(circle at 50% 50%, rgba(167,139,250,0.11) 0%, rgba(167,139,250,0.04) 50%, transparent 70%);
+  background: radial-gradient(circle at 50% 50%, rgba(167,139,250,0.07) 0%, rgba(167,139,250,0.03) 50%, transparent 70%);
   filter: blur(50px);
   animation: floatBlob3 16s ease-in-out infinite 4s;
   will-change: transform;
