@@ -4,6 +4,7 @@ import Head from 'next/head';
 import Sidebar from '@/components/Sidebar';
 import TimetableView from '@/components/TimetableView';
 import { DataStore, requireAuth, logout, sanitizeObject } from '@/lib/security';
+import MarksSection from '@/components/MarksSection';
 
 /* ── Small helpers ───────────────────────────────── */
 const Ico = ({ d, size = 16, sw = 1.7 }) => (
@@ -146,7 +147,7 @@ export default function Dashboard() {
   useEffect(() => {
     if (!requireAuth(router)) return;
     const raw = DataStore.get();
-    if (!raw) { router.replace('/'); return; }
+    if (!raw) { router.replace('/login'); return; }
     setData(sanitizeObject(raw));
   }, []);
 
@@ -319,46 +320,11 @@ export default function Dashboard() {
           {/* ── MARKS ─────────────────────────────── */}
           {tab === 'marks' && (
             <div className="tab-panel animate-in">
-              <div className="page-header">
+              <div className="page-header" style={{ marginBottom:20 }}>
                 <h1 className="page-title">Marks</h1>
+                <span className="tag tag-accent">{marks.length} subjects</span>
               </div>
-              <div className="marks-grid">
-                {marks.map((m, i) => {
-                  const sc  = parseFloat(m.overall?.scored) || 0;
-                  const tot = parseFloat(m.overall?.total)  || 0;
-                  const pct = tot > 0 ? (sc / tot) * 100 : 0;
-                  const clr = scoreColor(pct);
-                  const tests = (m.testPerformance || []).slice().reverse();
-                  return (
-                    <div key={i} className="mk-card glass animate-up" style={{ animationDelay:`${i * 55}ms` }}>
-                      <div className="mk-head">
-                        <div>
-                          <div className="mk-code">{m.courseCode}</div>
-                          <div className="mk-name">{m.courseName}</div>
-                          <span className="tag" style={{ marginTop:6, fontSize:9.5, background:`${clr}12`, color:clr, border:`1px solid ${clr}20` }}>
-                            {m.courseType}
-                          </span>
-                        </div>
-                        <div className="mk-score-block">
-                          <div className="mk-score" style={{ color:clr }}>{sc.toFixed(1)}</div>
-                          <div className="mk-denom">/ {tot.toFixed(1)}</div>
-                          <div className="mk-pct-badge" style={{ color:clr, background:`${clr}10`, border:`1px solid ${clr}20` }}>{pct.toFixed(1)}%</div>
-                        </div>
-                      </div>
-                      {tests.length > 0 ? (
-                        <div className="mk-chart-wrap">
-                          <MiniSparkline tests={tests} color={clr} />
-                        </div>
-                      ) : (
-                        <div className="mk-empty">No test data yet</div>
-                      )}
-                      <div className="progress-track" style={{ marginTop:4 }}>
-                        <div className="progress-fill" style={{ width:`${Math.min(pct,100)}%`, background:clr }} />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+              <MarksSection marks={marks} />
             </div>
           )}
 
