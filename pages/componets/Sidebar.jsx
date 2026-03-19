@@ -377,11 +377,21 @@ export default function Sidebar({ activeTab, onTabChange, user, below75 }) {
           font-size: 13.5px;
           font-family: var(--font-body);
           font-weight: 450;
+          line-height: 1.4;
           text-align: left;
           cursor: pointer;
           transition: all 0.16s cubic-bezier(.4,0,.2,1);
-          text-decoration: none;
+          text-decoration: none !important;
           overflow: hidden;
+          box-sizing: border-box;
+        }
+        a.nav-item {
+          display: flex;
+          color: var(--nav-text-default) !important;
+          font-size: 13.5px !important;
+          font-family: var(--font-body) !important;
+          font-weight: 450 !important;
+          text-decoration: none !important;
         }
         .nav-item:hover {
           background: var(--nav-item-hover);
