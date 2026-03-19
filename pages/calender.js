@@ -1,352 +1,428 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 
-/* ── Types & Mock Data ───────────────────────────── */
+/* ══════════════════════════════════════════════════
+   CONFIG
+   ══════════════════════════════════════════════════ */
+const MONTH_NAMES = [
+  'January','February','March','April','May','June',
+  'July','August','September','October','November','December',
+];
+const DAY_LABELS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
 const EVENT_TYPES = {
-  holiday:  { label:'Holiday',     color:'#f43f5e', bg:'rgba(244,63,94,0.1)',  border:'rgba(244,63,94,0.2)' },
-  exam:     { label:'Exam/Test',   color:'#f59e0b', bg:'rgba(245,158,11,0.1)', border:'rgba(245,158,11,0.2)' },
-  dayorder: { label:'Day Order',   color:'#5b5ef4', bg:'rgba(91,94,244,0.1)', border:'rgba(91,94,244,0.2)' },
-  special:  { label:'Special',     color:'#10b981', bg:'rgba(16,185,129,0.1)', border:'rgba(16,185,129,0.2)' },
+  holiday: { label:'Holiday',   color:'#f43f5e', glow:'rgba(244,63,94,0.25)',  bg:'rgba(244,63,94,0.1)',  border:'rgba(244,63,94,0.25)',  icon:'🏖' },
+  exam:    { label:'Exam/Test', color:'#f59e0b', glow:'rgba(245,158,11,0.25)', bg:'rgba(245,158,11,0.1)', border:'rgba(245,158,11,0.25)', icon:'📝' },
+  special: { label:'Special',   color:'#10b981', glow:'rgba(16,185,129,0.25)', bg:'rgba(16,185,129,0.1)', border:'rgba(16,185,129,0.25)', icon:'⭐' },
 };
 
-// SRM KTR Academic Calendar — Even Semester 2025–26 (mock)
+/* SRM KTR Academic Calendar — Even Semester 2025–26 */
 const CALENDAR_DATA = {
   'January 2026': {
     events: [
-      { date: 1,  type:'holiday',  label:'New Year\'s Day' },
-      { date: 14, type:'holiday',  label:'Pongal' },
-      { date: 15, type:'holiday',  label:'Thiruvalluvar Day' },
-      { date: 16, type:'holiday',  label:'Uzhavar Thirunal' },
-      { date: 26, type:'holiday',  label:'Republic Day' },
+      { date:1,  type:'holiday', label:"New Year's Day" },
+      { date:14, type:'holiday', label:'Pongal' },
+      { date:15, type:'holiday', label:'Thiruvalluvar Day' },
+      { date:16, type:'holiday', label:'Uzhavar Thirunal' },
+      { date:26, type:'holiday', label:'Republic Day' },
     ],
-    dayOrders: { 2:'D1', 3:'D2', 5:'D3', 6:'D4', 7:'D5', 8:'D1', 9:'D2', 10:'D3', 12:'D4', 13:'D5', 17:'D1', 18:'D2', 19:'D3', 20:'D4', 21:'D5', 22:'D1', 23:'D2', 24:'D3', 27:'D4', 28:'D5', 29:'D1', 30:'D2', 31:'D3' },
+    dayOrders: {2:'D1',3:'D2',5:'D3',6:'D4',7:'D5',8:'D1',9:'D2',10:'D3',12:'D4',13:'D5',17:'D1',18:'D2',19:'D3',20:'D4',21:'D5',22:'D1',23:'D2',24:'D3',27:'D4',28:'D5',29:'D1',30:'D2',31:'D3'},
   },
   'February 2026': {
     events: [
-      { date: 2,  type:'exam',     label:'CAT-1 Begins' },
-      { date: 14, type:'special',  label:'Valentine\'s Day / Techno Day' },
-      { date: 19, type:'special',  label:'SRM Founders\' Day' },
-      { date: 26, type:'exam',     label:'CAT-2 Prep Week' },
+      { date:2,  type:'exam',    label:'CAT-1 Begins' },
+      { date:14, type:'special', label:"Valentine's / Techno Day" },
+      { date:19, type:'special', label:"SRM Founders' Day" },
+      { date:26, type:'exam',    label:'CAT-2 Prep Week' },
     ],
-    dayOrders: { 2:'D4', 3:'D5', 4:'D1', 5:'D2', 6:'D3', 7:'D4', 9:'D5', 10:'D1', 11:'D2', 12:'D3', 13:'D4', 16:'D5', 17:'D1', 18:'D2', 20:'D3', 21:'D4', 23:'D5', 24:'D1', 25:'D2', 26:'D3', 27:'D4', 28:'D5' },
+    dayOrders: {2:'D4',3:'D5',4:'D1',5:'D2',6:'D3',7:'D4',9:'D5',10:'D1',11:'D2',12:'D3',13:'D4',16:'D5',17:'D1',18:'D2',20:'D3',21:'D4',23:'D5',24:'D1',25:'D2',26:'D3',27:'D4',28:'D5'},
   },
   'March 2026': {
     events: [
-      { date: 18, type:'holiday',  label:'Holi' },
-      { date: 2,  type:'exam',     label:'CAT-2 Begins' },
-      { date: 25, type:'exam',     label:'CAT-2 Ends' },
+      { date:2,  type:'exam',    label:'CAT-2 Begins' },
+      { date:18, type:'holiday', label:'Holi' },
+      { date:25, type:'exam',    label:'CAT-2 Ends' },
     ],
-    dayOrders: { 2:'D1', 3:'D2', 4:'D3', 5:'D4', 6:'D5', 7:'D1', 9:'D2', 10:'D3', 11:'D4', 12:'D5', 13:'D1', 16:'D2', 17:'D3', 19:'D4', 20:'D5', 23:'D1', 24:'D2', 26:'D3', 27:'D4', 28:'D5', 30:'D1', 31:'D2' },
+    dayOrders: {2:'D1',3:'D2',4:'D3',5:'D4',6:'D5',7:'D1',9:'D2',10:'D3',11:'D4',12:'D5',13:'D1',16:'D2',17:'D3',19:'D4',20:'D5',23:'D1',24:'D2',26:'D3',27:'D4',28:'D5',30:'D1',31:'D2'},
   },
   'April 2026': {
     events: [
-      { date: 1,  type:'holiday',  label:'Tamil New Year / Ugadi' },
-      { date: 3,  type:'holiday',  label:'Good Friday' },
-      { date: 14, type:'holiday',  label:'Dr. Ambedkar Jayanti' },
-      { date: 21, type:'exam',     label:'Model Exams Begin' },
-      { date: 30, type:'exam',     label:'Last Day of Instruction' },
+      { date:1,  type:'holiday', label:'Tamil New Year / Ugadi' },
+      { date:3,  type:'holiday', label:'Good Friday' },
+      { date:14, type:'holiday', label:'Dr. Ambedkar Jayanti' },
+      { date:21, type:'exam',    label:'Model Exams Begin' },
+      { date:30, type:'exam',    label:'Last Day of Instruction' },
     ],
-    dayOrders: { 2:'D3', 4:'D4', 6:'D5', 7:'D1', 8:'D2', 9:'D3', 10:'D4', 13:'D5', 15:'D1', 16:'D2', 17:'D3', 20:'D4', 22:'D5', 23:'D1', 24:'D2', 27:'D3', 28:'D4', 29:'D5', 30:'D1' },
+    dayOrders: {2:'D3',4:'D4',6:'D5',7:'D1',8:'D2',9:'D3',10:'D4',13:'D5',15:'D1',16:'D2',17:'D3',20:'D4',22:'D5',23:'D1',24:'D2',27:'D3',28:'D4',29:'D5',30:'D1'},
   },
   'May 2026': {
     events: [
-      { date: 1,  type:'holiday',  label:'Labour Day' },
-      { date: 4,  type:'exam',     label:'End Semester Exams Begin' },
-      { date: 25, type:'exam',     label:'End Semester Exams End' },
+      { date:1,  type:'holiday', label:'Labour Day' },
+      { date:4,  type:'exam',    label:'End Semester Exams Begin' },
+      { date:25, type:'exam',    label:'End Semester Exams End' },
     ],
     dayOrders: {},
   },
 };
 
 const MONTHS = Object.keys(CALENDAR_DATA);
-const DAYS_OF_WEEK = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
-function parseMonth(monthStr) {
-  const [m, y] = monthStr.split(' ');
-  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  return new Date(parseInt(y), months.indexOf(m), 1);
+/* ══════════════════════════════════════════════════
+   HELPERS
+   ══════════════════════════════════════════════════ */
+function parseMonthStr(str) {
+  const [m, y] = str.split(' ');
+  return new Date(parseInt(y), MONTH_NAMES.indexOf(m), 1);
+}
+function daysInMonth(d) {
+  return new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+}
+function firstWeekday(d) {
+  return new Date(d.getFullYear(), d.getMonth(), 1).getDay();
 }
 
-function getDaysInMonth(date) {
-  return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+// THE FIX — resolve current month string correctly
+function getCurrentMonthStr() {
+  const now = new Date();
+  return `${MONTH_NAMES[now.getMonth()]} ${now.getFullYear()}`;
 }
 
-function getFirstDayOfWeek(date) {
-  return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
-}
-
-/* ── Event Pill ──────────────────────────────────── */
-function EventPill({ event, compact }) {
-  const t = EVENT_TYPES[event.type] || EVENT_TYPES.special;
-  return (
-    <div className="event-pill" style={{ color:t.color, background:t.bg, border:`1px solid ${t.border}` }}>
-      {!compact && <span className="event-dot" style={{ background:t.color }} />}
-      <span className="event-text">{event.label}</span>
-    </div>
-  );
-}
-
-/* ── Day Cell ────────────────────────────────────── */
-function DayCell({ day, monthData, isToday, isSelected, onClick, currentDay }) {
-  if (!day) return <div className="day-cell day-empty" />;
-
-  const events = (monthData?.events || []).filter(e => e.date === day);
-  const dayOrder = monthData?.dayOrders?.[day];
-  const isWeekend = [0, 6].includes(new Date(currentDay.getFullYear(), currentDay.getMonth(), day).getDay());
-  const isHoliday = events.some(e => e.type === 'holiday');
-  const hasExam   = events.some(e => e.type === 'exam');
-
-  return (
-    <div
-      className={`day-cell ${isToday ? 'day-today' : ''} ${isSelected ? 'day-selected' : ''} ${isWeekend ? 'day-weekend' : ''} ${isHoliday ? 'day-holiday' : ''}`}
-      onClick={() => onClick(day)}
-    >
-      <div className="day-num-row">
-        <span className="day-num">{day}</span>
-        {dayOrder && !isHoliday && (
-          <span className="day-order" style={{ color: hasExam ? '#f59e0b' : 'rgba(91,94,244,0.8)' }}>{dayOrder}</span>
-        )}
-        {isHoliday && <span className="day-holiday-icon">🔴</span>}
-        {hasExam && !isHoliday && <span className="day-exam-dot" />}
-      </div>
-      {events.slice(0, 2).map((e, i) => <EventPill key={i} event={e} compact />)}
-    </div>
-  );
-}
-
-/* ── Upcoming Events List ────────────────────────── */
-function UpcomingEvents({ selectedMonth, selectedDay }) {
-  const allEvents = [];
+/* ══════════════════════════════════════════════════
+   UPCOMING STRIP
+   ══════════════════════════════════════════════════ */
+function UpcomingStrip() {
+  const now = new Date(); now.setHours(0,0,0,0);
+  const all = [];
   MONTHS.forEach(m => {
     (CALENDAR_DATA[m]?.events || []).forEach(e => {
-      allEvents.push({ ...e, month:m });
+      const d = parseMonthStr(m);
+      d.setDate(e.date);
+      if (d >= now) all.push({ ...e, month:m, date_obj:d });
     });
   });
-
-  const now = new Date();
-  const upcoming = allEvents.filter(e => {
-    const d = parseMonth(e.month);
-    d.setDate(e.date);
-    return d >= now;
-  }).sort((a, b) => {
-    const da = parseMonth(a.month); da.setDate(a.date);
-    const db = parseMonth(b.month); db.setDate(b.date);
-    return da - db;
-  }).slice(0, 8);
+  all.sort((a,b) => a.date_obj - b.date_obj);
+  const upcoming = all.slice(0, 5);
 
   return (
-    <div className="upcoming">
-      <div className="upcoming-title">Upcoming Events</div>
-      <div className="upcoming-list">
-        {upcoming.map((e, i) => {
-          const t = EVENT_TYPES[e.type] || EVENT_TYPES.special;
-          return (
-            <div key={i} className="upcoming-item">
-              <div className="upcoming-icon" style={{ color:t.color, background:t.bg }}>
-                {e.type==='holiday'?'🏖':'📅'}
-              </div>
-              <div className="upcoming-info">
-                <div className="upcoming-label">{e.label}</div>
-                <div className="upcoming-date">{e.month.split(' ')[0]} {e.date}</div>
-              </div>
-              <span className="tag" style={{ fontSize:9.5, background:t.bg, color:t.color, border:`1px solid ${t.border}`, flexShrink:0 }}>
-                {t.label}
-              </span>
+    <div className="upcoming-strip">
+      {upcoming.map((e, i) => {
+        const t = EVENT_TYPES[e.type] || EVENT_TYPES.special;
+        const daysLeft = Math.ceil((e.date_obj - now) / 86400000);
+        return (
+          <div key={i} className="up-item" style={{ '--uc': t.color, '--ubg': t.bg, '--ubdr': t.border }}>
+            <span className="up-icon">{t.icon}</span>
+            <div className="up-info">
+              <div className="up-label">{e.label}</div>
+              <div className="up-date">{e.month.split(' ')[0]} {e.date}</div>
             </div>
-          );
-        })}
-      </div>
+            <div className="up-days" style={{ color: t.color }}>
+              {daysLeft === 0 ? 'Today' : daysLeft === 1 ? 'Tomorrow' : `${daysLeft}d`}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
 
-/* ── Main Calendar ───────────────────────────────── */
+/* ══════════════════════════════════════════════════
+   DAY DETAIL PANEL (shown below grid on click)
+   ══════════════════════════════════════════════════ */
+function DayDetailPanel({ day, monthData, monthLabel, onClose }) {
+  if (!day) return null;
+  const events = (monthData?.events || []).filter(e => e.date === day);
+  const order  = monthData?.dayOrders?.[day];
+  return (
+    <div className="detail-panel animate-up">
+      <div className="dp-header">
+        <div className="dp-date-block">
+          <div className="dp-day-num">{day}</div>
+          <div className="dp-month-name">{monthLabel}</div>
+        </div>
+        {order && (
+          <div className="dp-order-badge">{order}</div>
+        )}
+        <button className="dp-close" onClick={onClose}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      {events.length > 0 ? (
+        <div className="dp-events">
+          {events.map((e, i) => {
+            const t = EVENT_TYPES[e.type] || EVENT_TYPES.special;
+            return (
+              <div key={i} className="dp-event" style={{ '--ec': t.color, '--ebg': t.bg, '--ebdr': t.border }}>
+                <span className="dp-event-icon">{t.icon}</span>
+                <div>
+                  <div className="dp-event-label">{e.label}</div>
+                  <div className="dp-event-type">{t.label}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="dp-no-event">
+          {order ? `Regular class day` : 'No events scheduled'}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════
+   MAIN
+   ══════════════════════════════════════════════════ */
 export default function CalendarPage() {
-  const today = new Date();
-  const currentMonthStr = `${today.toLocaleString('default',{month:'long'})} ${today.getFullYear()}`;
-  const initialMonth = MONTHS.find(m => m.includes(String(today.getFullYear()))) || MONTHS[0];
+  const todayObj = new Date();
+  const todayMonthStr = getCurrentMonthStr();
 
-  const [activeMonth, setActiveMonth] = useState(initialMonth);
-  const [selectedDay, setSelectedDay]   = useState(today.getDate());
-  const [view, setView] = useState('month'); // 'month' | 'list'
-
-  const monthDate   = parseMonth(activeMonth);
-  const daysInMonth = getDaysInMonth(monthDate);
-  const firstDay    = getFirstDayOfWeek(monthDate);
-  const monthData   = CALENDAR_DATA[activeMonth] || {};
-
-  const prevMonth = () => {
-    const idx = MONTHS.indexOf(activeMonth);
-    if (idx > 0) { setActiveMonth(MONTHS[idx-1]); setSelectedDay(null); }
-  };
-  const nextMonth = () => {
-    const idx = MONTHS.indexOf(activeMonth);
-    if (idx < MONTHS.length-1) { setActiveMonth(MONTHS[idx+1]); setSelectedDay(null); }
+  // THE FIX: start on current month if it exists in data, else closest
+  const resolveInitial = () => {
+    if (CALENDAR_DATA[todayMonthStr]) return todayMonthStr;
+    // find closest future month
+    return MONTHS.find(m => parseMonthStr(m) >= parseMonthStr(todayMonthStr)) || MONTHS[MONTHS.length - 1];
   };
 
-  const selectedEvents = selectedDay ? (monthData.events||[]).filter(e=>e.date===selectedDay) : [];
-  const selectedOrder  = selectedDay ? monthData.dayOrders?.[selectedDay] : null;
+  const [activeMonth, setActiveMonth] = useState(resolveInitial);
+  const [selectedDay, setSelectedDay] = useState(
+    // Auto-select today if we're on today's month
+    () => CALENDAR_DATA[todayMonthStr] ? todayObj.getDate() : null
+  );
+  const [animDir, setAnimDir]   = useState(0); // -1 prev, 1 next
+  const [animating, setAnimating] = useState(false);
+  const [view, setView]         = useState('month');
 
-  const isToday = (day) => {
-    return activeMonth === currentMonthStr && day === today.getDate();
+  const monthDate = parseMonthStr(activeMonth);
+  const totalDays = daysInMonth(monthDate);
+  const startDay  = firstWeekday(monthDate);
+  const monthData = CALENDAR_DATA[activeMonth] || {};
+  const activeIdx = MONTHS.indexOf(activeMonth);
+
+  // Month stats
+  const workingDays = Object.keys(monthData.dayOrders || {}).length;
+  const holidayCount = (monthData.events || []).filter(e => e.type === 'holiday').length;
+  const examCount    = (monthData.events || []).filter(e => e.type === 'exam').length;
+
+  // Month progress (how many days have passed)
+  const isCurrentMonth = activeMonth === todayMonthStr;
+  const progress = isCurrentMonth ? Math.round((todayObj.getDate() / totalDays) * 100) : 0;
+
+  const navigate = useCallback((dir) => {
+    const newIdx = activeIdx + dir;
+    if (newIdx < 0 || newIdx >= MONTHS.length) return;
+    setAnimDir(dir);
+    setAnimating(true);
+    setTimeout(() => {
+      setActiveMonth(MONTHS[newIdx]);
+      setSelectedDay(null);
+      setAnimating(false);
+    }, 200);
+  }, [activeIdx]);
+
+  const goToday = () => {
+    if (CALENDAR_DATA[todayMonthStr]) {
+      setActiveMonth(todayMonthStr);
+      setSelectedDay(todayObj.getDate());
+    }
   };
 
-  // Day stats
-  const totalDays = Object.keys(monthData.dayOrders||{}).length;
-  const holidays  = (monthData.events||[]).filter(e=>e.type==='holiday').length;
-  const exams     = (monthData.events||[]).filter(e=>e.type==='exam').length;
+  const isToday = (d) => activeMonth === todayMonthStr && d === todayObj.getDate();
+  const isPast  = (d) => {
+    const cellDate = new Date(monthDate.getFullYear(), monthDate.getMonth(), d);
+    cellDate.setHours(23,59,59);
+    return cellDate < todayObj;
+  };
 
   return (
     <>
       <Head><title>Academic Calendar — CampusPro</title></Head>
 
-      <div className="cal-app">
-        {/* ── SIDEBAR ────────────────────────────────── */}
-        <aside className="cal-sidebar glass">
-          <Link href="/" className="brand">
-            <span style={{ fontSize:20, color:'var(--accent)', filter:'drop-shadow(0 0 8px var(--accent-glow))' }}>⬡</span>
-            <span style={{ fontFamily:'var(--font-display)', fontSize:15, color:'var(--text-1)', fontWeight:700 }}>
-              Campus<strong style={{ color:'var(--accent)' }}>Pro</strong>
-            </span>
+      <div className="page">
+        {/* Ambient orbs */}
+        <div className="orb orb-a" /><div className="orb orb-b" />
+
+        {/* ── TOP BAR ──────────────────────────── */}
+        <div className="top-bar">
+          <Link href="/dashboard" className="back-btn">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
+            Dashboard
           </Link>
-
-          {/* Legend */}
-          <div className="legend">
-            <div className="legend-title">Legend</div>
-            {Object.entries(EVENT_TYPES).map(([key, t]) => (
-              <div key={key} className="legend-row">
-                <div className="legend-dot" style={{ background:t.color }} />
-                <span className="legend-label">{t.label}</span>
-              </div>
-            ))}
+          <div className="top-brand">
+            <span className="brand-hex">⬡</span>
+            <span className="brand-word">Campus<strong>Pro</strong></span>
           </div>
+          <div className="top-right">
+            <div className="semester-chip">Even Sem 2025–26 · SRM KTR</div>
+          </div>
+        </div>
 
-          {/* Month stats */}
-          <div className="month-stats">
-            <div className="ms-title">{activeMonth}</div>
-            <div className="ms-grid">
-              <div className="ms-card">
-                <div className="ms-val" style={{ color:'#5b5ef4' }}>{totalDays}</div>
-                <div className="ms-label">Working Days</div>
+        {/* ── UPCOMING STRIP ──────────────────── */}
+        <UpcomingStrip />
+
+        {/* ── CALENDAR CARD ───────────────────── */}
+        <div className="cal-card glass">
+
+          {/* Calendar header */}
+          <div className="cal-header">
+            <div className="cal-nav-left">
+              <button className="nav-btn" onClick={() => navigate(-1)} disabled={activeIdx === 0}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><polyline points="15 18 9 12 15 6"/></svg>
+              </button>
+              <div className="month-title-block">
+                <h2 className="month-name">{activeMonth.split(' ')[0]}</h2>
+                <span className="year-label">{activeMonth.split(' ')[1]}</span>
               </div>
-              <div className="ms-card">
-                <div className="ms-val" style={{ color:'#f43f5e' }}>{holidays}</div>
-                <div className="ms-label">Holidays</div>
+              <button className="nav-btn" onClick={() => navigate(1)} disabled={activeIdx === MONTHS.length - 1}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
+            </div>
+
+            {/* Month stats pills */}
+            <div className="month-stats">
+              <div className="ms-pill ms-work">
+                <div className="ms-val">{workingDays}</div>
+                <div className="ms-lbl">Working</div>
               </div>
-              <div className="ms-card">
-                <div className="ms-val" style={{ color:'#f59e0b' }}>{exams}</div>
-                <div className="ms-label">Exam Events</div>
+              <div className="ms-pill ms-hol">
+                <div className="ms-val">{holidayCount}</div>
+                <div className="ms-lbl">Holidays</div>
               </div>
+              <div className="ms-pill ms-exam">
+                <div className="ms-val">{examCount}</div>
+                <div className="ms-lbl">Exams</div>
+              </div>
+            </div>
+
+            <div className="cal-header-right">
+              {/* View toggle */}
+              <div className="view-toggle">
+                <button className={`vt-btn ${view==='month'?'vt-active':''}`} onClick={() => setView('month')}>Month</button>
+                <button className={`vt-btn ${view==='list'?'vt-active':''}`} onClick={() => setView('list')}>List</button>
+              </div>
+              {!isCurrentMonth && (
+                <button className="today-btn" onClick={goToday}>Today</button>
+              )}
             </div>
           </div>
 
-          {/* Selected day detail */}
-          {selectedDay && (
-            <div className="day-detail animate-fade-up">
-              <div className="dd-title">
-                {activeMonth.split(' ')[0]} {selectedDay}
-                {selectedOrder && <span className="dd-order">{selectedOrder}</span>}
+          {/* Month progress bar (only for current month) */}
+          {isCurrentMonth && (
+            <div className="month-progress-wrap">
+              <div className="month-progress-bar">
+                <div className="month-progress-fill" style={{ width:`${progress}%` }} />
               </div>
-              {selectedEvents.length > 0 ? (
-                <div className="dd-events">
-                  {selectedEvents.map((e, i) => {
-                    const t = EVENT_TYPES[e.type] || EVENT_TYPES.special;
-                    return (
-                      <div key={i} className="dd-event" style={{ borderLeft:`3px solid ${t.color}`, background:t.bg }}>
-                        <div className="dd-event-label" style={{ color:t.color }}>{e.label}</div>
-                        <div className="dd-event-type">{t.label}</div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="dd-empty">
-                  {selectedOrder ? `Day Order: ${selectedOrder}` : 'No events today'}
-                </div>
-              )}
+              <span className="month-progress-label">
+                Day {todayObj.getDate()} of {totalDays} · {progress}% through {activeMonth.split(' ')[0]}
+              </span>
             </div>
           )}
 
-          <UpcomingEvents />
-        </aside>
-
-        {/* ── MAIN CALENDAR ──────────────────────────── */}
-        <main className="cal-main">
-          {/* Header */}
-          <div className="cal-header animate-fade-up">
-            <div className="cal-nav">
-              <button className="nav-arrow" onClick={prevMonth} disabled={MONTHS.indexOf(activeMonth)===0}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
-              </button>
-              <div>
-                <h1 className="cal-month-title">{activeMonth}</h1>
-                <div className="cal-month-sub">SRM KTR · Even Semester 2025–26</div>
-              </div>
-              <button className="nav-arrow" onClick={nextMonth} disabled={MONTHS.indexOf(activeMonth)===MONTHS.length-1}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
-              </button>
-            </div>
-
-            <div style={{ display:'flex', gap:8, alignItems:'center' }}>
-              <button className={`view-btn ${view==='month'?'view-active':''}`} onClick={() => setView('month')}>Month</button>
-              <button className={`view-btn ${view==='list'?'view-active':''}`} onClick={() => setView('list')}>List</button>
-              <button className="btn btn-ghost" style={{ fontSize:12, padding:'7px 14px' }}
-                onClick={() => { setActiveMonth(initialMonth); setSelectedDay(today.getDate()); }}>
-                Today
-              </button>
-            </div>
-          </div>
-
           {view === 'month' && (
             <>
-              {/* Day headers */}
-              <div className="days-header">
-                {DAYS_OF_WEEK.map(d => (
-                  <div key={d} className={`days-header-cell ${d==='Sun'||d==='Sat'?'weekend-header':''}`}>{d}</div>
+              {/* Day of week headers */}
+              <div className="dow-header">
+                {DAY_LABELS.map((d, i) => (
+                  <div key={d} className={`dow-cell ${i===0||i===6 ? 'dow-weekend' : ''}`}>{d}</div>
                 ))}
               </div>
 
-              {/* Calendar grid */}
-              <div className="cal-grid animate-fade-in">
+              {/* Grid */}
+              <div className={`cal-grid ${animating ? (animDir > 0 ? 'slide-out-left' : 'slide-out-right') : 'slide-in'}`}>
                 {/* Empty cells */}
-                {Array(firstDay).fill(null).map((_, i) => (
-                  <div key={`e${i}`} className="day-cell day-empty" />
+                {Array(startDay).fill(null).map((_, i) => (
+                  <div key={`e${i}`} className="day-empty" />
                 ))}
+
                 {/* Day cells */}
-                {Array(daysInMonth).fill(null).map((_, i) => (
-                  <DayCell
-                    key={i+1}
-                    day={i+1}
-                    monthData={monthData}
-                    isToday={isToday(i+1)}
-                    isSelected={selectedDay === i+1}
-                    onClick={setSelectedDay}
-                    currentDay={monthDate}
-                  />
-                ))}
+                {Array(totalDays).fill(null).map((_, i) => {
+                  const d = i + 1;
+                  const events = (monthData.events || []).filter(e => e.date === d);
+                  const order  = monthData.dayOrders?.[d];
+                  const weekDay = new Date(monthDate.getFullYear(), monthDate.getMonth(), d).getDay();
+                  const isWknd = weekDay === 0 || weekDay === 6;
+                  const isHol  = events.some(e => e.type === 'holiday');
+                  const isExam = events.some(e => e.type === 'exam');
+                  const isSpec = events.some(e => e.type === 'special');
+                  const today  = isToday(d);
+                  const sel    = selectedDay === d;
+                  const past   = isPast(d) && !today;
+
+                  return (
+                    <div
+                      key={d}
+                      className={[
+                        'day-cell',
+                        today  ? 'day-today'    : '',
+                        sel    ? 'day-selected' : '',
+                        isWknd ? 'day-weekend'  : '',
+                        isHol  ? 'day-holiday'  : '',
+                        isExam ? 'day-exam'     : '',
+                        past   ? 'day-past'     : '',
+                      ].filter(Boolean).join(' ')}
+                      onClick={() => setSelectedDay(sel ? null : d)}
+                      style={{ animationDelay: `${i * 8}ms` }}
+                    >
+                      {/* Day number */}
+                      <div className="dn-wrap">
+                        <span className="day-num">{d}</span>
+                        {today && <div className="today-ring" />}
+                      </div>
+
+                      {/* Day order badge */}
+                      {order && !isHol && (
+                        <div className="order-badge" style={{
+                          color: isExam ? '#f59e0b' : 'var(--accent-light)',
+                          background: isExam ? 'rgba(245,158,11,0.1)' : 'var(--accent-dim)',
+                        }}>{order}</div>
+                      )}
+
+                      {/* Event indicators */}
+                      <div className="event-dots">
+                        {events.slice(0, 3).map((e, ei) => {
+                          const t = EVENT_TYPES[e.type];
+                          return (
+                            <div key={ei} className="event-dot-pill" style={{ background: t.color }}>
+                              <span className="edp-text">{e.label}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </>
           )}
 
           {view === 'list' && (
-            <div className="list-view animate-fade-up">
+            <div className="list-view animate-up">
               {MONTHS.map(m => {
                 const mData = CALENDAR_DATA[m] || {};
-                const events = mData.events || [];
-                if (!events.length) return null;
+                const evts  = mData.events || [];
+                if (!evts.length) return null;
+                const isCurrent = m === todayMonthStr;
                 return (
-                  <div key={m} className="list-month">
-                    <div className="list-month-label">{m}</div>
-                    {events.map((e, i) => {
+                  <div key={m} className={`list-month ${isCurrent ? 'list-month-current' : ''}`}>
+                    <div className="list-month-label">
+                      {m}
+                      {isCurrent && <span className="lm-current-chip">Current</span>}
+                    </div>
+                    {evts.map((e, i) => {
                       const t = EVENT_TYPES[e.type] || EVENT_TYPES.special;
                       return (
-                        <div key={i} className="list-event" style={{ borderLeft:`3px solid ${t.color}` }}>
-                          <div className="list-event-date">{m.split(' ')[0]} {e.date}</div>
-                          <div className="list-event-label">{e.label}</div>
-                          <span className="tag" style={{ fontSize:9.5, background:t.bg, color:t.color, border:`1px solid ${t.border}`, marginLeft:'auto' }}>
-                            {t.label}
-                          </span>
+                        <div key={i} className="list-event-row" style={{ '--lc': t.color, '--lbg': t.bg, '--lbdr': t.border }}>
+                          <div className="ler-date">
+                            <div className="ler-day">{e.date}</div>
+                            <div className="ler-mon">{m.split(' ')[0].slice(0,3)}</div>
+                          </div>
+                          <div className="ler-icon">{t.icon}</div>
+                          <div className="ler-info">
+                            <div className="ler-label">{e.label}</div>
+                            <div className="ler-type">{t.label}</div>
+                          </div>
+                          <div className="ler-badge">{t.label}</div>
                         </div>
                       );
                     })}
@@ -356,148 +432,402 @@ export default function CalendarPage() {
             </div>
           )}
 
-          {/* Month navigation dots */}
-          <div className="month-dots">
-            {MONTHS.map((m, i) => (
+          {/* ── DAY DETAIL PANEL ──────────────── */}
+          {selectedDay && view === 'month' && (
+            <DayDetailPanel
+              day={selectedDay}
+              monthData={monthData}
+              monthLabel={`${activeMonth.split(' ')[0]} ${selectedDay}`}
+              onClose={() => setSelectedDay(null)}
+            />
+          )}
+        </div>
+
+        {/* ── MONTH SWITCHER ──────────────────── */}
+        <div className="month-switcher">
+          {MONTHS.map((m, i) => {
+            const isActive = m === activeMonth;
+            const isCurr   = m === todayMonthStr;
+            return (
               <button
-                key={i}
-                className={`month-dot ${m===activeMonth?'month-dot-active':''}`}
-                onClick={() => { setActiveMonth(m); setSelectedDay(null); }}
-                title={m}
-              />
-            ))}
+                key={m}
+                className={`ms-tab ${isActive ? 'ms-active' : ''} ${isCurr ? 'ms-today' : ''}`}
+                onClick={() => { navigate(i - activeIdx); }}
+              >
+                {m.split(' ')[0].slice(0, 3)}
+                {isCurr && <span className="ms-today-dot" />}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* ── LEGEND ──────────────────────────── */}
+        <div className="legend-row-bottom">
+          {Object.entries(EVENT_TYPES).map(([key, t]) => (
+            <div key={key} className="leg-item">
+              <div className="leg-dot" style={{ background: t.color }} />
+              <span>{t.label}</span>
+            </div>
+          ))}
+          <div className="leg-item">
+            <div className="leg-dot leg-order" />
+            <span>Day Order</span>
           </div>
-        </main>
+          <div className="leg-item leg-today-item">
+            <div className="leg-today-circle" />
+            <span>Today</span>
+          </div>
+        </div>
       </div>
 
       <style jsx global>{`
         body { background: var(--bg-void); overflow-x: hidden; }
+        @keyframes slideInLeft  { from{opacity:0;transform:translateX(-20px)} to{opacity:1;transform:translateX(0)} }
+        @keyframes slideInRight { from{opacity:0;transform:translateX(20px)}  to{opacity:1;transform:translateX(0)} }
+        @keyframes cellFadeIn   { from{opacity:0;transform:scale(0.94)} to{opacity:1;transform:scale(1)} }
       `}</style>
 
       <style jsx>{`
-        .cal-app { display:flex; min-height:100vh; }
-
-        /* SIDEBAR */
-        .cal-sidebar {
-          width:280px; flex-shrink:0; min-height:100vh;
-          padding:20px 16px; display:flex; flex-direction:column; gap:18px;
-          position:sticky; top:0; height:100vh; overflow-y:auto;
-          border-right:1px solid var(--border);
+        /* ── PAGE ───────────────────────────────── */
+        .page {
+          max-width: 1080px; margin: 0 auto;
+          padding: 24px 20px 48px;
+          position: relative;
+          display: flex; flex-direction: column; gap: 16px;
         }
-        .brand { display:flex; align-items:center; gap:8px; }
-
-        .legend { padding:12px; background:var(--bg-elevated); border:1px solid var(--border); border-radius:var(--radius-md); }
-        .legend-title { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--text-3); margin-bottom:10px; }
-        .legend-row { display:flex; align-items:center; gap:9px; margin-bottom:7px; }
-        .legend-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
-        .legend-label { font-size:12px; color:var(--text-2); }
-
-        .month-stats { padding:14px; background:var(--bg-elevated); border:1px solid var(--border); border-radius:var(--radius-md); }
-        .ms-title { font-family:var(--font-display); font-size:13px; font-weight:700; color:var(--text-1); margin-bottom:12px; }
-        .ms-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
-        .ms-card { text-align:center; }
-        .ms-val { font-family:var(--font-mono); font-size:22px; font-weight:700; }
-        .ms-label { font-size:9px; color:var(--text-4); text-transform:uppercase; letter-spacing:0.4px; margin-top:2px; }
-
-        .day-detail { padding:14px; background:var(--accent-dim); border:1px solid var(--accent-border); border-radius:var(--radius-md); }
-        .dd-title { font-family:var(--font-display); font-size:14px; font-weight:700; color:var(--text-1); margin-bottom:10px; display:flex; align-items:center; gap:8px; }
-        .dd-order { font-family:var(--font-mono); font-size:11px; color:var(--accent); background:rgba(91,94,244,0.15); border:1px solid var(--accent-border); padding:2px 8px; border-radius:5px; }
-        .dd-events { display:flex; flex-direction:column; gap:8px; }
-        .dd-event { padding:10px 12px; border-radius:var(--radius-sm); }
-        .dd-event-label { font-size:13px; font-weight:600; }
-        .dd-event-type { font-size:10px; color:var(--text-3); margin-top:2px; text-transform:uppercase; letter-spacing:0.4px; }
-        .dd-empty { font-size:12px; color:var(--text-3); font-style:italic; }
-
-        /* UPCOMING */
-        .upcoming { flex:1; }
-        .upcoming-title { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--text-3); margin-bottom:12px; }
-        .upcoming-list { display:flex; flex-direction:column; gap:8px; }
-        .upcoming-item { display:flex; align-items:center; gap:10px; padding:10px; background:var(--bg-elevated); border:1px solid var(--border); border-radius:var(--radius-sm); }
-        .upcoming-icon { width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0; }
-        .upcoming-info { flex:1; min-width:0; }
-        .upcoming-label { font-size:12px; font-weight:500; color:var(--text-1); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-        .upcoming-date { font-family:var(--font-mono); font-size:10px; color:var(--text-3); margin-top:2px; }
-
-        /* MAIN */
-        .cal-main { flex:1; padding:28px 32px; display:flex; flex-direction:column; gap:20px; min-width:0; }
-        .cal-header { display:flex; align-items:center; justify-content:space-between; gap:16px; }
-        .cal-nav { display:flex; align-items:center; gap:18px; }
-        .nav-arrow {
-          width:34px; height:34px; display:flex; align-items:center; justify-content:center;
-          background:var(--bg-elevated); border:1px solid var(--border); border-radius:var(--radius-sm);
-          color:var(--text-2); cursor:pointer; transition:all 0.15s;
+        .orb {
+          position: fixed; border-radius: 50%;
+          filter: blur(100px); pointer-events: none; z-index: 0;
         }
-        .nav-arrow:hover:not(:disabled) { border-color:var(--border-strong); color:var(--text-1); }
-        .nav-arrow:disabled { opacity:0.3; cursor:not-allowed; }
-        .cal-month-title { font-family:var(--font-display); font-size:26px; font-weight:800; color:var(--text-1); letter-spacing:-0.5px; }
-        .cal-month-sub { font-size:11px; color:var(--text-3); margin-top:2px; }
-        .view-btn {
-          padding:7px 14px; border-radius:var(--radius-sm);
-          background:none; border:1px solid var(--border);
-          color:var(--text-3); font-size:12px; cursor:pointer;
-          transition:all 0.15s; font-family:var(--font-body);
+        .orb-a {
+          width: 500px; height: 500px;
+          background: radial-gradient(circle, var(--accent-dim), transparent 70%);
+          top: -150px; left: -100px;
+          animation: drift 14s ease-in-out infinite alternate;
         }
-        .view-btn:hover { background:var(--bg-elevated); color:var(--text-1); }
-        .view-active { background:var(--accent-dim); border-color:var(--accent-border); color:#a5b4fc; }
+        .orb-b {
+          width: 380px; height: 380px;
+          background: radial-gradient(circle, rgba(6,182,212,0.06), transparent 70%);
+          bottom: -80px; right: -60px;
+          animation: drift 18s ease-in-out infinite alternate-reverse;
+        }
+        @keyframes drift { from{transform:translate(0,0)} to{transform:translate(18px,12px)} }
 
-        /* CALENDAR GRID */
-        .days-header { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
-        .days-header-cell { text-align:center; font-size:10px; color:var(--text-3); padding:8px 4px; text-transform:uppercase; letter-spacing:0.7px; font-weight:600; }
-        .weekend-header { color:rgba(244,63,94,0.5); }
+        /* ── TOP BAR ────────────────────────────── */
+        .top-bar {
+          display: flex; align-items: center; gap: 16px;
+          position: relative; z-index: 1;
+        }
+        .back-btn {
+          display: flex; align-items: center; gap: 6px;
+          color: var(--text-3); font-size: 13px; padding: 6px 12px 6px 8px;
+          border-radius: var(--radius-sm); transition: all .15s; white-space: nowrap;
+        }
+        .back-btn:hover { background: var(--bg-hover); color: var(--text-1); }
+        .top-brand {
+          display: flex; align-items: center; gap: 8px;
+          font-family: var(--font-display); font-size: 16px; font-weight: 800;
+        }
+        .brand-hex { font-size: 20px; color: var(--accent); filter: drop-shadow(0 0 8px var(--accent-glow)); }
+        .brand-word { color: var(--text-1); }
+        .brand-word strong { color: var(--accent); }
+        .top-right { margin-left: auto; }
+        .semester-chip {
+          font-size: 11px; color: var(--text-3);
+          background: var(--bg-elevated); border: 1px solid var(--border);
+          padding: 5px 12px; border-radius: 20px;
+        }
 
-        .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
+        /* ── UPCOMING STRIP ─────────────────────── */
+        .upcoming-strip {
+          display: flex; gap: 10px; overflow-x: auto;
+          padding-bottom: 4px; position: relative; z-index: 1;
+        }
+        .upcoming-strip::-webkit-scrollbar { height: 0; }
+        .up-item {
+          display: flex; align-items: center; gap: 10px;
+          background: var(--card-bg); border: 1px solid var(--card-border);
+          border-radius: var(--radius-md); padding: 10px 14px;
+          min-width: 190px; flex-shrink: 0;
+          transition: transform .2s, border-color .2s;
+        }
+        .up-item:hover { transform: translateY(-2px); border-color: var(--uc, var(--border-strong)); }
+        .up-icon { font-size: 18px; flex-shrink: 0; }
+        .up-info { flex: 1; min-width: 0; }
+        .up-label { font-size: 12px; font-weight: 600; color: var(--text-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .up-date  { font-family: var(--font-mono); font-size: 10px; color: var(--text-3); margin-top: 2px; }
+        .up-days  { font-family: var(--font-mono); font-size: 11px; font-weight: 700; flex-shrink: 0; }
+
+        /* ── CALENDAR CARD ──────────────────────── */
+        .cal-card {
+          border-radius: var(--radius-xl); padding: 22px;
+          position: relative; z-index: 1;
+          box-shadow: var(--shadow-md);
+        }
+
+        /* ── HEADER ─────────────────────────────── */
+        .cal-header {
+          display: flex; align-items: center; gap: 16px;
+          margin-bottom: 16px; flex-wrap: wrap;
+        }
+        .cal-nav-left { display: flex; align-items: center; gap: 12px; }
+        .nav-btn {
+          width: 32px; height: 32px; border-radius: 9px;
+          background: var(--bg-elevated); border: 1px solid var(--border);
+          color: var(--text-2); cursor: pointer; display: flex;
+          align-items: center; justify-content: center;
+          transition: all .15s;
+        }
+        .nav-btn:hover:not(:disabled) { background: var(--bg-hover); border-color: var(--border-strong); color: var(--text-1); transform: scale(1.05); }
+        .nav-btn:disabled { opacity: .3; cursor: not-allowed; }
+        .month-title-block { display: flex; align-items: baseline; gap: 8px; }
+        .month-name { font-family: var(--font-display); font-size: 28px; font-weight: 800; color: var(--text-1); letter-spacing: -.6px; }
+        .year-label { font-family: var(--font-mono); font-size: 14px; color: var(--text-3); }
+
+        /* Month stats pills */
+        .month-stats { display: flex; gap: 8px; flex: 1; }
+        .ms-pill { display: flex; flex-direction: column; align-items: center; padding: 7px 14px; border-radius: var(--radius-md); background: var(--bg-elevated); border: 1px solid var(--border); min-width: 64px; }
+        .ms-val { font-family: var(--font-mono); font-size: 18px; font-weight: 700; }
+        .ms-lbl { font-size: 9px; color: var(--text-3); text-transform: uppercase; letter-spacing: .5px; margin-top: 1px; }
+        .ms-work .ms-val { color: var(--accent-light); }
+        .ms-hol  .ms-val { color: var(--rose); }
+        .ms-exam .ms-val { color: var(--amber); }
+
+        .cal-header-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+        .view-toggle { display: flex; border: 1px solid var(--border); border-radius: 9px; overflow: hidden; }
+        .vt-btn { padding: 6px 14px; background: none; border: none; color: var(--text-3); font-size: 12px; cursor: pointer; transition: all .15s; font-family: var(--font-body); }
+        .vt-btn:hover { color: var(--text-1); background: var(--bg-hover); }
+        .vt-active { background: var(--accent-dim) !important; color: var(--accent-light) !important; font-weight: 600; }
+        .today-btn {
+          padding: 6px 14px; border-radius: 9px;
+          background: var(--accent-dim); border: 1px solid var(--accent-border);
+          color: var(--accent-light); font-size: 12px; font-weight: 600; cursor: pointer;
+          transition: all .15s; font-family: var(--font-body);
+        }
+        .today-btn:hover { background: rgba(99,102,241,.18); }
+
+        /* Month progress */
+        .month-progress-wrap {
+          display: flex; align-items: center; gap: 12px;
+          margin-bottom: 14px;
+        }
+        .month-progress-bar { flex: 1; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+        .month-progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), #06b6d4); border-radius: 2px; transition: width .6s ease; }
+        .month-progress-label { font-size: 11px; color: var(--text-3); white-space: nowrap; font-family: var(--font-mono); }
+
+        /* ── DOW HEADER ─────────────────────────── */
+        .dow-header { display: grid; grid-template-columns: repeat(7,1fr); gap: 3px; margin-bottom: 6px; }
+        .dow-cell { text-align: center; font-size: 10px; font-weight: 700; letter-spacing: .7px; text-transform: uppercase; color: var(--text-3); padding: 6px 0; }
+        .dow-weekend { color: rgba(244,63,94,.5); }
+
+        /* ── GRID ───────────────────────────────── */
+        .cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 3px; }
+        .slide-in { animation: slideIn .25s ease both; }
+        @keyframes slideIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+        .slide-out-left  { animation: soLeft  .18s ease both; }
+        .slide-out-right { animation: soRight .18s ease both; }
+        @keyframes soLeft  { to{opacity:0;transform:translateX(-12px)} }
+        @keyframes soRight { to{opacity:0;transform:translateX(12px)} }
+
+        .day-empty { min-height: 90px; }
+
         .day-cell {
-          min-height:88px; border-radius:var(--radius-sm);
-          padding:7px; cursor:pointer; transition:all 0.15s;
-          background:rgba(255,255,255,0.015);
-          border:1px solid transparent;
-          display:flex; flex-direction:column; gap:4px;
+          min-height: 90px; border-radius: 10px;
+          padding: 8px 7px 6px;
+          background: rgba(255,255,255,.018);
+          border: 1px solid transparent;
+          cursor: pointer; position: relative;
+          display: flex; flex-direction: column; gap: 4px;
+          transition: background .15s, border-color .15s, transform .18s;
+          animation: cellFadeIn .35s ease both;
         }
-        .day-cell:not(.day-empty):hover { background:var(--bg-elevated); border-color:var(--border); }
-        .day-empty { cursor:default; opacity:0; }
-        .day-today { background:rgba(91,94,244,0.08); border-color:var(--accent-border); }
-        .day-selected { background:var(--accent-dim); border-color:rgba(91,94,244,0.3); box-shadow:0 0 0 2px rgba(91,94,244,0.15); }
-        .day-weekend { opacity:0.55; }
-        .day-holiday { background:rgba(244,63,94,0.06); }
+        .day-cell:hover { background: var(--bg-elevated); border-color: var(--border); transform: scale(1.03); z-index: 2; }
 
-        .day-num-row { display:flex; align-items:center; justify-content:space-between; }
-        .day-num { font-family:var(--font-mono); font-size:12px; font-weight:600; color:var(--text-2); }
-        .day-today .day-num { color:var(--accent); }
-        .day-order { font-size:9px; color:rgba(91,94,244,0.6); font-family:var(--font-mono); font-weight:600; }
-        .day-holiday-icon { font-size:10px; }
-        .day-exam-dot { width:5px; height:5px; border-radius:50%; background:#f59e0b; box-shadow:0 0 4px #f59e0b; }
+        /* State variants */
+        .day-past     { opacity: .45; }
+        .day-weekend  { opacity: .6; }
+        .day-holiday  { background: rgba(244,63,94,.06); border-color: rgba(244,63,94,.12); }
+        .day-exam     { background: rgba(245,158,11,.05); }
+        .day-today    {
+          background: var(--accent-dim) !important;
+          border-color: var(--accent) !important;
+          box-shadow: 0 0 0 1px var(--accent-border), 0 4px 16px var(--accent-glow);
+        }
+        .day-selected {
+          background: rgba(99,102,241,.16) !important;
+          border-color: var(--accent) !important;
+          transform: scale(1.04); z-index: 2;
+        }
 
-        /* EVENT PILL */
-        .event-pill { display:flex; align-items:center; gap:4px; border-radius:4px; padding:2px 5px; }
-        .event-dot { width:4px; height:4px; border-radius:50%; flex-shrink:0; }
-        .event-text { font-size:9px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        /* Day number */
+        .dn-wrap { display: flex; align-items: center; justify-content: space-between; }
+        .day-num {
+          font-family: var(--font-mono); font-size: 13px; font-weight: 600;
+          color: var(--text-2); line-height: 1;
+        }
+        .day-today .day-num { color: var(--accent-light); font-weight: 800; font-size: 14px; }
+        .today-ring {
+          width: 22px; height: 22px; border-radius: 50%;
+          background: var(--accent); box-shadow: 0 0 10px var(--accent-glow);
+          position: absolute; top: 6px; left: 6px; z-index: 0;
+          animation: todayPulse 2.5s ease-in-out infinite;
+        }
+        .day-today .day-num { position: relative; z-index: 1; color: white !important; font-size: 12px; }
+        @keyframes todayPulse { 0%,100%{box-shadow:0 0 10px var(--accent-glow)} 50%{box-shadow:0 0 18px var(--accent-glow)} }
 
-        /* LIST VIEW */
-        .list-view { display:flex; flex-direction:column; gap:20px; }
+        /* Order badge */
+        .order-badge {
+          font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+          padding: 1px 5px; border-radius: 4px;
+          display: inline-block; align-self: flex-start;
+        }
+
+        /* Event dots/pills */
+        .event-dots { display: flex; flex-direction: column; gap: 2px; margin-top: auto; }
+        .event-dot-pill {
+          border-radius: 3px; padding: 2px 5px;
+          display: flex; align-items: center; opacity: .85;
+        }
+        .edp-text {
+          font-size: 8.5px; font-weight: 600; color: white;
+          white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+          max-width: 100%;
+        }
+
+        /* ── DAY DETAIL PANEL ───────────────────── */
+        .detail-panel {
+          margin-top: 14px;
+          background: var(--bg-elevated);
+          border: 1px solid var(--accent-border);
+          border-radius: var(--radius-lg);
+          padding: 16px 18px;
+          box-shadow: 0 4px 24px var(--accent-glow);
+        }
+        .dp-header { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+        .dp-date-block { display: flex; align-items: baseline; gap: 6px; flex: 1; }
+        .dp-day-num { font-family: var(--font-display); font-size: 32px; font-weight: 800; color: var(--accent-light); line-height: 1; }
+        .dp-month-name { font-size: 14px; color: var(--text-2); font-weight: 500; }
+        .dp-order-badge {
+          background: var(--accent-dim); border: 1px solid var(--accent-border);
+          color: var(--accent-light); font-family: var(--font-mono);
+          font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 20px;
+        }
+        .dp-close {
+          width: 28px; height: 28px; border-radius: 8px;
+          background: var(--bg-hover); border: 1px solid var(--border);
+          color: var(--text-3); cursor: pointer; display: flex;
+          align-items: center; justify-content: center; transition: all .15s;
+        }
+        .dp-close:hover { color: var(--rose); border-color: rgba(244,63,94,.3); background: var(--rose-dim); }
+        .dp-events { display: flex; gap: 10px; flex-wrap: wrap; }
+        .dp-event {
+          display: flex; align-items: center; gap: 10px;
+          background: var(--ebg); border: 1px solid var(--ebdr);
+          border-radius: var(--radius-md); padding: 10px 14px;
+          flex: 1; min-width: 180px;
+        }
+        .dp-event-icon { font-size: 20px; }
+        .dp-event-label { font-size: 14px; font-weight: 600; color: var(--ec); }
+        .dp-event-type  { font-size: 10px; color: var(--text-3); margin-top: 2px; text-transform: uppercase; letter-spacing: .5px; }
+        .dp-no-event { font-size: 13px; color: var(--text-3); font-style: italic; }
+
+        /* ── LIST VIEW ──────────────────────────── */
+        .list-view { display: flex; flex-direction: column; gap: 20px; padding-top: 8px; }
         .list-month { }
-        .list-month-label { font-family:var(--font-display); font-size:15px; font-weight:700; color:var(--text-1); margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid var(--border); }
-        .list-event { display:flex; align-items:center; gap:14px; padding:12px 14px; background:var(--bg-surface); border:1px solid var(--border); border-radius:var(--radius-sm); margin-bottom:6px; }
-        .list-event-date { font-family:var(--font-mono); font-size:11px; color:var(--text-3); min-width:52px; flex-shrink:0; }
-        .list-event-label { font-size:13px; font-weight:500; color:var(--text-1); flex:1; }
-
-        /* MONTH DOTS */
-        .month-dots { display:flex; gap:8px; justify-content:center; padding:8px 0; }
-        .month-dot { width:7px; height:7px; border-radius:50%; background:var(--border); border:none; cursor:pointer; transition:all 0.15s; }
-        .month-dot:hover { background:rgba(91,94,244,0.4); }
-        .month-dot-active { background:var(--accent); box-shadow:0 0 6px var(--accent-glow); width:20px; border-radius:4px; }
-
-        /* RESPONSIVE */
-        @media (max-width: 900px) {
-          .cal-app { flex-direction:column; }
-          .cal-sidebar { width:100%; height:auto; min-height:auto; position:static; flex-direction:row; flex-wrap:wrap; }
-          .cal-main { padding:16px; }
-          .day-cell { min-height:64px; }
+        .list-month-label {
+          display: flex; align-items: center; gap: 10px;
+          font-family: var(--font-display); font-size: 15px; font-weight: 700;
+          color: var(--text-1); margin-bottom: 10px;
+          padding-bottom: 8px; border-bottom: 1px solid var(--border);
         }
-        @media (max-width: 600px) {
-          .cal-main { padding:12px; }
-          .day-num { font-size:11px; }
-          .event-pill { display:none; }
-          .day-cell { min-height:48px; padding:4px; }
+        .list-month-current .list-month-label { color: var(--accent-light); border-color: var(--accent-border); }
+        .lm-current-chip {
+          font-size: 9.5px; font-weight: 700; letter-spacing: .5px;
+          background: var(--accent-dim); color: var(--accent-light);
+          border: 1px solid var(--accent-border); padding: 2px 8px; border-radius: 10px;
+        }
+        .list-event-row {
+          display: flex; align-items: center; gap: 14px;
+          padding: 12px 14px;
+          background: var(--lbg, var(--bg-elevated));
+          border: 1px solid var(--lbdr, var(--border));
+          border-radius: var(--radius-md); margin-bottom: 6px;
+          transition: transform .15s;
+        }
+        .list-event-row:hover { transform: translateX(4px); }
+        .ler-date { text-align: center; flex-shrink: 0; }
+        .ler-day { font-family: var(--font-mono); font-size: 20px; font-weight: 700; color: var(--lc, var(--text-1)); line-height: 1; }
+        .ler-mon { font-size: 9px; color: var(--text-3); text-transform: uppercase; letter-spacing: .5px; }
+        .ler-icon { font-size: 18px; flex-shrink: 0; }
+        .ler-info { flex: 1; }
+        .ler-label { font-size: 13.5px; font-weight: 600; color: var(--text-1); }
+        .ler-type  { font-size: 10.5px; color: var(--text-3); margin-top: 2px; }
+        .ler-badge {
+          font-size: 10px; font-weight: 600; padding: 3px 9px; border-radius: 10px;
+          background: var(--lbg); color: var(--lc); border: 1px solid var(--lbdr);
+          flex-shrink: 0;
+        }
+
+        /* ── MONTH SWITCHER ─────────────────────── */
+        .month-switcher {
+          display: flex; gap: 6px; justify-content: center;
+          position: relative; z-index: 1;
+        }
+        .ms-tab {
+          position: relative;
+          padding: 7px 16px; border-radius: 10px;
+          background: var(--bg-elevated); border: 1px solid var(--border);
+          color: var(--text-3); font-size: 12px; font-weight: 600;
+          cursor: pointer; transition: all .18s; font-family: var(--font-body);
+        }
+        .ms-tab:hover { background: var(--bg-hover); color: var(--text-1); border-color: var(--border-strong); }
+        .ms-active {
+          background: var(--accent-dim) !important;
+          border-color: var(--accent) !important;
+          color: var(--accent-light) !important;
+          box-shadow: 0 4px 12px var(--accent-glow);
+        }
+        .ms-today { border-color: var(--accent-border) !important; }
+        .ms-today-dot {
+          position: absolute; top: 4px; right: 4px;
+          width: 5px; height: 5px; border-radius: 50%;
+          background: var(--accent); box-shadow: 0 0 4px var(--accent-glow);
+        }
+
+        /* ── LEGEND ROW ─────────────────────────── */
+        .legend-row-bottom {
+          display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+          padding: 10px 4px; border-top: 1px solid var(--border);
+          position: relative; z-index: 1;
+        }
+        .leg-item { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-3); }
+        .leg-dot { width: 8px; height: 8px; border-radius: 50%; }
+        .leg-order { background: var(--accent-light); }
+        .leg-today-circle { width: 16px; height: 16px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 6px var(--accent-glow); }
+        .leg-today-item { color: var(--accent-light); }
+
+        /* ── ANIMATE ────────────────────────────── */
+        .animate-up { animation: fadeUp .35s cubic-bezier(.4,0,.2,1) both; }
+        @keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+
+        /* ── RESPONSIVE ─────────────────────────── */
+        @media (max-width: 700px) {
+          .month-stats { display: none; }
+          .cal-header-right { margin-left: 0; }
+          .day-cell { min-height: 58px; padding: 5px 4px; }
+          .edp-text { display: none; }
+          .event-dot-pill { width: 6px; height: 6px; border-radius: 50%; padding: 0; }
+          .order-badge { display: none; }
+          .month-switcher { flex-wrap: wrap; }
+          .upcoming-strip { gap: 7px; }
+          .up-item { min-width: 150px; padding: 8px 10px; }
+        }
+        @media (max-width: 480px) {
+          .page { padding: 14px 10px 40px; }
+          .month-name { font-size: 22px; }
+          .top-brand { display: none; }
+          .day-cell { min-height: 46px; }
+          .day-num { font-size: 11px; }
         }
       `}</style>
     </>
