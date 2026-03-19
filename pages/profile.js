@@ -286,19 +286,15 @@ export default function ProfilePage() {
 
         /* Back button */
         .back-btn {
-          display: inline-flex;
-          align-items: center;
-          gap: 7px;
-          color: var(--text-3);
-          font-size: 13px;
-          padding: 7px 14px 7px 10px;
-          border-radius: var(--radius-sm);
-          transition: all .15s;
-          margin-bottom: 28px;
-          position: relative;
-          z-index: 1;
+          display:inline-flex; align-items:center; gap:7px;
+          color:var(--text-2); font-size:13px; font-weight:500;
+          padding:7px 14px 7px 10px; border-radius:10px;
+          border:1px solid var(--border); background:var(--bg-elevated);
+          transition:all .18s; margin-bottom:28px; position:relative; z-index:1;
+          text-decoration:none;
         }
-        .back-btn:hover { background: var(--bg-hover); color: var(--text-1); }
+        .back-btn:hover { background:var(--bg-hover); color:var(--text-1); border-color:var(--border-strong); transform:translateX(-2px); }
+        .back-btn svg { color:var(--accent); }
 
         /* Layout */
         .profile-wrap {

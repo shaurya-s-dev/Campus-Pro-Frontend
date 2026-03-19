@@ -110,7 +110,7 @@ function SkeletonDashboard() {
 export default function Dashboard() {
   const router = useRouter();
   const [data, setData] = useState(null);
-  const [tab, setTab]   = useState('Dashboard');
+  const [tab, setTab]   = useState('overview');
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -172,9 +172,9 @@ export default function Dashboard() {
 
             <>
               {/* ═══════════════════════════════
-                  DASHBOARD TAB
+                  OVERVIEW TAB
               ═══════════════════════════════ */}
-              {tab === 'Dashboard' && (
+              {tab === 'overview' && (
                 <div className="tab-panel animate-in">
 
                   {/* Page header */}

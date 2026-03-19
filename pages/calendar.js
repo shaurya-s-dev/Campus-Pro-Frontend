@@ -152,14 +152,17 @@ export default function CalendarPage() {
         {/* ── TOP BAR ─────────────────────────── */}
         <div className="topbar">
           <Link href="/dashboard" className="back-btn">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
-            Dashboard
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><polyline points="15 18 9 12 15 6"/></svg>
+            <span>Dashboard</span>
           </Link>
+          <div className="topbar-divider"/>
           <div className="brand">
             <span className="brand-hex">⬡</span>
             <span className="brand-name">Campus<strong>Pro</strong></span>
           </div>
-          <div className="sem-chip">Even Sem 2025–26 · SRM KTR</div>
+          <div className="topbar-right">
+            <div className="sem-chip">Even Sem 2025–26 · SRM KTR</div>
+          </div>
         </div>
 
         <div className="layout">
@@ -450,13 +453,29 @@ export default function CalendarPage() {
         .orb2 { width:380px; height:380px; background:radial-gradient(circle,rgba(6,182,212,0.05),transparent 70%); bottom:-80px; right:-60px; animation:drift 18s ease-in-out infinite alternate-reverse; }
 
         /* TOP BAR */
-        .topbar { display:flex; align-items:center; gap:14px; padding:18px 24px 0; position:relative; z-index:2; }
-        .back-btn { display:flex; align-items:center; gap:6px; color:var(--text-3); font-size:13px; padding:6px 12px 6px 8px; border-radius:8px; transition:all .15s; text-decoration:none; }
-        .back-btn:hover { background:var(--bg-hover); color:var(--text-1); }
-        .brand { display:flex; align-items:center; gap:7px; font-family:var(--font-display); font-size:16px; font-weight:800; }
+        .topbar {
+          display:flex; align-items:center; gap:12px;
+          padding:16px 24px; position:relative; z-index:2;
+          border-bottom:1px solid var(--border);
+          background:rgba(4,4,11,0.6);
+          backdrop-filter:blur(20px);
+        }
+        .back-btn {
+          display:flex; align-items:center; gap:7px;
+          color:var(--text-2); font-size:13px; font-weight:500;
+          padding:7px 13px 7px 9px; border-radius:10px;
+          border:1px solid var(--border);
+          background:var(--bg-elevated);
+          transition:all .18s; text-decoration:none; flex-shrink:0;
+        }
+        .back-btn:hover { background:var(--bg-hover); color:var(--text-1); border-color:var(--border-strong); transform:translateX(-2px); }
+        .back-btn svg { color:var(--accent); }
+        .topbar-divider { width:1px; height:20px; background:var(--border); flex-shrink:0; }
+        .brand { display:flex; align-items:center; gap:8px; font-family:var(--font-display); font-size:16px; font-weight:800; }
         .brand-hex { font-size:20px; color:var(--accent); filter:drop-shadow(0 0 8px var(--accent-glow)); }
         .brand-name { color:var(--text-1); } .brand-name strong { color:var(--accent); }
-        .sem-chip { margin-left:auto; font-size:11px; color:var(--text-3); background:var(--bg-elevated); border:1px solid var(--border); padding:5px 12px; border-radius:20px; }
+        .topbar-right { margin-left:auto; }
+        .sem-chip { font-size:11px; color:var(--text-3); background:var(--bg-elevated); border:1px solid var(--border); padding:5px 12px; border-radius:20px; white-space:nowrap; }
 
         /* LAYOUT */
         .layout { display:grid; grid-template-columns:260px 1fr; gap:0; padding:18px 24px 40px; position:relative; z-index:1; }
