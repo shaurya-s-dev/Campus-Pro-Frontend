@@ -1,23 +1,24 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 
 /* ══════════════════════════════════════════════════
-   CONFIG
+   CONSTANTS
    ══════════════════════════════════════════════════ */
-const MONTH_NAMES = [
-  'January','February','March','April','May','June',
-  'July','August','September','October','November','December',
-];
-const DAY_LABELS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DAY_LABELS  = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const DAY_SHORT   = ['S','M','T','W','T','F','S'];
 
-const EVENT_TYPES = {
-  holiday: { label:'Holiday',   color:'#f43f5e', glow:'rgba(244,63,94,0.25)',  bg:'rgba(244,63,94,0.1)',  border:'rgba(244,63,94,0.25)',  icon:'🏖' },
-  exam:    { label:'Exam/Test', color:'#f59e0b', glow:'rgba(245,158,11,0.25)', bg:'rgba(245,158,11,0.1)', border:'rgba(245,158,11,0.25)', icon:'📝' },
-  special: { label:'Special',   color:'#10b981', glow:'rgba(16,185,129,0.25)', bg:'rgba(16,185,129,0.1)', border:'rgba(16,185,129,0.25)', icon:'⭐' },
+const ET = {
+  holiday: { label:'Holiday',    color:'#f43f5e', bg:'rgba(244,63,94,0.12)',  border:'rgba(244,63,94,0.3)',  icon:'🎉' },
+  exam:    { label:'Exam / Test',color:'#f59e0b', bg:'rgba(245,158,11,0.12)', border:'rgba(245,158,11,0.3)', icon:'📝' },
+  special: { label:'Special',    color:'#10b981', bg:'rgba(16,185,129,0.12)', border:'rgba(16,185,129,0.3)', icon:'⭐' },
 };
 
-/* SRM KTR Academic Calendar — Even Semester 2025–26 */
+/* ══════════════════════════════════════════════════
+   ACADEMIC CALENDAR DATA — SRM KTR Even Sem 2025-26
+   Holidays removed from dayOrders, Telugu NY fixed
+   ══════════════════════════════════════════════════ */
 const CALENDAR_DATA = {
   'January 2026': {
     events: [
@@ -27,6 +28,7 @@ const CALENDAR_DATA = {
       { date:16, type:'holiday', label:'Uzhavar Thirunal' },
       { date:26, type:'holiday', label:'Republic Day' },
     ],
+    // No day orders on holidays: 1,14,15,16,26 excluded
     dayOrders: {2:'D1',3:'D2',5:'D3',6:'D4',7:'D5',8:'D1',9:'D2',10:'D3',12:'D4',13:'D5',17:'D1',18:'D2',19:'D3',20:'D4',21:'D5',22:'D1',23:'D2',24:'D3',27:'D4',28:'D5',29:'D1',30:'D2',31:'D3'},
   },
   'February 2026': {
@@ -36,15 +38,17 @@ const CALENDAR_DATA = {
       { date:19, type:'special', label:"SRM Founders' Day" },
       { date:26, type:'exam',    label:'CAT-2 Prep Week' },
     ],
-    dayOrders: {2:'D4',3:'D5',4:'D1',5:'D2',6:'D3',7:'D4',9:'D5',10:'D1',11:'D2',12:'D3',13:'D4',16:'D5',17:'D1',18:'D2',20:'D3',21:'D4',23:'D5',24:'D1',25:'D2',26:'D3',27:'D4',28:'D5'},
+    dayOrders: {2:'D4',3:'D5',4:'D1',5:'D2',6:'D3',7:'D4',9:'D5',10:'D1',11:'D2',12:'D3',13:'D4',16:'D5',17:'D1',18:'D2',19:'D3',20:'D4',21:'D5',23:'D1',24:'D2',25:'D3',26:'D4',27:'D5',28:'D1'},
   },
   'March 2026': {
     events: [
       { date:2,  type:'exam',    label:'CAT-2 Begins' },
       { date:18, type:'holiday', label:'Holi' },
+      { date:19, type:'holiday', label:"Telugu New Year's Day" }, // ← FIXED
       { date:25, type:'exam',    label:'CAT-2 Ends' },
     ],
-    dayOrders: {2:'D1',3:'D2',4:'D3',5:'D4',6:'D5',7:'D1',9:'D2',10:'D3',11:'D4',12:'D5',13:'D1',16:'D2',17:'D3',19:'D4',20:'D5',23:'D1',24:'D2',26:'D3',27:'D4',28:'D5',30:'D1',31:'D2'},
+    // 18 & 19 are holidays — removed from dayOrders
+    dayOrders: {2:'D1',3:'D2',4:'D3',5:'D4',6:'D5',7:'D1',9:'D2',10:'D3',11:'D4',12:'D5',13:'D1',16:'D2',17:'D3',20:'D5',23:'D1',24:'D2',26:'D3',27:'D4',28:'D5',30:'D1',31:'D2'},
   },
   'April 2026': {
     events: [
@@ -54,6 +58,7 @@ const CALENDAR_DATA = {
       { date:21, type:'exam',    label:'Model Exams Begin' },
       { date:30, type:'exam',    label:'Last Day of Instruction' },
     ],
+    // 1,3,14 are holidays — removed from dayOrders
     dayOrders: {2:'D3',4:'D4',6:'D5',7:'D1',8:'D2',9:'D3',10:'D4',13:'D5',15:'D1',16:'D2',17:'D3',20:'D4',22:'D5',23:'D1',24:'D2',27:'D3',28:'D4',29:'D5',30:'D1'},
   },
   'May 2026': {
@@ -75,759 +80,534 @@ function parseMonthStr(str) {
   const [m, y] = str.split(' ');
   return new Date(parseInt(y), MONTH_NAMES.indexOf(m), 1);
 }
-function daysInMonth(d) {
-  return new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-}
-function firstWeekday(d) {
-  return new Date(d.getFullYear(), d.getMonth(), 1).getDay();
-}
-
-// THE FIX — resolve current month string correctly
+function daysInMonth(d)   { return new Date(d.getFullYear(), d.getMonth()+1, 0).getDate(); }
+function firstWeekday(d)  { return new Date(d.getFullYear(), d.getMonth(), 1).getDay(); }
 function getCurrentMonthStr() {
-  const now = new Date();
-  return `${MONTH_NAMES[now.getMonth()]} ${now.getFullYear()}`;
-}
-
-/* ══════════════════════════════════════════════════
-   UPCOMING STRIP
-   ══════════════════════════════════════════════════ */
-function UpcomingStrip() {
-  const now = new Date(); now.setHours(0,0,0,0);
-  const all = [];
-  MONTHS.forEach(m => {
-    (CALENDAR_DATA[m]?.events || []).forEach(e => {
-      const d = parseMonthStr(m);
-      d.setDate(e.date);
-      if (d >= now) all.push({ ...e, month:m, date_obj:d });
-    });
-  });
-  all.sort((a,b) => a.date_obj - b.date_obj);
-  const upcoming = all.slice(0, 5);
-
-  return (
-    <div className="upcoming-strip">
-      {upcoming.map((e, i) => {
-        const t = EVENT_TYPES[e.type] || EVENT_TYPES.special;
-        const daysLeft = Math.ceil((e.date_obj - now) / 86400000);
-        return (
-          <div key={i} className="up-item" style={{ '--uc': t.color, '--ubg': t.bg, '--ubdr': t.border }}>
-            <span className="up-icon">{t.icon}</span>
-            <div className="up-info">
-              <div className="up-label">{e.label}</div>
-              <div className="up-date">{e.month.split(' ')[0]} {e.date}</div>
-            </div>
-            <div className="up-days" style={{ color: t.color }}>
-              {daysLeft === 0 ? 'Today' : daysLeft === 1 ? 'Tomorrow' : `${daysLeft}d`}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-/* ══════════════════════════════════════════════════
-   DAY DETAIL PANEL (shown below grid on click)
-   ══════════════════════════════════════════════════ */
-function DayDetailPanel({ day, monthData, monthLabel, onClose }) {
-  if (!day) return null;
-  const events = (monthData?.events || []).filter(e => e.date === day);
-  const order  = monthData?.dayOrders?.[day];
-  return (
-    <div className="detail-panel animate-up">
-      <div className="dp-header">
-        <div className="dp-date-block">
-          <div className="dp-day-num">{day}</div>
-          <div className="dp-month-name">{monthLabel}</div>
-        </div>
-        {order && (
-          <div className="dp-order-badge">{order}</div>
-        )}
-        <button className="dp-close" onClick={onClose}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
-        </button>
-      </div>
-      {events.length > 0 ? (
-        <div className="dp-events">
-          {events.map((e, i) => {
-            const t = EVENT_TYPES[e.type] || EVENT_TYPES.special;
-            return (
-              <div key={i} className="dp-event" style={{ '--ec': t.color, '--ebg': t.bg, '--ebdr': t.border }}>
-                <span className="dp-event-icon">{t.icon}</span>
-                <div>
-                  <div className="dp-event-label">{e.label}</div>
-                  <div className="dp-event-type">{t.label}</div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="dp-no-event">
-          {order ? `Regular class day` : 'No events scheduled'}
-        </div>
-      )}
-    </div>
-  );
+  const n = new Date();
+  return `${MONTH_NAMES[n.getMonth()]} ${n.getFullYear()}`;
 }
 
 /* ══════════════════════════════════════════════════
    MAIN
    ══════════════════════════════════════════════════ */
 export default function CalendarPage() {
-  const todayObj = new Date();
-  const todayMonthStr = getCurrentMonthStr();
+  const today        = new Date();
+  const todayStr     = getCurrentMonthStr();
+  const resolveInit  = () => CALENDAR_DATA[todayStr] ? todayStr : MONTHS.find(m => parseMonthStr(m) >= parseMonthStr(todayStr)) || MONTHS[MONTHS.length-1];
 
-  // THE FIX: start on current month if it exists in data, else closest
-  const resolveInitial = () => {
-    if (CALENDAR_DATA[todayMonthStr]) return todayMonthStr;
-    // find closest future month
-    return MONTHS.find(m => parseMonthStr(m) >= parseMonthStr(todayMonthStr)) || MONTHS[MONTHS.length - 1];
-  };
+  const [activeMonth, setActiveMonth] = useState(resolveInit);
+  const [selectedDay, setSelectedDay] = useState(() => CALENDAR_DATA[todayStr] ? today.getDate() : null);
+  const [view,        setView]        = useState('month');
+  const [animDir,     setAnimDir]     = useState(0);
+  const [animating,   setAnimating]   = useState(false);
 
-  const [activeMonth, setActiveMonth] = useState(resolveInitial);
-  const [selectedDay, setSelectedDay] = useState(
-    // Auto-select today if we're on today's month
-    () => CALENDAR_DATA[todayMonthStr] ? todayObj.getDate() : null
-  );
-  const [animDir, setAnimDir]   = useState(0); // -1 prev, 1 next
-  const [animating, setAnimating] = useState(false);
-  const [view, setView]         = useState('month');
+  const monthDate  = parseMonthStr(activeMonth);
+  const totalDays  = daysInMonth(monthDate);
+  const startDay   = firstWeekday(monthDate);
+  const monthData  = CALENDAR_DATA[activeMonth] || {};
+  const activeIdx  = MONTHS.indexOf(activeMonth);
+  const isCurrent  = activeMonth === todayStr;
+  const progress   = isCurrent ? Math.round((today.getDate() / totalDays) * 100) : 0;
 
-  const monthDate = parseMonthStr(activeMonth);
-  const totalDays = daysInMonth(monthDate);
-  const startDay  = firstWeekday(monthDate);
-  const monthData = CALENDAR_DATA[activeMonth] || {};
-  const activeIdx = MONTHS.indexOf(activeMonth);
-
-  // Month stats
-  const workingDays = Object.keys(monthData.dayOrders || {}).length;
-  const holidayCount = (monthData.events || []).filter(e => e.type === 'holiday').length;
-  const examCount    = (monthData.events || []).filter(e => e.type === 'exam').length;
-
-  // Month progress (how many days have passed)
-  const isCurrentMonth = activeMonth === todayMonthStr;
-  const progress = isCurrentMonth ? Math.round((todayObj.getDate() / totalDays) * 100) : 0;
+  const workDays   = Object.keys(monthData.dayOrders || {}).length;
+  const holDays    = (monthData.events||[]).filter(e=>e.type==='holiday').length;
+  const examDays   = (monthData.events||[]).filter(e=>e.type==='exam').length;
 
   const navigate = useCallback((dir) => {
-    const newIdx = activeIdx + dir;
-    if (newIdx < 0 || newIdx >= MONTHS.length) return;
-    setAnimDir(dir);
-    setAnimating(true);
-    setTimeout(() => {
-      setActiveMonth(MONTHS[newIdx]);
-      setSelectedDay(null);
-      setAnimating(false);
-    }, 200);
+    const ni = activeIdx + dir;
+    if (ni < 0 || ni >= MONTHS.length) return;
+    setAnimDir(dir); setAnimating(true);
+    setTimeout(() => { setActiveMonth(MONTHS[ni]); setSelectedDay(null); setAnimating(false); }, 180);
   }, [activeIdx]);
 
-  const goToday = () => {
-    if (CALENDAR_DATA[todayMonthStr]) {
-      setActiveMonth(todayMonthStr);
-      setSelectedDay(todayObj.getDate());
-    }
+  const isToday = (d) => isCurrent && d === today.getDate();
+  const isPast  = (d) => {
+    const c = new Date(monthDate.getFullYear(), monthDate.getMonth(), d); c.setHours(23,59,59);
+    return c < today;
   };
 
-  const isToday = (d) => activeMonth === todayMonthStr && d === todayObj.getDate();
-  const isPast  = (d) => {
-    const cellDate = new Date(monthDate.getFullYear(), monthDate.getMonth(), d);
-    cellDate.setHours(23,59,59);
-    return cellDate < todayObj;
-  };
+  // Selected day info
+  const selEvents = selectedDay ? (monthData.events||[]).filter(e=>e.date===selectedDay) : [];
+  const selOrder  = selectedDay ? monthData.dayOrders?.[selectedDay] : null;
+  const selIsHol  = selEvents.some(e=>e.type==='holiday');
+
+  // Upcoming events
+  const now = new Date(); now.setHours(0,0,0,0);
+  const allUpcoming = [];
+  MONTHS.forEach(m => {
+    (CALENDAR_DATA[m]?.events||[]).forEach(e => {
+      const d = parseMonthStr(m); d.setDate(e.date);
+      if (d >= now) allUpcoming.push({...e, month:m, dateObj:d});
+    });
+  });
+  allUpcoming.sort((a,b)=>a.dateObj-b.dateObj);
+  const upcoming = allUpcoming.slice(0,6);
 
   return (
     <>
       <Head><title>Academic Calendar — CampusPro</title></Head>
+      <div className="root">
+        <div className="orb orb1"/><div className="orb orb2"/>
 
-      <div className="page">
-        {/* Ambient orbs */}
-        <div className="orb orb-a" /><div className="orb orb-b" />
-
-        {/* ── TOP BAR ──────────────────────────── */}
-        <div className="top-bar">
+        {/* ── TOP BAR ─────────────────────────── */}
+        <div className="topbar">
           <Link href="/dashboard" className="back-btn">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
             Dashboard
           </Link>
-          <div className="top-brand">
+          <div className="brand">
             <span className="brand-hex">⬡</span>
-            <span className="brand-word">Campus<strong>Pro</strong></span>
+            <span className="brand-name">Campus<strong>Pro</strong></span>
           </div>
-          <div className="top-right">
-            <div className="semester-chip">Even Sem 2025–26 · SRM KTR</div>
-          </div>
+          <div className="sem-chip">Even Sem 2025–26 · SRM KTR</div>
         </div>
 
-        {/* ── UPCOMING STRIP ──────────────────── */}
-        <UpcomingStrip />
+        <div className="layout">
+          {/* ══ LEFT SIDEBAR ══════════════════════ */}
+          <aside className="sidebar glass">
 
-        {/* ── CALENDAR CARD ───────────────────── */}
-        <div className="cal-card glass">
-
-          {/* Calendar header */}
-          <div className="cal-header">
-            <div className="cal-nav-left">
-              <button className="nav-btn" onClick={() => navigate(-1)} disabled={activeIdx === 0}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><polyline points="15 18 9 12 15 6"/></svg>
-              </button>
-              <div className="month-title-block">
-                <h2 className="month-name">{activeMonth.split(' ')[0]}</h2>
-                <span className="year-label">{activeMonth.split(' ')[1]}</span>
+            {/* Legend */}
+            <div className="side-section">
+              <div className="side-label">Legend</div>
+              {Object.entries(ET).map(([k,t]) => (
+                <div key={k} className="leg-row">
+                  <div className="leg-dot" style={{background:t.color}}/>
+                  <span className="leg-text">{t.label}</span>
+                </div>
+              ))}
+              <div className="leg-row">
+                <div className="leg-dot" style={{background:'#818cf8'}}/>
+                <span className="leg-text">Day Order</span>
               </div>
-              <button className="nav-btn" onClick={() => navigate(1)} disabled={activeIdx === MONTHS.length - 1}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><polyline points="9 18 15 12 9 6"/></svg>
-              </button>
-            </div>
-
-            {/* Month stats pills */}
-            <div className="month-stats">
-              <div className="ms-pill ms-work">
-                <div className="ms-val">{workingDays}</div>
-                <div className="ms-lbl">Working</div>
-              </div>
-              <div className="ms-pill ms-hol">
-                <div className="ms-val">{holidayCount}</div>
-                <div className="ms-lbl">Holidays</div>
-              </div>
-              <div className="ms-pill ms-exam">
-                <div className="ms-val">{examCount}</div>
-                <div className="ms-lbl">Exams</div>
+              <div className="leg-row">
+                <div className="leg-today-dot"/>
+                <span className="leg-text" style={{color:'#818cf8'}}>Today</span>
               </div>
             </div>
 
-            <div className="cal-header-right">
-              {/* View toggle */}
-              <div className="view-toggle">
-                <button className={`vt-btn ${view==='month'?'vt-active':''}`} onClick={() => setView('month')}>Month</button>
-                <button className={`vt-btn ${view==='list'?'vt-active':''}`} onClick={() => setView('list')}>List</button>
+            {/* Month stats */}
+            <div className="side-section">
+              <div className="side-label">{activeMonth}</div>
+              <div className="ms-grid">
+                <div className="ms-item">
+                  <div className="ms-val" style={{color:'#818cf8'}}>{workDays}</div>
+                  <div className="ms-lbl">Working</div>
+                </div>
+                <div className="ms-item">
+                  <div className="ms-val" style={{color:'#f43f5e'}}>{holDays}</div>
+                  <div className="ms-lbl">Holidays</div>
+                </div>
+                <div className="ms-item">
+                  <div className="ms-val" style={{color:'#f59e0b'}}>{examDays}</div>
+                  <div className="ms-lbl">Events</div>
+                </div>
               </div>
-              {!isCurrentMonth && (
-                <button className="today-btn" onClick={goToday}>Today</button>
+              {isCurrent && (
+                <div className="progress-wrap">
+                  <div className="progress-track">
+                    <div className="progress-fill" style={{width:`${progress}%`}}/>
+                  </div>
+                  <div className="progress-lbl">{progress}% through {activeMonth.split(' ')[0]}</div>
+                </div>
               )}
             </div>
-          </div>
 
-          {/* Month progress bar (only for current month) */}
-          {isCurrentMonth && (
-            <div className="month-progress-wrap">
-              <div className="month-progress-bar">
-                <div className="month-progress-fill" style={{ width:`${progress}%` }} />
-              </div>
-              <span className="month-progress-label">
-                Day {todayObj.getDate()} of {totalDays} · {progress}% through {activeMonth.split(' ')[0]}
-              </span>
-            </div>
-          )}
-
-          {view === 'month' && (
-            <>
-              {/* Day of week headers */}
-              <div className="dow-header">
-                {DAY_LABELS.map((d, i) => (
-                  <div key={d} className={`dow-cell ${i===0||i===6 ? 'dow-weekend' : ''}`}>{d}</div>
-                ))}
-              </div>
-
-              {/* Grid */}
-              <div className={`cal-grid ${animating ? (animDir > 0 ? 'slide-out-left' : 'slide-out-right') : 'slide-in'}`}>
-                {/* Empty cells */}
-                {Array(startDay).fill(null).map((_, i) => (
-                  <div key={`e${i}`} className="day-empty" />
-                ))}
-
-                {/* Day cells */}
-                {Array(totalDays).fill(null).map((_, i) => {
-                  const d = i + 1;
-                  const events = (monthData.events || []).filter(e => e.date === d);
-                  const order  = monthData.dayOrders?.[d];
-                  const weekDay = new Date(monthDate.getFullYear(), monthDate.getMonth(), d).getDay();
-                  const isWknd = weekDay === 0 || weekDay === 6;
-                  const isHol  = events.some(e => e.type === 'holiday');
-                  const isExam = events.some(e => e.type === 'exam');
-                  const isSpec = events.some(e => e.type === 'special');
-                  const today  = isToday(d);
-                  const sel    = selectedDay === d;
-                  const past   = isPast(d) && !today;
-
+            {/* Selected day detail */}
+            {selectedDay && (
+              <div className="side-section day-detail">
+                <div className="dd-top">
+                  <div className="dd-num">{selectedDay}</div>
+                  <div className="dd-month">{activeMonth.split(' ')[0]}</div>
+                  {selOrder && <div className="dd-order">{selOrder}</div>}
+                  <button className="dd-close" onClick={()=>setSelectedDay(null)}>✕</button>
+                </div>
+                {selIsHol ? (
+                  <div className="dd-holiday-msg">🎉 Holiday — No Classes</div>
+                ) : selOrder ? (
+                  <div className="dd-class-msg">📚 Class Day · {selOrder}</div>
+                ) : (
+                  <div className="dd-noclass">Weekend / No Data</div>
+                )}
+                {selEvents.map((e,i) => {
+                  const t = ET[e.type]||ET.special;
                   return (
-                    <div
-                      key={d}
-                      className={[
-                        'day-cell',
-                        today  ? 'day-today'    : '',
-                        sel    ? 'day-selected' : '',
-                        isWknd ? 'day-weekend'  : '',
-                        isHol  ? 'day-holiday'  : '',
-                        isExam ? 'day-exam'     : '',
-                        past   ? 'day-past'     : '',
-                      ].filter(Boolean).join(' ')}
-                      onClick={() => setSelectedDay(sel ? null : d)}
-                      style={{ animationDelay: `${i * 8}ms` }}
-                    >
-                      {/* Day number */}
-                      <div className="dn-wrap">
-                        <span className="day-num">{d}</span>
-                        {today && <div className="today-ring" />}
-                      </div>
-
-                      {/* Day order badge */}
-                      {order && !isHol && (
-                        <div className="order-badge" style={{
-                          color: isExam ? '#f59e0b' : 'var(--accent-light)',
-                          background: isExam ? 'rgba(245,158,11,0.1)' : 'var(--accent-dim)',
-                        }}>{order}</div>
-                      )}
-
-                      {/* Event indicators */}
-                      <div className="event-dots">
-                        {events.slice(0, 3).map((e, ei) => {
-                          const t = EVENT_TYPES[e.type];
-                          return (
-                            <div key={ei} className="event-dot-pill" style={{ background: t.color }}>
-                              <span className="edp-text">{e.label}</span>
-                            </div>
-                          );
-                        })}
+                    <div key={i} className="dd-event" style={{background:t.bg,border:`1px solid ${t.border}`}}>
+                      <span>{t.icon}</span>
+                      <div>
+                        <div className="dd-ev-label" style={{color:t.color}}>{e.label}</div>
+                        <div className="dd-ev-type">{t.label}</div>
                       </div>
                     </div>
                   );
                 })}
               </div>
-            </>
-          )}
+            )}
 
-          {view === 'list' && (
-            <div className="list-view animate-up">
-              {MONTHS.map(m => {
-                const mData = CALENDAR_DATA[m] || {};
-                const evts  = mData.events || [];
-                if (!evts.length) return null;
-                const isCurrent = m === todayMonthStr;
-                return (
-                  <div key={m} className={`list-month ${isCurrent ? 'list-month-current' : ''}`}>
-                    <div className="list-month-label">
-                      {m}
-                      {isCurrent && <span className="lm-current-chip">Current</span>}
-                    </div>
-                    {evts.map((e, i) => {
-                      const t = EVENT_TYPES[e.type] || EVENT_TYPES.special;
-                      return (
-                        <div key={i} className="list-event-row" style={{ '--lc': t.color, '--lbg': t.bg, '--lbdr': t.border }}>
-                          <div className="ler-date">
-                            <div className="ler-day">{e.date}</div>
-                            <div className="ler-mon">{m.split(' ')[0].slice(0,3)}</div>
-                          </div>
-                          <div className="ler-icon">{t.icon}</div>
-                          <div className="ler-info">
-                            <div className="ler-label">{e.label}</div>
-                            <div className="ler-type">{t.label}</div>
-                          </div>
-                          <div className="ler-badge">{t.label}</div>
+            {/* Upcoming events */}
+            <div className="side-section" style={{flex:1}}>
+              <div className="side-label">Upcoming</div>
+              <div className="upcoming-list">
+                {upcoming.map((e,i) => {
+                  const t = ET[e.type]||ET.special;
+                  const dl = Math.ceil((e.dateObj - now) / 86400000);
+                  return (
+                    <div key={i} className="up-item" style={{borderLeft:`3px solid ${t.color}`}}>
+                      <div className="up-left">
+                        <div className="up-icon">{t.icon}</div>
+                        <div>
+                          <div className="up-label">{e.label}</div>
+                          <div className="up-date">{e.month.split(' ')[0]} {e.date}</div>
                         </div>
-                      );
-                    })}
-                  </div>
+                      </div>
+                      <div className="up-days" style={{color:t.color}}>
+                        {dl===0?'Today':dl===1?'Tmrw':`${dl}d`}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </aside>
+
+          {/* ══ MAIN CALENDAR ══════════════════════ */}
+          <main className="cal-main">
+            {/* Header */}
+            <div className="cal-header">
+              <div className="cal-nav">
+                <button className="nav-btn" onClick={()=>navigate(-1)} disabled={activeIdx===0}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><polyline points="15 18 9 12 15 6"/></svg>
+                </button>
+                <div className="month-block">
+                  <h1 className="month-title">{activeMonth.split(' ')[0]}</h1>
+                  <span className="year-badge">{activeMonth.split(' ')[1]}</span>
+                </div>
+                <button className="nav-btn" onClick={()=>navigate(1)} disabled={activeIdx===MONTHS.length-1}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
+              </div>
+
+              <div className="cal-header-right">
+                <div className="view-toggle">
+                  <button className={`vt ${view==='month'?'vt-on':''}`} onClick={()=>setView('month')}>Month</button>
+                  <button className={`vt ${view==='list'?'vt-on':''}`} onClick={()=>setView('list')}>List</button>
+                </div>
+                {!isCurrent && (
+                  <button className="today-btn" onClick={()=>{setActiveMonth(todayStr);setSelectedDay(today.getDate());}}>Today</button>
+                )}
+              </div>
+            </div>
+
+            {/* Month tabs */}
+            <div className="month-tabs">
+              {MONTHS.map((m,i) => {
+                const isAct = m===activeMonth;
+                const isCur = m===todayStr;
+                return (
+                  <button key={m} className={`mt ${isAct?'mt-on':''} ${isCur?'mt-today':''}`}
+                    onClick={()=>navigate(i-activeIdx)}>
+                    {m.split(' ')[0].slice(0,3)}
+                    {isCur && <span className="mt-dot"/>}
+                  </button>
                 );
               })}
             </div>
-          )}
 
-          {/* ── DAY DETAIL PANEL ──────────────── */}
-          {selectedDay && view === 'month' && (
-            <DayDetailPanel
-              day={selectedDay}
-              monthData={monthData}
-              monthLabel={`${activeMonth.split(' ')[0]} ${selectedDay}`}
-              onClose={() => setSelectedDay(null)}
-            />
-          )}
-        </div>
+            {/* Month view */}
+            {view==='month' && (
+              <div className={`cal-body ${animating?(animDir>0?'sl':'sr'):''}`}>
+                {/* DOW headers */}
+                <div className="dow-row">
+                  {DAY_LABELS.map((d,i) => (
+                    <div key={d} className={`dow-cell ${i===0||i===6?'dow-wknd':''}`}>{d}</div>
+                  ))}
+                </div>
 
-        {/* ── MONTH SWITCHER ──────────────────── */}
-        <div className="month-switcher">
-          {MONTHS.map((m, i) => {
-            const isActive = m === activeMonth;
-            const isCurr   = m === todayMonthStr;
-            return (
-              <button
-                key={m}
-                className={`ms-tab ${isActive ? 'ms-active' : ''} ${isCurr ? 'ms-today' : ''}`}
-                onClick={() => { navigate(i - activeIdx); }}
-              >
-                {m.split(' ')[0].slice(0, 3)}
-                {isCurr && <span className="ms-today-dot" />}
-              </button>
-            );
-          })}
-        </div>
+                {/* Day grid */}
+                <div className="day-grid">
+                  {Array(startDay).fill(null).map((_,i)=>(
+                    <div key={`e${i}`} className="day-empty"/>
+                  ))}
+                  {Array(totalDays).fill(null).map((_,i)=>{
+                    const d       = i+1;
+                    const events  = (monthData.events||[]).filter(e=>e.date===d);
+                    const order   = monthData.dayOrders?.[d];
+                    const wday    = new Date(monthDate.getFullYear(),monthDate.getMonth(),d).getDay();
+                    const isWknd  = wday===0||wday===6;
+                    const isHol   = events.some(e=>e.type==='holiday');
+                    const isExam  = events.some(e=>e.type==='exam');
+                    const isSpec  = events.some(e=>e.type==='special');
+                    const todayD  = isToday(d);
+                    const sel     = selectedDay===d;
+                    const past    = isPast(d) && !todayD;
 
-        {/* ── LEGEND ──────────────────────────── */}
-        <div className="legend-row-bottom">
-          {Object.entries(EVENT_TYPES).map(([key, t]) => (
-            <div key={key} className="leg-item">
-              <div className="leg-dot" style={{ background: t.color }} />
-              <span>{t.label}</span>
-            </div>
-          ))}
-          <div className="leg-item">
-            <div className="leg-dot leg-order" />
-            <span>Day Order</span>
-          </div>
-          <div className="leg-item leg-today-item">
-            <div className="leg-today-circle" />
-            <span>Today</span>
-          </div>
+                    return (
+                      <div key={d}
+                        className={['day-cell',
+                          todayD?'dc-today':'',
+                          sel?'dc-sel':'',
+                          isWknd?'dc-wknd':'',
+                          isHol?'dc-hol':'',
+                          isExam?'dc-exam':'',
+                          past?'dc-past':'',
+                        ].filter(Boolean).join(' ')}
+                        style={{animationDelay:`${i*6}ms`}}
+                        onClick={()=>setSelectedDay(sel?null:d)}
+                      >
+                        {/* Day number */}
+                        <div className="dn-row">
+                          {todayD ? (
+                            <div className="today-circle">{d}</div>
+                          ) : (
+                            <span className={`dn ${isHol?'dn-hol':''} ${isWknd?'dn-wknd':''}`}>{d}</span>
+                          )}
+                          {order && !isHol && (
+                            <span className="do-badge" style={{color:isExam?'#f59e0b':'#818cf8',background:isExam?'rgba(245,158,11,0.1)':'rgba(129,140,248,0.1)'}}>{order}</span>
+                          )}
+                        </div>
+
+                        {/* Event pills */}
+                        <div className="ev-stack">
+                          {isHol && (
+                            <div className="ev-pill ev-hol">
+                              <span className="ev-dot" style={{background:'#f43f5e'}}/>
+                              <span className="ev-txt">{events.find(e=>e.type==='holiday')?.label}</span>
+                            </div>
+                          )}
+                          {isExam && !isHol && (
+                            <div className="ev-pill ev-exam">
+                              <span className="ev-dot" style={{background:'#f59e0b'}}/>
+                              <span className="ev-txt">{events.find(e=>e.type==='exam')?.label}</span>
+                            </div>
+                          )}
+                          {isSpec && !isHol && (
+                            <div className="ev-pill ev-spec">
+                              <span className="ev-dot" style={{background:'#10b981'}}/>
+                              <span className="ev-txt">{events.find(e=>e.type==='special')?.label}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* List view */}
+            {view==='list' && (
+              <div className="list-view">
+                {MONTHS.map(m => {
+                  const md = CALENDAR_DATA[m]||{};
+                  const evts = md.events||[];
+                  if (!evts.length) return null;
+                  const isCur = m===todayStr;
+                  return (
+                    <div key={m} className="lv-month">
+                      <div className="lv-month-label">
+                        {m}
+                        {isCur && <span className="lv-cur-chip">Current</span>}
+                      </div>
+                      {evts.map((e,i) => {
+                        const t = ET[e.type]||ET.special;
+                        const wday = new Date(parseMonthStr(m).getFullYear(), parseMonthStr(m).getMonth(), e.date).getDay();
+                        const dayName = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][wday];
+                        return (
+                          <div key={i} className="lv-row" style={{'--lc':t.color,'--lbg':t.bg,'--lbd':t.border}}>
+                            <div className="lv-date-block">
+                              <div className="lv-day-num" style={{color:t.color}}>{e.date}</div>
+                              <div className="lv-day-name">{dayName}</div>
+                            </div>
+                            <div className="lv-icon">{t.icon}</div>
+                            <div className="lv-info">
+                              <div className="lv-label">{e.label}</div>
+                              <div className="lv-type">{t.label} · {m.split(' ')[0]}</div>
+                            </div>
+                            <div className="lv-chip" style={{color:t.color,background:t.bg,border:`1px solid ${t.border}`}}>{t.label}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </main>
         </div>
       </div>
 
       <style jsx global>{`
         body { background: var(--bg-void); overflow-x: hidden; }
-        @keyframes slideInLeft  { from{opacity:0;transform:translateX(-20px)} to{opacity:1;transform:translateX(0)} }
-        @keyframes slideInRight { from{opacity:0;transform:translateX(20px)}  to{opacity:1;transform:translateX(0)} }
-        @keyframes cellFadeIn   { from{opacity:0;transform:scale(0.94)} to{opacity:1;transform:scale(1)} }
+        @keyframes sl { from{opacity:0;transform:translateX(-14px)} to{opacity:1;transform:translateX(0)} }
+        @keyframes sr { from{opacity:0;transform:translateX(14px)}  to{opacity:1;transform:translateX(0)} }
+        @keyframes dcIn { from{opacity:0;transform:scale(0.92)} to{opacity:1;transform:scale(1)} }
+        @keyframes drift { from{transform:translate(0,0)} to{transform:translate(20px,14px)} }
       `}</style>
 
       <style jsx>{`
-        /* ── PAGE ───────────────────────────────── */
-        .page {
-          max-width: 1080px; margin: 0 auto;
-          padding: 24px 20px 48px;
-          position: relative;
-          display: flex; flex-direction: column; gap: 16px;
-        }
-        .orb {
-          position: fixed; border-radius: 50%;
-          filter: blur(100px); pointer-events: none; z-index: 0;
-        }
-        .orb-a {
-          width: 500px; height: 500px;
-          background: radial-gradient(circle, var(--accent-dim), transparent 70%);
-          top: -150px; left: -100px;
-          animation: drift 14s ease-in-out infinite alternate;
-        }
-        .orb-b {
-          width: 380px; height: 380px;
-          background: radial-gradient(circle, rgba(6,182,212,0.06), transparent 70%);
-          bottom: -80px; right: -60px;
-          animation: drift 18s ease-in-out infinite alternate-reverse;
-        }
-        @keyframes drift { from{transform:translate(0,0)} to{transform:translate(18px,12px)} }
+        .root { min-height:100vh; position:relative; }
+        .orb { position:fixed; border-radius:50%; filter:blur(110px); pointer-events:none; z-index:0; }
+        .orb1 { width:500px; height:500px; background:radial-gradient(circle,rgba(99,102,241,0.07),transparent 70%); top:-150px; left:-100px; animation:drift 14s ease-in-out infinite alternate; }
+        .orb2 { width:380px; height:380px; background:radial-gradient(circle,rgba(6,182,212,0.05),transparent 70%); bottom:-80px; right:-60px; animation:drift 18s ease-in-out infinite alternate-reverse; }
 
-        /* ── TOP BAR ────────────────────────────── */
-        .top-bar {
-          display: flex; align-items: center; gap: 16px;
-          position: relative; z-index: 1;
-        }
-        .back-btn {
-          display: flex; align-items: center; gap: 6px;
-          color: var(--text-3); font-size: 13px; padding: 6px 12px 6px 8px;
-          border-radius: var(--radius-sm); transition: all .15s; white-space: nowrap;
-        }
-        .back-btn:hover { background: var(--bg-hover); color: var(--text-1); }
-        .top-brand {
-          display: flex; align-items: center; gap: 8px;
-          font-family: var(--font-display); font-size: 16px; font-weight: 800;
-        }
-        .brand-hex { font-size: 20px; color: var(--accent); filter: drop-shadow(0 0 8px var(--accent-glow)); }
-        .brand-word { color: var(--text-1); }
-        .brand-word strong { color: var(--accent); }
-        .top-right { margin-left: auto; }
-        .semester-chip {
-          font-size: 11px; color: var(--text-3);
-          background: var(--bg-elevated); border: 1px solid var(--border);
-          padding: 5px 12px; border-radius: 20px;
-        }
+        /* TOP BAR */
+        .topbar { display:flex; align-items:center; gap:14px; padding:18px 24px 0; position:relative; z-index:2; }
+        .back-btn { display:flex; align-items:center; gap:6px; color:var(--text-3); font-size:13px; padding:6px 12px 6px 8px; border-radius:8px; transition:all .15s; text-decoration:none; }
+        .back-btn:hover { background:var(--bg-hover); color:var(--text-1); }
+        .brand { display:flex; align-items:center; gap:7px; font-family:var(--font-display); font-size:16px; font-weight:800; }
+        .brand-hex { font-size:20px; color:var(--accent); filter:drop-shadow(0 0 8px var(--accent-glow)); }
+        .brand-name { color:var(--text-1); } .brand-name strong { color:var(--accent); }
+        .sem-chip { margin-left:auto; font-size:11px; color:var(--text-3); background:var(--bg-elevated); border:1px solid var(--border); padding:5px 12px; border-radius:20px; }
 
-        /* ── UPCOMING STRIP ─────────────────────── */
-        .upcoming-strip {
-          display: flex; gap: 10px; overflow-x: auto;
-          padding-bottom: 4px; position: relative; z-index: 1;
-        }
-        .upcoming-strip::-webkit-scrollbar { height: 0; }
-        .up-item {
-          display: flex; align-items: center; gap: 10px;
-          background: var(--card-bg); border: 1px solid var(--card-border);
-          border-radius: var(--radius-md); padding: 10px 14px;
-          min-width: 190px; flex-shrink: 0;
-          transition: transform .2s, border-color .2s;
-        }
-        .up-item:hover { transform: translateY(-2px); border-color: var(--uc, var(--border-strong)); }
-        .up-icon { font-size: 18px; flex-shrink: 0; }
-        .up-info { flex: 1; min-width: 0; }
-        .up-label { font-size: 12px; font-weight: 600; color: var(--text-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .up-date  { font-family: var(--font-mono); font-size: 10px; color: var(--text-3); margin-top: 2px; }
-        .up-days  { font-family: var(--font-mono); font-size: 11px; font-weight: 700; flex-shrink: 0; }
+        /* LAYOUT */
+        .layout { display:grid; grid-template-columns:260px 1fr; gap:0; padding:18px 24px 40px; position:relative; z-index:1; }
 
-        /* ── CALENDAR CARD ──────────────────────── */
-        .cal-card {
-          border-radius: var(--radius-xl); padding: 22px;
-          position: relative; z-index: 1;
-          box-shadow: var(--shadow-md);
-        }
+        /* SIDEBAR */
+        .sidebar { border-radius:var(--radius-xl); padding:18px; display:flex; flex-direction:column; gap:0; margin-right:16px; position:sticky; top:20px; height:calc(100vh - 100px); overflow-y:auto; }
+        .sidebar::-webkit-scrollbar { width:0; }
+        .side-section { padding:14px 0; border-bottom:1px solid var(--border); }
+        .side-section:last-child { border-bottom:none; }
+        .side-label { font-size:9px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:var(--text-4); margin-bottom:10px; }
 
-        /* ── HEADER ─────────────────────────────── */
-        .cal-header {
-          display: flex; align-items: center; gap: 16px;
-          margin-bottom: 16px; flex-wrap: wrap;
-        }
-        .cal-nav-left { display: flex; align-items: center; gap: 12px; }
-        .nav-btn {
-          width: 32px; height: 32px; border-radius: 9px;
-          background: var(--bg-elevated); border: 1px solid var(--border);
-          color: var(--text-2); cursor: pointer; display: flex;
-          align-items: center; justify-content: center;
-          transition: all .15s;
-        }
-        .nav-btn:hover:not(:disabled) { background: var(--bg-hover); border-color: var(--border-strong); color: var(--text-1); transform: scale(1.05); }
-        .nav-btn:disabled { opacity: .3; cursor: not-allowed; }
-        .month-title-block { display: flex; align-items: baseline; gap: 8px; }
-        .month-name { font-family: var(--font-display); font-size: 28px; font-weight: 800; color: var(--text-1); letter-spacing: -.6px; }
-        .year-label { font-family: var(--font-mono); font-size: 14px; color: var(--text-3); }
+        /* Legend */
+        .leg-row { display:flex; align-items:center; gap:9px; margin-bottom:7px; }
+        .leg-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+        .leg-today-dot { width:16px; height:16px; border-radius:50%; background:var(--accent); box-shadow:0 0 6px var(--accent-glow); flex-shrink:0; }
+        .leg-text { font-size:12px; color:var(--text-2); }
 
-        /* Month stats pills */
-        .month-stats { display: flex; gap: 8px; flex: 1; }
-        .ms-pill { display: flex; flex-direction: column; align-items: center; padding: 7px 14px; border-radius: var(--radius-md); background: var(--bg-elevated); border: 1px solid var(--border); min-width: 64px; }
-        .ms-val { font-family: var(--font-mono); font-size: 18px; font-weight: 700; }
-        .ms-lbl { font-size: 9px; color: var(--text-3); text-transform: uppercase; letter-spacing: .5px; margin-top: 1px; }
-        .ms-work .ms-val { color: var(--accent-light); }
-        .ms-hol  .ms-val { color: var(--rose); }
-        .ms-exam .ms-val { color: var(--amber); }
+        /* Month stats */
+        .ms-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:12px; }
+        .ms-item { text-align:center; background:var(--bg-elevated); border:1px solid var(--border); border-radius:10px; padding:8px 4px; }
+        .ms-val { font-family:var(--font-mono); font-size:20px; font-weight:700; }
+        .ms-lbl { font-size:8.5px; color:var(--text-4); text-transform:uppercase; letter-spacing:.4px; margin-top:2px; }
+        .progress-wrap { }
+        .progress-track { height:4px; background:var(--border); border-radius:2px; overflow:hidden; }
+        .progress-fill { height:100%; background:linear-gradient(90deg,var(--accent),#06b6d4); border-radius:2px; transition:width .6s ease; }
+        .progress-lbl { font-size:10px; color:var(--text-4); margin-top:5px; font-family:var(--font-mono); }
 
-        .cal-header-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
-        .view-toggle { display: flex; border: 1px solid var(--border); border-radius: 9px; overflow: hidden; }
-        .vt-btn { padding: 6px 14px; background: none; border: none; color: var(--text-3); font-size: 12px; cursor: pointer; transition: all .15s; font-family: var(--font-body); }
-        .vt-btn:hover { color: var(--text-1); background: var(--bg-hover); }
-        .vt-active { background: var(--accent-dim) !important; color: var(--accent-light) !important; font-weight: 600; }
-        .today-btn {
-          padding: 6px 14px; border-radius: 9px;
-          background: var(--accent-dim); border: 1px solid var(--accent-border);
-          color: var(--accent-light); font-size: 12px; font-weight: 600; cursor: pointer;
-          transition: all .15s; font-family: var(--font-body);
-        }
-        .today-btn:hover { background: rgba(99,102,241,.18); }
+        /* Day detail */
+        .day-detail { background:var(--accent-dim); border-radius:12px; padding:12px; margin:0 -4px; }
+        .dd-top { display:flex; align-items:baseline; gap:6px; margin-bottom:8px; }
+        .dd-num { font-family:var(--font-display); font-size:28px; font-weight:800; color:var(--accent-light); line-height:1; }
+        .dd-month { font-size:13px; color:var(--text-2); flex:1; }
+        .dd-order { font-family:var(--font-mono); font-size:11px; font-weight:700; color:var(--accent-light); background:rgba(99,102,241,.15); padding:2px 8px; border-radius:6px; }
+        .dd-close { background:none; border:none; color:var(--text-4); cursor:pointer; font-size:12px; padding:2px 4px; }
+        .dd-holiday-msg { font-size:12px; color:#f43f5e; background:rgba(244,63,94,.1); border:1px solid rgba(244,63,94,.2); border-radius:8px; padding:7px 10px; margin-bottom:8px; }
+        .dd-class-msg   { font-size:12px; color:var(--emerald); background:var(--emerald-dim); border:1px solid var(--emerald-border); border-radius:8px; padding:7px 10px; margin-bottom:8px; }
+        .dd-noclass { font-size:12px; color:var(--text-3); font-style:italic; }
+        .dd-event { display:flex; align-items:center; gap:8px; border-radius:8px; padding:8px 10px; margin-top:6px; }
+        .dd-ev-label { font-size:12px; font-weight:600; }
+        .dd-ev-type  { font-size:10px; color:var(--text-3); margin-top:1px; text-transform:uppercase; letter-spacing:.4px; }
 
-        /* Month progress */
-        .month-progress-wrap {
-          display: flex; align-items: center; gap: 12px;
-          margin-bottom: 14px;
-        }
-        .month-progress-bar { flex: 1; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
-        .month-progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), #06b6d4); border-radius: 2px; transition: width .6s ease; }
-        .month-progress-label { font-size: 11px; color: var(--text-3); white-space: nowrap; font-family: var(--font-mono); }
+        /* Upcoming */
+        .upcoming-list { display:flex; flex-direction:column; gap:6px; }
+        .up-item { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 10px; background:var(--bg-elevated); border:1px solid var(--border); border-radius:10px; }
+        .up-left { display:flex; align-items:center; gap:8px; }
+        .up-icon { font-size:14px; }
+        .up-label { font-size:11.5px; font-weight:500; color:var(--text-1); }
+        .up-date  { font-size:10px; color:var(--text-3); font-family:var(--font-mono); margin-top:1px; }
+        .up-days  { font-family:var(--font-mono); font-size:11px; font-weight:700; flex-shrink:0; }
 
-        /* ── DOW HEADER ─────────────────────────── */
-        .dow-header { display: grid; grid-template-columns: repeat(7,1fr); gap: 3px; margin-bottom: 6px; }
-        .dow-cell { text-align: center; font-size: 10px; font-weight: 700; letter-spacing: .7px; text-transform: uppercase; color: var(--text-3); padding: 6px 0; }
-        .dow-weekend { color: rgba(244,63,94,.5); }
+        /* CALENDAR MAIN */
+        .cal-main { display:flex; flex-direction:column; gap:14px; }
 
-        /* ── GRID ───────────────────────────────── */
-        .cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 3px; }
-        .slide-in { animation: slideIn .25s ease both; }
-        @keyframes slideIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
-        .slide-out-left  { animation: soLeft  .18s ease both; }
-        .slide-out-right { animation: soRight .18s ease both; }
-        @keyframes soLeft  { to{opacity:0;transform:translateX(-12px)} }
-        @keyframes soRight { to{opacity:0;transform:translateX(12px)} }
+        /* Header */
+        .cal-header { display:flex; align-items:center; justify-content:space-between; gap:16px; }
+        .cal-nav { display:flex; align-items:center; gap:14px; }
+        .nav-btn { width:34px; height:34px; border-radius:10px; background:var(--bg-elevated); border:1px solid var(--border); color:var(--text-2); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .15s; }
+        .nav-btn:hover:not(:disabled) { background:var(--bg-hover); border-color:var(--border-strong); color:var(--text-1); transform:scale(1.05); }
+        .nav-btn:disabled { opacity:.3; cursor:not-allowed; }
+        .month-block { display:flex; align-items:baseline; gap:10px; }
+        .month-title { font-family:var(--font-display); font-size:30px; font-weight:800; color:var(--text-1); letter-spacing:-.6px; }
+        .year-badge  { font-family:var(--font-mono); font-size:14px; color:var(--text-3); }
+        .cal-header-right { display:flex; align-items:center; gap:8px; }
+        .view-toggle { display:flex; border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+        .vt { padding:6px 14px; background:none; border:none; color:var(--text-3); font-size:12px; cursor:pointer; transition:all .15s; font-family:var(--font-body); }
+        .vt:hover { background:var(--bg-hover); color:var(--text-1); }
+        .vt-on { background:var(--accent-dim)!important; color:var(--accent-light)!important; font-weight:600; }
+        .today-btn { padding:6px 14px; border-radius:10px; background:var(--accent-dim); border:1px solid var(--accent-border); color:var(--accent-light); font-size:12px; font-weight:600; cursor:pointer; transition:all .15s; font-family:var(--font-body); }
+        .today-btn:hover { background:rgba(99,102,241,.18); }
 
-        .day-empty { min-height: 90px; }
+        /* Month tabs */
+        .month-tabs { display:flex; gap:6px; }
+        .mt { position:relative; padding:6px 14px; border-radius:9px; background:var(--bg-elevated); border:1px solid var(--border); color:var(--text-3); font-size:12px; font-weight:600; cursor:pointer; transition:all .18s; font-family:var(--font-body); }
+        .mt:hover { background:var(--bg-hover); color:var(--text-1); }
+        .mt-on { background:var(--accent-dim)!important; border-color:var(--accent)!important; color:var(--accent-light)!important; box-shadow:0 4px 12px var(--accent-glow); }
+        .mt-today { border-color:var(--accent-border)!important; }
+        .mt-dot { position:absolute; top:3px; right:3px; width:5px; height:5px; border-radius:50%; background:var(--accent); box-shadow:0 0 4px var(--accent-glow); }
 
+        /* DOW row */
+        .dow-row { display:grid; grid-template-columns:repeat(7,1fr); gap:3px; margin-bottom:4px; }
+        .dow-cell { text-align:center; font-size:10px; font-weight:700; letter-spacing:.7px; text-transform:uppercase; color:var(--text-3); padding:6px 0; }
+        .dow-wknd { color:rgba(244,63,94,.5); }
+
+        /* Day grid */
+        .cal-body { }
+        .sl { animation:sl .22s ease both; }
+        .sr { animation:sr .22s ease both; }
+
+        .day-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:3px; }
+        .day-empty { min-height:86px; }
         .day-cell {
-          min-height: 90px; border-radius: 10px;
-          padding: 8px 7px 6px;
-          background: rgba(255,255,255,.018);
-          border: 1px solid transparent;
-          cursor: pointer; position: relative;
-          display: flex; flex-direction: column; gap: 4px;
-          transition: background .15s, border-color .15s, transform .18s;
-          animation: cellFadeIn .35s ease both;
+          min-height:86px; border-radius:10px; padding:7px 6px 5px; cursor:pointer;
+          background:rgba(255,255,255,.016); border:1px solid transparent;
+          display:flex; flex-direction:column; gap:3px;
+          transition:background .14s, border-color .14s, transform .16s;
+          animation:dcIn .35s ease both;
         }
-        .day-cell:hover { background: var(--bg-elevated); border-color: var(--border); transform: scale(1.03); z-index: 2; }
-
-        /* State variants */
-        .day-past     { opacity: .45; }
-        .day-weekend  { opacity: .6; }
-        .day-holiday  { background: rgba(244,63,94,.06); border-color: rgba(244,63,94,.12); }
-        .day-exam     { background: rgba(245,158,11,.05); }
-        .day-today    {
-          background: var(--accent-dim) !important;
-          border-color: var(--accent) !important;
-          box-shadow: 0 0 0 1px var(--accent-border), 0 4px 16px var(--accent-glow);
-        }
-        .day-selected {
-          background: rgba(99,102,241,.16) !important;
-          border-color: var(--accent) !important;
-          transform: scale(1.04); z-index: 2;
-        }
+        .day-cell:hover { background:var(--bg-elevated); border-color:var(--border); transform:scale(1.03); z-index:2; }
+        .dc-past   { opacity:.38; }
+        .dc-wknd   { opacity:.55; }
+        .dc-hol    { background:rgba(244,63,94,.06)!important; border-color:rgba(244,63,94,.15)!important; }
+        .dc-exam   { background:rgba(245,158,11,.05); }
+        .dc-today  { background:rgba(99,102,241,.1)!important; border-color:var(--accent)!important; box-shadow:0 0 0 1px var(--accent-border),0 4px 14px var(--accent-glow); }
+        .dc-sel    { background:rgba(99,102,241,.16)!important; border-color:var(--accent)!important; transform:scale(1.04); z-index:2; }
 
         /* Day number */
-        .dn-wrap { display: flex; align-items: center; justify-content: space-between; }
-        .day-num {
-          font-family: var(--font-mono); font-size: 13px; font-weight: 600;
-          color: var(--text-2); line-height: 1;
-        }
-        .day-today .day-num { color: var(--accent-light); font-weight: 800; font-size: 14px; }
-        .today-ring {
-          width: 22px; height: 22px; border-radius: 50%;
-          background: var(--accent); box-shadow: 0 0 10px var(--accent-glow);
-          position: absolute; top: 6px; left: 6px; z-index: 0;
-          animation: todayPulse 2.5s ease-in-out infinite;
-        }
-        .day-today .day-num { position: relative; z-index: 1; color: white !important; font-size: 12px; }
-        @keyframes todayPulse { 0%,100%{box-shadow:0 0 10px var(--accent-glow)} 50%{box-shadow:0 0 18px var(--accent-glow)} }
+        .dn-row { display:flex; align-items:center; justify-content:space-between; }
+        .dn { font-family:var(--font-mono); font-size:12.5px; font-weight:600; color:var(--text-2); }
+        .dn-hol  { color:#f43f5e; }
+        .dn-wknd { color:rgba(244,63,94,.6); }
+        .today-circle { width:24px; height:24px; border-radius:50%; background:var(--accent); color:#fff; font-family:var(--font-mono); font-size:11.5px; font-weight:700; display:flex; align-items:center; justify-content:center; box-shadow:0 0 10px var(--accent-glow); animation:pulse 2.5s ease-in-out infinite; }
+        @keyframes pulse { 0%,100%{box-shadow:0 0 10px var(--accent-glow)} 50%{box-shadow:0 0 18px var(--accent-glow)} }
+        .do-badge { font-family:var(--font-mono); font-size:8.5px; font-weight:700; padding:1px 5px; border-radius:4px; }
 
-        /* Order badge */
-        .order-badge {
-          font-family: var(--font-mono); font-size: 9px; font-weight: 700;
-          padding: 1px 5px; border-radius: 4px;
-          display: inline-block; align-self: flex-start;
-        }
+        /* Event pills */
+        .ev-stack { display:flex; flex-direction:column; gap:2px; margin-top:auto; }
+        .ev-pill { display:flex; align-items:center; gap:3px; border-radius:4px; padding:2px 4px; }
+        .ev-hol  { background:rgba(244,63,94,.12); }
+        .ev-exam { background:rgba(245,158,11,.1); }
+        .ev-spec { background:rgba(16,185,129,.1); }
+        .ev-dot  { width:4px; height:4px; border-radius:50%; flex-shrink:0; }
+        .ev-txt  { font-size:8px; font-weight:600; color:var(--text-1); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
-        /* Event dots/pills */
-        .event-dots { display: flex; flex-direction: column; gap: 2px; margin-top: auto; }
-        .event-dot-pill {
-          border-radius: 3px; padding: 2px 5px;
-          display: flex; align-items: center; opacity: .85;
-        }
-        .edp-text {
-          font-size: 8.5px; font-weight: 600; color: white;
-          white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-          max-width: 100%;
-        }
+        /* LIST VIEW */
+        .list-view { display:flex; flex-direction:column; gap:22px; }
+        .lv-month { }
+        .lv-month-label { display:flex; align-items:center; gap:10px; font-family:var(--font-display); font-size:15px; font-weight:700; color:var(--text-1); padding-bottom:10px; border-bottom:1px solid var(--border); margin-bottom:10px; }
+        .lv-cur-chip { font-size:9.5px; font-weight:700; background:var(--accent-dim); color:var(--accent-light); border:1px solid var(--accent-border); padding:2px 8px; border-radius:10px; }
+        .lv-row { display:flex; align-items:center; gap:14px; padding:12px 14px; background:var(--lbg,var(--bg-elevated)); border:1px solid var(--lbd,var(--border)); border-radius:12px; margin-bottom:7px; transition:transform .15s; }
+        .lv-row:hover { transform:translateX(4px); }
+        .lv-date-block { text-align:center; flex-shrink:0; min-width:36px; }
+        .lv-day-num  { font-family:var(--font-mono); font-size:22px; font-weight:700; line-height:1; }
+        .lv-day-name { font-size:9px; color:var(--text-3); text-transform:uppercase; letter-spacing:.5px; margin-top:1px; }
+        .lv-icon  { font-size:18px; flex-shrink:0; }
+        .lv-info  { flex:1; }
+        .lv-label { font-size:13.5px; font-weight:600; color:var(--text-1); }
+        .lv-type  { font-size:10.5px; color:var(--text-3); margin-top:2px; }
+        .lv-chip  { font-size:10px; font-weight:600; padding:3px 9px; border-radius:10px; flex-shrink:0; }
 
-        /* ── DAY DETAIL PANEL ───────────────────── */
-        .detail-panel {
-          margin-top: 14px;
-          background: var(--bg-elevated);
-          border: 1px solid var(--accent-border);
-          border-radius: var(--radius-lg);
-          padding: 16px 18px;
-          box-shadow: 0 4px 24px var(--accent-glow);
+        /* RESPONSIVE */
+        @media (max-width:900px) {
+          .layout { grid-template-columns:1fr; }
+          .sidebar { position:static; height:auto; margin-right:0; margin-bottom:16px; flex-direction:row; flex-wrap:wrap; }
+          .side-section { flex:1; min-width:180px; }
         }
-        .dp-header { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
-        .dp-date-block { display: flex; align-items: baseline; gap: 6px; flex: 1; }
-        .dp-day-num { font-family: var(--font-display); font-size: 32px; font-weight: 800; color: var(--accent-light); line-height: 1; }
-        .dp-month-name { font-size: 14px; color: var(--text-2); font-weight: 500; }
-        .dp-order-badge {
-          background: var(--accent-dim); border: 1px solid var(--accent-border);
-          color: var(--accent-light); font-family: var(--font-mono);
-          font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 20px;
-        }
-        .dp-close {
-          width: 28px; height: 28px; border-radius: 8px;
-          background: var(--bg-hover); border: 1px solid var(--border);
-          color: var(--text-3); cursor: pointer; display: flex;
-          align-items: center; justify-content: center; transition: all .15s;
-        }
-        .dp-close:hover { color: var(--rose); border-color: rgba(244,63,94,.3); background: var(--rose-dim); }
-        .dp-events { display: flex; gap: 10px; flex-wrap: wrap; }
-        .dp-event {
-          display: flex; align-items: center; gap: 10px;
-          background: var(--ebg); border: 1px solid var(--ebdr);
-          border-radius: var(--radius-md); padding: 10px 14px;
-          flex: 1; min-width: 180px;
-        }
-        .dp-event-icon { font-size: 20px; }
-        .dp-event-label { font-size: 14px; font-weight: 600; color: var(--ec); }
-        .dp-event-type  { font-size: 10px; color: var(--text-3); margin-top: 2px; text-transform: uppercase; letter-spacing: .5px; }
-        .dp-no-event { font-size: 13px; color: var(--text-3); font-style: italic; }
-
-        /* ── LIST VIEW ──────────────────────────── */
-        .list-view { display: flex; flex-direction: column; gap: 20px; padding-top: 8px; }
-        .list-month { }
-        .list-month-label {
-          display: flex; align-items: center; gap: 10px;
-          font-family: var(--font-display); font-size: 15px; font-weight: 700;
-          color: var(--text-1); margin-bottom: 10px;
-          padding-bottom: 8px; border-bottom: 1px solid var(--border);
-        }
-        .list-month-current .list-month-label { color: var(--accent-light); border-color: var(--accent-border); }
-        .lm-current-chip {
-          font-size: 9.5px; font-weight: 700; letter-spacing: .5px;
-          background: var(--accent-dim); color: var(--accent-light);
-          border: 1px solid var(--accent-border); padding: 2px 8px; border-radius: 10px;
-        }
-        .list-event-row {
-          display: flex; align-items: center; gap: 14px;
-          padding: 12px 14px;
-          background: var(--lbg, var(--bg-elevated));
-          border: 1px solid var(--lbdr, var(--border));
-          border-radius: var(--radius-md); margin-bottom: 6px;
-          transition: transform .15s;
-        }
-        .list-event-row:hover { transform: translateX(4px); }
-        .ler-date { text-align: center; flex-shrink: 0; }
-        .ler-day { font-family: var(--font-mono); font-size: 20px; font-weight: 700; color: var(--lc, var(--text-1)); line-height: 1; }
-        .ler-mon { font-size: 9px; color: var(--text-3); text-transform: uppercase; letter-spacing: .5px; }
-        .ler-icon { font-size: 18px; flex-shrink: 0; }
-        .ler-info { flex: 1; }
-        .ler-label { font-size: 13.5px; font-weight: 600; color: var(--text-1); }
-        .ler-type  { font-size: 10.5px; color: var(--text-3); margin-top: 2px; }
-        .ler-badge {
-          font-size: 10px; font-weight: 600; padding: 3px 9px; border-radius: 10px;
-          background: var(--lbg); color: var(--lc); border: 1px solid var(--lbdr);
-          flex-shrink: 0;
-        }
-
-        /* ── MONTH SWITCHER ─────────────────────── */
-        .month-switcher {
-          display: flex; gap: 6px; justify-content: center;
-          position: relative; z-index: 1;
-        }
-        .ms-tab {
-          position: relative;
-          padding: 7px 16px; border-radius: 10px;
-          background: var(--bg-elevated); border: 1px solid var(--border);
-          color: var(--text-3); font-size: 12px; font-weight: 600;
-          cursor: pointer; transition: all .18s; font-family: var(--font-body);
-        }
-        .ms-tab:hover { background: var(--bg-hover); color: var(--text-1); border-color: var(--border-strong); }
-        .ms-active {
-          background: var(--accent-dim) !important;
-          border-color: var(--accent) !important;
-          color: var(--accent-light) !important;
-          box-shadow: 0 4px 12px var(--accent-glow);
-        }
-        .ms-today { border-color: var(--accent-border) !important; }
-        .ms-today-dot {
-          position: absolute; top: 4px; right: 4px;
-          width: 5px; height: 5px; border-radius: 50%;
-          background: var(--accent); box-shadow: 0 0 4px var(--accent-glow);
-        }
-
-        /* ── LEGEND ROW ─────────────────────────── */
-        .legend-row-bottom {
-          display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
-          padding: 10px 4px; border-top: 1px solid var(--border);
-          position: relative; z-index: 1;
-        }
-        .leg-item { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-3); }
-        .leg-dot { width: 8px; height: 8px; border-radius: 50%; }
-        .leg-order { background: var(--accent-light); }
-        .leg-today-circle { width: 16px; height: 16px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 6px var(--accent-glow); }
-        .leg-today-item { color: var(--accent-light); }
-
-        /* ── ANIMATE ────────────────────────────── */
-        .animate-up { animation: fadeUp .35s cubic-bezier(.4,0,.2,1) both; }
-        @keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
-
-        /* ── RESPONSIVE ─────────────────────────── */
-        @media (max-width: 700px) {
-          .month-stats { display: none; }
-          .cal-header-right { margin-left: 0; }
-          .day-cell { min-height: 58px; padding: 5px 4px; }
-          .edp-text { display: none; }
-          .event-dot-pill { width: 6px; height: 6px; border-radius: 50%; padding: 0; }
-          .order-badge { display: none; }
-          .month-switcher { flex-wrap: wrap; }
-          .upcoming-strip { gap: 7px; }
-          .up-item { min-width: 150px; padding: 8px 10px; }
-        }
-        @media (max-width: 480px) {
-          .page { padding: 14px 10px 40px; }
-          .month-name { font-size: 22px; }
-          .top-brand { display: none; }
-          .day-cell { min-height: 46px; }
-          .day-num { font-size: 11px; }
+        @media (max-width:600px) {
+          .layout { padding:12px; }
+          .day-cell { min-height:52px; padding:4px 3px; }
+          .ev-txt { display:none; }
+          .month-title { font-size:22px; }
+          .month-tabs { flex-wrap:wrap; }
         }
       `}</style>
     </>
