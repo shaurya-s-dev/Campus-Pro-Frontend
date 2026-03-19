@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Sidebar from '@/components/Sidebar';
@@ -92,7 +92,7 @@ export default function Dashboard() {
     const raw = DataStore.get();
     if (!raw) { router.replace('/'); return; }
     setData(sanitizeObject(raw));
-  }, []);
+  }, [router]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (router.query.tab) setTab(router.query.tab);
@@ -104,6 +104,13 @@ export default function Dashboard() {
   const marks      = data?.marks?.marks           || [];
   const timetable  = data?.timetable              || null;
   const courses    = data?.courses?.courses       || [];
+
+  /* ── Memoised stats to avoid repeated filter/reduce in render ── */
+  const courseStats = useMemo(() => ({
+    theory:    courses.filter(c => c.slotType === 'Theory').length,
+    practical: courses.filter(c => c.slotType === 'Practical').length,
+    credits:   courses.reduce((s, c) => s + (parseFloat(c.credit) || 0), 0),
+  }), [courses]);
 
   const avgAtt   = attendance.length
     ? (attendance.reduce((s, a) => s + parseFloat(a.attendancePercentage || 0), 0) / attendance.length).toFixed(1)
@@ -183,7 +190,7 @@ export default function Dashboard() {
                       label="Subjects" value={courses.length}
                       color="var(--cyan)"
                       icon="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"
-                      sub={`${courses.filter(c=>c.slotType==='Theory').length} theory · ${courses.filter(c=>c.slotType==='Practical').length} lab`}
+                      sub={`${courseStats.theory} theory · ${courseStats.practical} lab`}
                       delay={120}
                     />
                     <KPICard
@@ -223,7 +230,7 @@ export default function Dashboard() {
                       const attended  = conducted - absent;
                       const canMiss   = Math.floor(attended - 0.75 * conducted);
                       return (
-                        <div key={i} className="att-mini glass-raised glass-hover animate-up" style={{ animationDelay: `${i * 50}ms` }}>
+                        <div key={a.courseCode ? `mini-${a.courseCode}` : i} className="att-mini glass-raised glass-hover animate-up" style={{ animationDelay: `${i * 50}ms` }}>
                           <div className="am-top">
                             <CircleProgress pct={pct} color={clr} size={46} />
                             <div className="am-info">
@@ -282,7 +289,7 @@ export default function Dashboard() {
 
                   {/* ── Attendance cards ──────────────── */}
                   <div className="att-cards">
-                    {attendance.map((a, i) => {
+                    {attendance.map((a, i) => { // key uses courseCode for stability
                       const pct        = parseFloat(a.attendancePercentage);
                       const clr        = attColor(pct);
                       const conducted  = parseFloat(a.hoursConducted) || 0;
@@ -300,7 +307,7 @@ export default function Dashboard() {
                       const facultyName = a.facultyName?.split('(')[0]?.trim() || '—';
 
                       return (
-                        <div key={i} className="att-card glass animate-up" style={{ animationDelay: `${i * 40}ms` }}>
+                        <div key={a.courseCode || i} className="att-card glass animate-up" style={{ animationDelay: `${i * 40}ms` }}>
 
                           {/* Left accent stripe */}
                           <div className="ac-stripe" style={{ background: clr }} />
@@ -428,9 +435,9 @@ export default function Dashboard() {
 
                   <div className="cs-strip">
                     {[
-                      { l: 'Theory',        v: courses.filter(c=>c.slotType==='Theory').length,    c: 'var(--accent-light)' },
-                      { l: 'Practical',     v: courses.filter(c=>c.slotType==='Practical').length, c: 'var(--emerald)' },
-                      { l: 'Total Credits', v: courses.reduce((s,c)=>s+(parseFloat(c.credit)||0),0), c: 'var(--amber)' },
+                      { l: 'Theory',    v: courseStats.theory,    c: 'var(--accent-light)' },
+                      { l: 'Practical', v: courseStats.practical, c: 'var(--emerald)' },
+                      { l: 'Total Credits', v: courseStats.credits,  c: 'var(--amber)' },
                     ].map((s, i) => (
                       <div key={i} className="cs-pill glass-raised">
                         <span className="cs-val" style={{ color: s.c }}>{s.v}</span>
@@ -446,7 +453,7 @@ export default function Dashboard() {
                       const accentClr = isTheory ? 'var(--accent-light)' : 'var(--emerald)';
                       const barClr    = isTheory ? '#6366f1' : '#10b981';
                       return (
-                        <div key={i} className="cc-card glass glass-hover animate-up" style={{ animationDelay: `${i * 40}ms` }}>
+                        <div key={c.code || i} className="cc-card glass glass-hover animate-up" style={{ animationDelay: `${i * 40}ms` }}>
                           {/* Top accent stripe */}
                           <div className="cc-stripe" style={{ background: `linear-gradient(90deg, ${barClr}, transparent)` }} />
                           <div className="cc-body">
@@ -602,7 +609,7 @@ export default function Dashboard() {
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          height: 100vh;
+          min-height: 70vh;
         }
 
         /* ── Tab panels ───────────────────────── */

@@ -193,18 +193,21 @@ export default function CalendarPage() {
   const goToMonth = useCallback((idx) => {
     if (idx < 0 || idx >= MONTHS.length) return;
     setAnim(idx > activeIdx ? 'left' : 'right');
-    setTimeout(() => {
+    // Note: timeout is short (180ms) so unmount risk is negligible;
+    // Next.js route changes would unmount before this fires, which is safe.
+    const t = setTimeout(() => {
       setActiveMonth(MONTHS[idx]);
       setSelectedDay(null);
       setAnim(null);
     }, 180);
+    return () => clearTimeout(t);
   }, [activeIdx]);
 
   const navigate  = useCallback((delta) => goToMonth(activeIdx + delta), [activeIdx, goToMonth]);
   const goToday   = useCallback(() => {
     if (CALENDAR_DATA[TODAY_KEY]) {
       goToMonth(MONTHS.indexOf(TODAY_KEY));
-      setTimeout(() => setSelectedDay(TODAY_DATE), 200);
+      setTimeout(() => setSelectedDay(TODAY_DATE), 220);
     }
   }, [TODAY_KEY, TODAY_DATE, goToMonth]);
 

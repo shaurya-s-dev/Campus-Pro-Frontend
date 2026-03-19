@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useTheme } from '@/context/ThemeContext';
@@ -85,6 +85,8 @@ export default function Sidebar({ activeTab, onTabChange, user, below75 }) {
           className="collapse-btn"
           onClick={() => setCollapsed(p => !p)}
           title={collapsed ? 'Expand [' : 'Collapse ['}
+          aria-expanded={!collapsed}
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
           {collapsed ? icons.chevR : icons.chevL}
         </button>
@@ -235,6 +237,7 @@ export default function Sidebar({ activeTab, onTabChange, user, below75 }) {
           className={`logout-btn${collapsed ? ' item-center' : ''}`}
           onClick={() => logout(router)}
           title={collapsed ? 'Sign out' : undefined}
+          aria-label="Sign out"
         >
           <span className="nav-icon">{icons.logout}</span>
           {!collapsed && <span>Sign out</span>}
