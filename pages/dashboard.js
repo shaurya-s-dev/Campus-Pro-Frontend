@@ -2,9 +2,9 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Sidebar from '@/components/Sidebar';
-import TimetableView from '@/components/TimetableView';
+import TimetableView from '../components/TimetableView';
 import { DataStore, requireAuth, logout, sanitizeObject } from '@/lib/security';
-import MarksSection from '@/components/MarksSection';
+import MarksSection from '../components/MarksSection';
 
 /* ── Small helpers ───────────────────────────────── */
 const Ico = ({ d, size = 16, sw = 1.7 }) => (
