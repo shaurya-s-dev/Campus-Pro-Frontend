@@ -50,14 +50,17 @@ const CALENDAR_DATA = {
   },
   'March 2026': {
     events: [
-      { date: 2,  type: 'exam',    label: 'CAT-2 Begins' },
-      { date: 18, type: 'holiday', label: 'Holi'          },
-      { date: 25, type: 'exam',    label: 'CAT-2 Ends'   },
+      { date: 2,  type: 'exam',    label: 'CAT-2 Begins'       },
+      { date: 18, type: 'holiday', label: 'Holi'                },
+      { date: 19, type: 'holiday', label: "Telugu New Year's Day"},
+      { date: 25, type: 'exam',    label: 'CAT-2 Ends'         },
     ],
     dayOrders: {
       2:'D1', 3:'D2', 4:'D3', 5:'D4', 6:'D5', 7:'D1',
       9:'D2',10:'D3',11:'D4',12:'D5',13:'D1',
-      16:'D2',17:'D3',19:'D4',20:'D5',
+      16:'D2',17:'D3',
+      // 18=Holi, 19=Telugu New Year — both holidays, no class
+      20:'D5',
       23:'D1',24:'D2',26:'D3',27:'D4',28:'D5',
       30:'D1',31:'D2',
     },
@@ -266,46 +269,79 @@ export default function CalendarPage() {
 
           {/* ── LEFT: UPCOMING SIDEBAR ──────────── */}
           <div className="sidebar-panel">
-            <div className="sp-heading">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-              </svg>
-              Upcoming
+
+            {/* Header */}
+            <div className="sp-hd">
+              <div className="sp-hd-left">
+                <div className="sp-hd-icon">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                  </svg>
+                </div>
+                <span className="sp-hd-title">Upcoming</span>
+              </div>
+              <div className="sp-hd-count">{upcomingItems.length}</div>
             </div>
 
+            {/* Timeline list */}
             <div className="sp-list">
               {upcomingItems.length === 0 && (
-                <div className="sp-empty">No upcoming events</div>
+                <div className="sp-empty">
+                  <div className="sp-empty-icon">✓</div>
+                  <div>No upcoming events</div>
+                </div>
               )}
-              {upcomingItems.map((ev, i) => (
-                <div key={i} className="sp-item">
-                  <div className="spi-left">
-                    {/* Date badge */}
-                    <div className="spi-date-badge" style={{ borderColor: ev.t.border }}>
-                      <div className="spi-day">{ev.date}</div>
-                      <div className="spi-mon">{ev.monthKey.split(' ')[0].slice(0,3)}</div>
+
+              {upcomingItems.map((ev, i) => {
+                const isFirst = i === 0;
+                const isLast  = i === upcomingItems.length - 1;
+                return (
+                  <div key={i} className={`tl-item${isFirst ? ' tl-first' : ''}`}>
+                    {/* Vertical timeline connector */}
+                    <div className="tl-spine">
+                      <div className="tl-dot" style={{ background: ev.t.color, borderColor: ev.t.border }} />
+                      {!isLast && <div className="tl-line" />}
                     </div>
-                    {/* Info */}
-                    <div className="spi-info">
-                      <div className="spi-label">{ev.label}</div>
-                      <div className="spi-type" style={{ color: ev.t.color }}>
-                        <span className="spi-icon">{ev.t.icon}</span>
-                        {ev.t.label}
+
+                    {/* Card */}
+                    <div className="tl-card" style={{ '--ec': ev.t.color, '--ebg': ev.t.bg, '--ebdr': ev.t.border }}>
+                      {/* Type strip on left */}
+                      <div className="tl-type-strip" style={{ background: ev.t.color }} />
+
+                      <div className="tl-body">
+                        {/* Top row: label + countdown */}
+                        <div className="tl-top">
+                          <div className="tl-name">{ev.label}</div>
+                          <div className="tl-count" style={{ color: ev.t.color }}>
+                            {ev.diffLabel}
+                          </div>
+                        </div>
+
+                        {/* Bottom row: date + type */}
+                        <div className="tl-meta">
+                          <div className="tl-date-pill">
+                            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                              <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                            </svg>
+                            {ev.monthKey.split(' ')[0].slice(0,3)} {ev.date}
+                          </div>
+                          <div className="tl-type-badge" style={{ color: ev.t.color, background: ev.t.bg }}>
+                            {ev.t.icon} {ev.t.label}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
-                  <div className="spi-badge" style={{ color: ev.t.color, background: ev.t.bg, borderColor: ev.t.border }}>
-                    {ev.diffLabel}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Legend */}
             <div className="sp-legend">
+              <div className="sp-legend-title">Legend</div>
               {Object.entries(EVENT_TYPES).map(([key, t]) => (
                 <div key={key} className="leg-item">
-                  <div className="leg-dot" style={{ background: t.color }} />
+                  <div className="leg-swatch" style={{ background: t.color }} />
                   <span>{t.label}</span>
                 </div>
               ))}
@@ -611,81 +647,135 @@ export default function CalendarPage() {
           background: var(--card-bg);
           border: 1px solid var(--card-border);
           border-radius: var(--radius-xl);
-          padding: 18px 16px;
+          padding: 16px 14px 14px;
           backdrop-filter: blur(20px);
-          display: flex; flex-direction: column; gap: 14px;
-          /* Stick to top while calendar scrolls */
+          display: flex; flex-direction: column; gap: 12px;
           position: sticky; top: 20px;
           max-height: calc(100vh - 80px);
           overflow: hidden;
           box-shadow: var(--shadow-sm);
         }
 
-        /* Heading */
-        .sp-heading {
-          display: flex; align-items: center; gap: 7px;
-          font-family: var(--font-display); font-size: 11px; font-weight: 700;
-          letter-spacing: 1.2px; text-transform: uppercase;
-          color: var(--text-3);
+        /* Header */
+        .sp-hd {
+          display: flex; align-items: center; justify-content: space-between;
+          padding-bottom: 10px;
+          border-bottom: 1px solid var(--border);
+        }
+        .sp-hd-left { display: flex; align-items: center; gap: 8px; }
+        .sp-hd-icon {
+          width: 24px; height: 24px; border-radius: 7px;
+          background: var(--accent-dim); border: 1px solid var(--accent-border);
+          display: flex; align-items: center; justify-content: center;
+          color: var(--accent-light);
+        }
+        .sp-hd-title {
+          font-family: var(--font-display); font-size: 13px; font-weight: 700;
+          color: var(--text-1); letter-spacing: -.2px;
+        }
+        .sp-hd-count {
+          font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+          background: var(--accent-dim); border: 1px solid var(--accent-border);
+          color: var(--accent-light); padding: 2px 8px; border-radius: 20px;
         }
 
-        /* Scrollable list */
+        /* Scrollable timeline list */
         .sp-list {
-          display: flex; flex-direction: column; gap: 6px;
+          display: flex; flex-direction: column;
           overflow-y: auto; flex: 1;
+          padding-right: 2px;
         }
         .sp-list::-webkit-scrollbar { width: 3px; }
         .sp-list::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
 
-        .sp-empty { font-size: 12px; color: var(--text-4); text-align: center; padding: 20px 0; font-style: italic; }
-
-        /* Each upcoming item */
-        .sp-item {
-          display: flex; align-items: center; justify-content: space-between; gap: 8px;
-          padding: 10px 11px;
-          background: var(--bg-elevated);
-          border: 1px solid var(--border);
-          border-radius: var(--radius-md);
-          transition: background .14s, border-color .14s;
+        .sp-empty {
+          display: flex; flex-direction: column; align-items: center; gap: 8px;
+          padding: 28px 0; color: var(--text-4); font-size: 12px;
         }
-        .sp-item:hover { background: var(--bg-overlay); border-color: var(--border-strong); }
-
-        .spi-left {
-          display: flex; align-items: center; gap: 9px; min-width: 0;
+        .sp-empty-icon {
+          width: 28px; height: 28px; border-radius: 50%;
+          background: var(--emerald-dim); border: 1px solid var(--emerald-border);
+          color: var(--emerald); display: flex; align-items: center; justify-content: center;
+          font-size: 13px;
         }
 
-        /* Date badge */
-        .spi-date-badge {
+        /* ── Timeline item ── */
+        .tl-item {
+          display: flex; gap: 10px; padding: 5px 0;
+        }
+        .tl-first { padding-top: 0; }
+
+        /* Vertical spine */
+        .tl-spine {
           display: flex; flex-direction: column; align-items: center;
-          min-width: 32px; padding: 4px 5px;
-          border: 1px solid; border-radius: var(--radius-sm);
-          background: var(--bg-surface); flex-shrink: 0;
+          flex-shrink: 0; width: 14px;
+          padding-top: 6px;
         }
-        .spi-day { font-family: var(--font-mono); font-size: 14px; font-weight: 700; color: var(--text-1); line-height: 1; }
-        .spi-mon { font-size: 8px; color: var(--text-3); text-transform: uppercase; letter-spacing: .5px; margin-top: 1px; }
-
-        /* Info */
-        .spi-info { min-width: 0; flex: 1; }
-        .spi-label { font-size: 11.5px; font-weight: 600; color: var(--text-1); line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .spi-type  { display: flex; align-items: center; gap: 3px; font-size: 9.5px; color: var(--text-3); margin-top: 2px; }
-        .spi-icon  { font-size: 9px; }
-
-        /* Countdown badge */
-        .spi-badge {
-          font-family: var(--font-mono); font-size: 9.5px; font-weight: 700;
-          padding: 2px 7px; border-radius: 20px; border: 1px solid;
-          flex-shrink: 0; white-space: nowrap;
+        .tl-dot {
+          width: 10px; height: 10px; border-radius: 50%;
+          border: 2px solid; flex-shrink: 0;
+          box-shadow: 0 0 0 2px var(--bg-void);
+        }
+        .tl-line {
+          width: 1.5px; flex: 1; min-height: 12px;
+          background: var(--border); margin-top: 3px;
         }
 
-        /* Legend at bottom of sidebar */
+        /* Card */
+        .tl-card {
+          flex: 1; min-width: 0;
+          display: flex; overflow: hidden;
+          border-radius: 9px;
+          background: var(--bg-elevated);
+          border: 1px solid var(--card-border);
+          margin-bottom: 6px;
+          transition: border-color .14s, background .14s;
+        }
+        .tl-card:hover { background: var(--bg-overlay); border-color: var(--ebdr, var(--border-strong)); }
+
+        .tl-type-strip { width: 3px; flex-shrink: 0; }
+
+        .tl-body { flex: 1; min-width: 0; padding: 8px 10px; }
+
+        .tl-top {
+          display: flex; align-items: flex-start;
+          justify-content: space-between; gap: 6px; margin-bottom: 5px;
+        }
+        .tl-name {
+          font-size: 11.5px; font-weight: 600; color: var(--text-1);
+          line-height: 1.3; flex: 1; min-width: 0;
+          overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .tl-count {
+          font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+          white-space: nowrap; flex-shrink: 0;
+        }
+
+        .tl-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+        .tl-date-pill {
+          display: flex; align-items: center; gap: 4px;
+          font-family: var(--font-mono); font-size: 9px; font-weight: 600;
+          color: var(--text-3); background: var(--bg-surface);
+          border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px;
+        }
+        .tl-type-badge {
+          font-size: 9px; font-weight: 600;
+          padding: 2px 6px; border-radius: 4px;
+        }
+
+        /* Legend */
         .sp-legend {
           border-top: 1px solid var(--border);
           padding-top: 10px;
-          display: flex; flex-direction: column; gap: 6px;
+          display: flex; flex-direction: column; gap: 5px;
           flex-shrink: 0;
         }
-        .leg-item  { display: flex; align-items: center; gap: 6px; font-size: 10.5px; color: var(--text-3); }
-        .leg-dot   { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+        .sp-legend-title {
+          font-size: 9px; font-weight: 700; letter-spacing: 1px;
+          text-transform: uppercase; color: var(--text-5); margin-bottom: 3px;
+        }
+        .leg-item  { display: flex; align-items: center; gap: 7px; font-size: 10.5px; color: var(--text-3); }
+        .leg-swatch { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 
         /* ── CALENDAR COLUMN ─────────────────── */
         .cal-col { display: flex; flex-direction: column; gap: 10px; }
