@@ -162,10 +162,17 @@ export default function ProfilePage() {
   return (
     <>
       <Head><title>Profile — CampusPro</title></Head>
+
+      {/* Animated ambient background */}
+      <div className="dash-bg" aria-hidden="true">
+        <div className="dash-bg-grid" />
+        <div className="dash-blob-1" />
+        <div className="dash-blob-2" />
+        <div className="dash-blob-3" />
+        <div className="dash-bg-vignette" />
+      </div>
+
       <div className="page">
-        {/* Background orbs */}
-        <div className="bg-orb orb-a" />
-        <div className="bg-orb orb-b" />
 
         {/* Back nav */}
         <Link href="/dashboard" className="back-btn animate-up">
@@ -251,7 +258,18 @@ export default function ProfilePage() {
       </div>
 
       <style jsx global>{`
-        body { background: var(--bg-void); }
+        body { background: #05060f; }
+        @keyframes floatBlob  { 0%,100%{transform:translate(0,0) scale(1)} 33%{transform:translate(40px,-28px) scale(1.06)} 66%{transform:translate(-24px,18px) scale(0.96)} }
+        @keyframes floatBlob2 { 0%,100%{transform:translate(0,0) scale(1)} 40%{transform:translate(-35px,22px) scale(1.04)} 70%{transform:translate(28px,-15px) scale(0.98)} }
+        @keyframes floatBlob3 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(20px,30px) scale(1.07)} }
+        @keyframes gridDrift  { from{transform:translateY(0)} to{transform:translateY(48px)} }
+        .dash-bg { position:fixed; inset:0; z-index:0; pointer-events:none; overflow:hidden; }
+        .dash-bg-grid { position:absolute; inset:-100px; background-image:radial-gradient(circle, rgba(255,255,255,0.08) 1px, transparent 1px); background-size:28px 28px; animation:gridDrift 14s linear infinite; }
+        .dash-blob-1 { position:absolute; width:700px; height:700px; top:-200px; left:-180px; border-radius:50%; background:radial-gradient(circle at 40% 40%, rgba(99,102,241,0.17) 0%, rgba(99,102,241,0.06) 45%, transparent 70%); filter:blur(60px); animation:floatBlob 20s ease-in-out infinite; will-change:transform; }
+        .dash-blob-2 { position:absolute; width:600px; height:600px; bottom:-150px; right:-150px; border-radius:50%; background:radial-gradient(circle at 60% 60%, rgba(34,211,238,0.13) 0%, rgba(34,211,238,0.05) 45%, transparent 70%); filter:blur(55px); animation:floatBlob2 24s ease-in-out infinite; will-change:transform; }
+        .dash-blob-3 { position:absolute; width:420px; height:420px; top:38%; left:52%; border-radius:50%; background:radial-gradient(circle at 50% 50%, rgba(167,139,250,0.11) 0%, rgba(167,139,250,0.04) 50%, transparent 70%); filter:blur(50px); animation:floatBlob3 16s ease-in-out infinite 4s; will-change:transform; }
+        .dash-bg-vignette { position:absolute; inset:0; background:radial-gradient(ellipse 80% 70% at 50% 50%, transparent 50%, rgba(5,6,15,0.5) 100%); }
+
       `}</style>
 
       <style jsx>{`
@@ -263,38 +281,23 @@ export default function ProfilePage() {
           position: relative;
         }
         /* Background orbs */
-        .bg-orb {
-          position: fixed;
-          border-radius: 50%;
-          filter: blur(100px);
-          pointer-events: none;
-          z-index: 0;
-        }
-        .orb-a {
-          width: 500px; height: 500px;
-          background: radial-gradient(circle, var(--accent-dim), transparent 70%);
-          top: -150px; left: -100px;
-          animation: drift 14s ease-in-out infinite alternate;
-        }
-        .orb-b {
-          width: 350px; height: 350px;
-          background: radial-gradient(circle, var(--cyan-dim), transparent 70%);
-          bottom: -80px; right: 5%;
-          animation: drift 18s ease-in-out infinite alternate-reverse;
-        }
-        @keyframes drift { from{transform:translate(0,0)} to{transform:translate(20px,14px)} }
+        /* blob background handled by .dash-bg */
 
         /* Back button */
         .back-btn {
-          display:inline-flex; align-items:center; gap:7px;
-          color:var(--text-2); font-size:13px; font-weight:500;
-          padding:7px 14px 7px 10px; border-radius:10px;
-          border:1px solid var(--border); background:var(--bg-elevated);
-          transition:all .18s; margin-bottom:28px; position:relative; z-index:1;
-          text-decoration:none;
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+          color: var(--text-3);
+          font-size: 13px;
+          padding: 7px 14px 7px 10px;
+          border-radius: var(--radius-sm);
+          transition: all .15s;
+          margin-bottom: 28px;
+          position: relative;
+          z-index: 1;
         }
-        .back-btn:hover { background:var(--bg-hover); color:var(--text-1); border-color:var(--border-strong); transform:translateX(-2px); }
-        .back-btn svg { color:var(--accent); }
+        .back-btn:hover { background: var(--bg-hover); color: var(--text-1); }
 
         /* Layout */
         .profile-wrap {

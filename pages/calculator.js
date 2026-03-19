@@ -462,15 +462,23 @@ export default function Calculator() {
     <>
       <Head><title>GPA Calculator — CampusPro</title></Head>
 
+
+      {/* Animated ambient background */}
+      <div className="dash-bg" aria-hidden="true">
+        <div className="dash-bg-grid" />
+        <div className="dash-blob-1" />
+        <div className="dash-blob-2" />
+        <div className="dash-blob-3" />
+        <div className="dash-bg-vignette" />
+      </div>
+
       <div className="calc-page">
-        {/* Bg orb */}
-        <div className="calc-orb" />
 
         {/* Header */}
         <div className="calc-header animate-up">
           <Link href="/dashboard" className="back-link">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><polyline points="15 18 9 12 15 6"/></svg>
-            <span>Dashboard</span>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
+            Dashboard
           </Link>
           <div className="calc-title-block">
             <div className="tag tag-accent" style={{ marginBottom: 10, fontSize: 10.5 }}>SRM KTR · Official Grading</div>
@@ -614,8 +622,19 @@ export default function Calculator() {
       </div>
 
       <style jsx global>{`
-        body { background: var(--bg-void); overflow-x: hidden; }
+        body { background: #05060f; overflow-x: hidden; }
         option { background: var(--bg-surface); }
+        @keyframes floatBlob  { 0%,100%{transform:translate(0,0) scale(1)} 33%{transform:translate(40px,-28px) scale(1.06)} 66%{transform:translate(-24px,18px) scale(0.96)} }
+        @keyframes floatBlob2 { 0%,100%{transform:translate(0,0) scale(1)} 40%{transform:translate(-35px,22px) scale(1.04)} 70%{transform:translate(28px,-15px) scale(0.98)} }
+        @keyframes floatBlob3 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(20px,30px) scale(1.07)} }
+        @keyframes gridDrift  { from{transform:translateY(0)} to{transform:translateY(48px)} }
+        .dash-bg { position:fixed; inset:0; z-index:0; pointer-events:none; overflow:hidden; }
+        .dash-bg-grid { position:absolute; inset:-100px; background-image:radial-gradient(circle, rgba(255,255,255,0.08) 1px, transparent 1px); background-size:28px 28px; animation:gridDrift 14s linear infinite; }
+        .dash-blob-1 { position:absolute; width:700px; height:700px; top:-200px; left:-180px; border-radius:50%; background:radial-gradient(circle at 40% 40%, rgba(99,102,241,0.17) 0%, rgba(99,102,241,0.06) 45%, transparent 70%); filter:blur(60px); animation:floatBlob 20s ease-in-out infinite; will-change:transform; }
+        .dash-blob-2 { position:absolute; width:600px; height:600px; bottom:-150px; right:-150px; border-radius:50%; background:radial-gradient(circle at 60% 60%, rgba(34,211,238,0.13) 0%, rgba(34,211,238,0.05) 45%, transparent 70%); filter:blur(55px); animation:floatBlob2 24s ease-in-out infinite; will-change:transform; }
+        .dash-blob-3 { position:absolute; width:420px; height:420px; top:38%; left:52%; border-radius:50%; background:radial-gradient(circle at 50% 50%, rgba(167,139,250,0.11) 0%, rgba(167,139,250,0.04) 50%, transparent 70%); filter:blur(50px); animation:floatBlob3 16s ease-in-out infinite 4s; will-change:transform; }
+        .dash-bg-vignette { position:absolute; inset:0; background:radial-gradient(ellipse 80% 70% at 50% 50%, transparent 50%, rgba(5,6,15,0.5) 100%); }
+
       `}</style>
 
       <style jsx>{`
@@ -624,25 +643,11 @@ export default function Calculator() {
           padding: 32px 24px 64px;
           position: relative;
         }
-        .calc-orb {
-          position: fixed; top: -200px; right: -100px;
-          width: 500px; height: 500px; border-radius: 50%;
-          background: radial-gradient(circle, var(--accent-dim), transparent 70%);
-          filter: blur(100px); pointer-events: none; z-index: 0;
-        }
+        /* blob background handled by .dash-bg */
 
         /* Header */
-        .calc-header { position:relative; z-index:1; margin-bottom:28px; }
-        .calc-header-toprow { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; }
-        .back-link {
-          display:inline-flex; align-items:center; gap:7px;
-          color:var(--text-2); font-size:13px; font-weight:500;
-          padding:7px 14px 7px 10px; border-radius:10px;
-          border:1px solid var(--border); background:var(--bg-elevated);
-          margin-bottom:20px; transition:all .18s; text-decoration:none;
-        }
-        .back-link:hover { background:var(--bg-hover); color:var(--text-1); border-color:var(--border-strong); transform:translateX(-2px); }
-        .back-link svg { color:var(--accent); }
+        .calc-header { position: relative; z-index: 1; margin-bottom: 28px; }
+        .back-link { display:inline-flex; align-items:center; gap:6px; color:var(--text-3); font-size:13px; padding:6px 12px 6px 8px; border-radius:var(--radius-sm); margin-bottom:16px; transition:all .15s; }
         .back-link:hover { background:var(--bg-hover); color:var(--text-1); }
         .calc-title { font-family:var(--font-display); font-size:32px; font-weight:800; color:var(--text-1); letter-spacing:-.8px; }
         .calc-sub { font-size:13.5px; color:var(--text-2); margin-top:5px; }
