@@ -15,7 +15,7 @@ const Ico = ({ d, size = 15, sw = 1.8 }) => (
 );
 
 /* ── Color helpers ────────────────────────────────── */
-const attColor  = p => p >= 75 ? 'var(--emerald)' : 'var(--rose)';
+const attColor  = p => p >= 85 ? 'var(--emerald)' : p >= 75 ? 'var(--amber)' : 'var(--rose)';
 const scoreColor= p => p >= 80 ? 'var(--emerald)' : p >= 60 ? 'var(--amber)' : 'var(--rose)';
 
 /* ── Greeting ─────────────────────────────────────── */
@@ -245,9 +245,9 @@ export default function Dashboard() {
                           <div className="am-footer">
                             <span className="am-hrs">{attended}/{conducted} hrs</span>
                             <span className="am-tag" style={{
-                              color: canMiss >= 0 ? 'var(--emerald)' : 'var(--rose)',
-                              background: canMiss >= 0 ? 'var(--emerald-dim)' : 'var(--rose-dim)',
-                              border: `1px solid ${canMiss >= 0 ? 'var(--emerald-border)' : 'var(--rose-border)'}`,
+                              color:       clr,
+                              background:  pct >= 85 ? 'var(--emerald-dim)' : pct >= 75 ? 'var(--amber-dim)' : 'var(--rose-dim)',
+                              border:      `1px solid ${pct >= 85 ? 'var(--emerald-border)' : pct >= 75 ? 'var(--amber-border)' : 'var(--rose-border)'}`,
                             }}>
                               {canMiss >= 0 ? `Skip ${canMiss} more` : `Need ${Math.abs(canMiss)}`}
                             </span>
@@ -301,8 +301,9 @@ export default function Dashboard() {
                       const canSkip75 = Math.floor((attended - 0.75 * conducted) / 0.75);
 
                       const status =
-                        pct >= 75 ? { label: 'Safe',    clr: 'var(--emerald)' } :
-                                    { label: 'At Risk', clr: 'var(--rose)'    };
+                        pct >= 85 ? { label: 'Excellent', clr: 'var(--emerald)' } :
+                        pct >= 75 ? { label: 'Safe',      clr: 'var(--amber)'   } :
+                                    { label: 'At Risk',   clr: 'var(--rose)'    };
 
                       const facultyName = a.facultyName?.split('(')[0]?.trim() || '—';
 
@@ -347,10 +348,15 @@ export default function Dashboard() {
                             <div className="ac-bar-wrap">
                               <div className="ac-bar-bg">
                                 <div className="ac-bar-fill" style={{ width: `${Math.min(pct, 100)}%`, background: `linear-gradient(90deg, ${clr}99, ${clr})` }} />
-                                {/* 75% threshold marker */}
-                                <div className="ac-marker" style={{ left: '75%' }} title="75% threshold">
-                                  <div className="ac-marker-line" />
-                                  <span className="ac-marker-lbl">75%</span>
+                                {/* 75% danger threshold marker */}
+                                <div className="ac-marker" style={{ left: '75%' }} title="Minimum 75% required">
+                                  <div className="ac-marker-line" style={{ background: 'var(--rose)' }} />
+                                  <span className="ac-marker-lbl" style={{ color: 'var(--rose)' }}>75%</span>
+                                </div>
+                                {/* 85% safe threshold marker */}
+                                <div className="ac-marker" style={{ left: '85%' }} title="85% for comfortable buffer">
+                                  <div className="ac-marker-line" style={{ background: 'var(--emerald)' }} />
+                                  <span className="ac-marker-lbl" style={{ color: 'var(--emerald)' }}>85%</span>
                                 </div>
 
                               </div>
@@ -375,12 +381,20 @@ export default function Dashboard() {
                               <div className="ac-stat-sep" />
 
                               {/* Smart advice cell */}
-                              {pct >= 75 ? (
+                              {pct >= 85 ? (
                                 <div className="ac-advice safe">
                                   <span className="adv-ico">✓</span>
                                   <div>
-                                    <div className="adv-main">Can skip <strong>{canSkip75}</strong> more</div>
+                                    <div className="adv-main">Safe — can skip <strong>{canSkip75}</strong> more</div>
                                     <div className="adv-sub">and stay above 75%</div>
+                                  </div>
+                                </div>
+                              ) : pct >= 75 ? (
+                                <div className="ac-advice warn">
+                                  <span className="adv-ico">⚠</span>
+                                  <div>
+                                    <div className="adv-main">Borderline — skip max <strong>{canSkip75}</strong></div>
+                                    <div className="adv-sub">Attend more to reach 85%</div>
                                   </div>
                                 </div>
                               ) : (
