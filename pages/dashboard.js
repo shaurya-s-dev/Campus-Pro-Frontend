@@ -222,7 +222,7 @@ export default function Dashboard() {
                     <button className="link-btn" onClick={() => setTab('attendance')}>View all →</button>
                   </div>
                   <div className="att-mini-grid">
-                    {attendance.slice(0, 6).map((a, i) => {
+                    {attendance.map((a, i) => {
                       const pct       = parseFloat(a.attendancePercentage);
                       const clr       = attColor(pct);
                       const conducted = parseFloat(a.hoursConducted) || 0;
