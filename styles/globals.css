@@ -166,8 +166,8 @@ a { color: inherit; text-decoration: none; }
 .glass {
   background: var(--card-bg);
   border: 1px solid var(--card-border);
-  backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
 }
 
 /* ── Buttons ──────────────────────────────────── */
