@@ -6,6 +6,7 @@ import { TokenStore, DataStore } from '@/lib/security';
 const ACADEMIA_SESSIONS_URL =
   'https://academia.srmist.edu.in/accounts/p/10002227248/announcement/sessions-reminder?servicename=ZohoCreator&serviceurl=https://academia.srmist.edu.in/portal/academia-academic-services/redirectFromLogin&service_language=en';
 
+<<<<<<< HEAD
 /* ── Extract message string regardless of backend type (string or object) ── */
 function extractMsg(data) {
   if (!data) return '';
@@ -52,6 +53,9 @@ function getRedirectUrl(data) {
 }
 
 /* ── Session limit screen ────────────────────────────────────────────────── */
+=======
+/* ─--─ Session limit screen (too many concurrent sessions) ─── */
+>>>>>>> 1ecf802641149eb67b6f14189386f83caa36ad5a
 function SessionLimitScreen({ redirectUrl, onBack }) {
   return (
     <div className="info-screen">
