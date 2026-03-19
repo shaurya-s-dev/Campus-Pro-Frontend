@@ -6,7 +6,6 @@ import { TokenStore, DataStore } from '@/lib/security';
 const ACADEMIA_SESSIONS_URL =
   'https://academia.srmist.edu.in/accounts/p/10002227248/announcement/sessions-reminder?servicename=ZohoCreator&serviceurl=https://academia.srmist.edu.in/portal/academia-academic-services/redirectFromLogin&service_language=en';
 
-<<<<<<< HEAD
 /* ── Extract message string regardless of backend type (string or object) ── */
 function extractMsg(data) {
   if (!data) return '';
@@ -21,7 +20,6 @@ function extractMsg(data) {
 /* ── Detection ───────────────────────────────────────────────────────────── */
 function detectSessionLimit(data) {
   if (!data) return false;
-  // Backend now sends SESSION_LIMIT string
   if (data.message === 'SESSION_LIMIT') return true;
   if (data.session?.sessionLimit) return true;
   const msg = extractMsg(data);
@@ -35,7 +33,6 @@ function detectSessionLimit(data) {
 
 function detectDailyLimit(data) {
   if (!data) return false;
-  // Backend now sends DAILY_LIMIT string
   if (data.message === 'DAILY_LIMIT') return true;
   if (data.session?.dailyLimit) return true;
   const msg = extractMsg(data);
@@ -53,9 +50,6 @@ function getRedirectUrl(data) {
 }
 
 /* ── Session limit screen ────────────────────────────────────────────────── */
-=======
-/* ─--─ Session limit screen (too many concurrent sessions) ─── */
->>>>>>> 1ecf802641149eb67b6f14189386f83caa36ad5a
 function SessionLimitScreen({ redirectUrl, onBack }) {
   return (
     <div className="info-screen">
@@ -141,8 +135,7 @@ export default function Login() {
   const [error, setError]       = useState('');
   const [status, setStatus]     = useState('');
   const [loading, setLoading]   = useState(false);
-  // null = login form | 'session' | 'daily'
-  const [screen, setScreen]           = useState(null);
+  const [screen, setScreen]     = useState(null);
   const [sessionRedirectUrl, setSessionRedirectUrl] = useState(null);
 
   const handleLogin = async (e) => {
@@ -159,18 +152,15 @@ export default function Login() {
       });
       const loginData = await loginRes.json();
 
-      // Daily limit check first (more specific)
       if (detectDailyLimit(loginData)) {
         setScreen('daily'); setLoading(false); return;
       }
-      // Session limit
       if (detectSessionLimit(loginData)) {
         setSessionRedirectUrl(getRedirectUrl(loginData));
         setScreen('session'); setLoading(false); return;
       }
 
       if (!loginData.authenticated || !loginData.cookies) {
-        // Show actual backend message instead of generic "wrong credentials"
         const msg = loginData.message;
         const displayMsg = (typeof msg === 'string' && msg && msg !== 'SESSION_LIMIT' && msg !== 'DAILY_LIMIT')
           ? msg
