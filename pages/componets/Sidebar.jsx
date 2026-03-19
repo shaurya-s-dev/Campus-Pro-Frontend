@@ -28,12 +28,8 @@ const NAV_ITEMS = [
   { id: 'marks',       label: 'Marks',       icon: 'award',      path: '/dashboard?tab=marks' },
   { id: 'timetable',   label: 'Timetable',   icon: 'clock',      path: '/dashboard?tab=timetable' },
   { id: 'courses',     label: 'Courses',     icon: 'book',       path: '/dashboard?tab=courses' },
-];
-
-const EXTRA_ITEMS = [
-  { id: 'calculator', label: 'GPA Calc',  icon: 'calculator', path: '/calculator' },
-  { id: 'calendar',   label: 'Calendar',  icon: 'calendar',   path: '/calendar' },
-  { id: 'profile',    label: 'Profile',   icon: 'user',       path: '/profile' },
+  { id: 'calculator',  label: 'GPA Calc',    icon: 'calculator', path: '/calculator',  isLink: true },
+  { id: 'calendar',    label: 'Calendar',    icon: 'calendar',   path: '/calendar',    isLink: true },
 ];
 
 export default function Sidebar({ activeTab, onTabChange, user, below75 }) {
@@ -113,60 +109,39 @@ export default function Sidebar({ activeTab, onTabChange, user, below75 }) {
       {!collapsed && <div className="nav-section-label">Navigation</div>}
       <div className={`nav-divider ${collapsed ? 'divider-mini' : ''}`} />
 
-      {/* ── Main nav ──────────────────────────────── */}
+      {/* ── Unified nav ───────────────────────────── */}
       <nav className="main-nav">
         {NAV_ITEMS.map((item) => {
-          const active = isActive(item.id);
-          return (
-            <button
-              key={item.id}
-              className={`nav-item ${active ? 'nav-active' : ''}`}
-              onClick={() => onTabChange?.(item.id)}
-              title={collapsed ? item.label : undefined}
-            >
-              {/* Active indicator bar */}
-              {active && <div className="active-bar" />}
+          const active = item.isLink
+            ? isPathActive(item.path)
+            : isActive(item.id);
 
+          const sharedProps = {
+            key: item.id,
+            className: `nav-item ${active ? 'nav-active' : ''}`,
+            title: collapsed ? item.label : undefined,
+          };
+
+          const inner = (
+            <>
+              {active && <div className="active-bar" />}
               <span className="nav-icon" style={{ color: active ? 'var(--nav-text-active)' : '' }}>
                 {icons[item.icon]}
               </span>
-
-              {!collapsed && (
-                <span className="nav-label">{item.label}</span>
-              )}
-
-              {/* Danger badge on attendance */}
+              {!collapsed && <span className="nav-label">{item.label}</span>}
               {item.id === 'attendance' && below75 > 0 && !collapsed && (
                 <span className="nav-badge">{below75}</span>
               )}
               {item.id === 'attendance' && below75 > 0 && collapsed && (
                 <span className="nav-badge-mini" />
               )}
-            </button>
+            </>
           );
-        })}
-      </nav>
 
-      {/* ── Tools ─────────────────────────────────── */}
-      {!collapsed && <div className="nav-section-label" style={{ marginTop: 16 }}>Tools</div>}
-      {collapsed && <div style={{ margin: '12px 0 4px', height: 1, background: 'var(--border)' }} />}
-
-      <nav className="extra-nav">
-        {EXTRA_ITEMS.map((item) => {
-          const active = isPathActive(item.path);
-          return (
-            <Link
-              key={item.id}
-              href={item.path}
-              className={`nav-item ${active ? 'nav-active' : ''}`}
-              title={collapsed ? item.label : undefined}
-            >
-              {active && <div className="active-bar" />}
-              <span className="nav-icon" style={{ color: active ? 'var(--nav-text-active)' : '' }}>
-                {icons[item.icon]}
-              </span>
-              {!collapsed && <span className="nav-label">{item.label}</span>}
-            </Link>
+          return item.isLink ? (
+            <Link {...sharedProps} href={item.path}>{inner}</Link>
+          ) : (
+            <button {...sharedProps} onClick={() => onTabChange?.(item.id)}>{inner}</button>
           );
         })}
       </nav>
@@ -192,15 +167,15 @@ export default function Sidebar({ activeTab, onTabChange, user, below75 }) {
           )}
         </button>
 
-        {/* Logout */}
-        <button
-          className={`logout-btn ${collapsed ? 'logout-mini' : ''}`}
-          onClick={() => logout(router)}
-          title="Sign out"
+        {/* Profile — replaces Sign out */}
+        <Link
+          href="/profile"
+          className={`profile-btn ${collapsed ? 'profile-mini' : ''} ${isPathActive('/profile') ? 'profile-active' : ''}`}
+          title="Profile"
         >
-          <span className="nav-icon">{icons.logout}</span>
-          {!collapsed && <span>Sign out</span>}
-        </button>
+          <span className="nav-icon">{icons.user}</span>
+          {!collapsed && <span>Profile</span>}
+        </Link>
       </div>
 
       <style jsx>{`
@@ -387,7 +362,7 @@ export default function Sidebar({ activeTab, onTabChange, user, below75 }) {
         .divider-mini { margin: 4px 0 8px; }
 
         /* ── Nav item ─────────────────────────────── */
-        .main-nav, .extra-nav { display: flex; flex-direction: column; gap: 1px; }
+        .main-nav { display: flex; flex-direction: column; gap: 1px; }
         .nav-item {
           position: relative;
           display: flex;
@@ -517,25 +492,24 @@ export default function Sidebar({ activeTab, onTabChange, user, below75 }) {
         }
         .track-on .theme-thumb { transform: translateX(12px); }
 
-        /* Logout */
-        .logout-btn {
+        /* Profile button (bottom) */
+        .profile-btn {
           display: flex;
           align-items: center;
           gap: 10px;
           width: 100%;
           padding: 9px 10px;
           border-radius: 10px;
-          background: none;
-          border: none;
           color: var(--text-3);
           font-size: 13px;
           font-family: var(--font-body);
-          cursor: pointer;
+          text-decoration: none;
           transition: all 0.16s;
-          text-align: left;
+          position: relative;
         }
-        .logout-btn:hover { background: var(--rose-dim); color: var(--rose); }
-        .logout-mini { justify-content: center; padding: 9px 0; }
+        .profile-btn:hover { background: var(--nav-item-hover); color: var(--text-1); }
+        .profile-active { background: var(--nav-item-active) !important; color: var(--nav-text-active) !important; font-weight: 600; }
+        .profile-mini { justify-content: center; padding: 9px 0; }
       `}</style>
     </div>
   );
