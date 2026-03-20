@@ -31,6 +31,33 @@ const greeting = () => {
 /* ══════════════════════════════════════════════════
    CircleProgress
    ══════════════════════════════════════════════════ */
+/* ── Skeleton ─────────────────────────────────────── */
+function Skeleton({ type = 'card', count = 1 }) {
+  const items = Array.from({ length: count });
+  return (
+    <div className="skeleton-grid">
+      {items.map((_, i) => (
+        <div key={i} className={`skeleton-item sk-${type}`}>
+          <div className="sk-shimmer" />
+        </div>
+      ))}
+      <style jsx>{`
+        .skeleton-grid { display: flex; flex-direction: column; gap: 12px; width: 100%; }
+        .skeleton-item { position: relative; overflow: hidden; background: rgba(255,255,255,0.03); border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); }
+        .sk-card { height: 110px; }
+        .sk-stat { height: 80px; }
+        .sk-text { height: 20px; width: 60%; margin-bottom: 8px; }
+        .sk-shimmer {
+          position: absolute; inset: 0;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.03), transparent);
+          animation: shimmer 1.5s infinite;
+        }
+        @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+      `}</style>
+    </div>
+  );
+}
+
 function CircleProgress({ pct, color = 'var(--accent)', size = 56 }) {
   const r    = size / 2 - 5;
   const circ = 2 * Math.PI * r;
@@ -151,11 +178,22 @@ export default function Dashboard() {
     if (!raw) { router.replace('/'); return; }
     if (raw.tokenInvalid) { import('@/lib/security').then(s => s.logout(router)); return; }
     setData(sanitizeObject(raw));
-  }, [router]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [router]);
 
+  // Read tab from URL on mount & update tab
   useEffect(() => {
-    if (router.query.tab) setTab(router.query.tab);
+    const urlTab = router.query.tab;
+    const validTabs = ['overview','attendance','marks','timetable','courses','gpa','skippro','calendar'];
+    if (urlTab && validTabs.includes(urlTab)) {
+      setTab(urlTab);
+    }
   }, [router.query.tab]);
+
+  // Update URL when tab changes
+  const handleTabChange = (newTab) => {
+    setTab(newTab);
+    router.push(`/dashboard?tab=${newTab}`, undefined, { shallow: true });
+  };
 
   /* ── Derived data ───────────────────────────── */
   const user       = data?.user || {};
@@ -175,24 +213,25 @@ export default function Dashboard() {
     ? (attendance.reduce((s, a) => {
         const c = parseFloat(a.hoursConducted) || 0;
         const p = c > 0 ? ((c - (parseFloat(a.hoursAbsent) || 0)) / c) * 100 : parseFloat(a.attendancePercentage) || 0;
-        return s + p;
+        return s + (isFinite(p) ? p : 0);
       }, 0) / attendance.length).toFixed(1)
     : 0;
   const below75  = attendance.filter((a) => {
     const c = parseFloat(a.hoursConducted) || 0;
     const p = c > 0 ? ((c - (parseFloat(a.hoursAbsent) || 0)) / c) * 100 : parseFloat(a.attendancePercentage) || 0;
-    return p < 75;
+    return (isFinite(p) ? p : 0) < 75;
   }).length;
   const safeAtt  = attendance.filter((a) => {
     const c = parseFloat(a.hoursConducted) || 0;
     const p = c > 0 ? ((c - (parseFloat(a.hoursAbsent) || 0)) / c) * 100 : parseFloat(a.attendancePercentage) || 0;
-    return p >= 75;
+    return (isFinite(p) ? p : 0) >= 75;
   }).length;
   const avgScore = marks.length
     ? (marks.reduce((s, m) => {
         const sc  = parseFloat(m.overall?.scored) || 0;
         const tot = parseFloat(m.overall?.total)  || 1;
-        return s + (sc / tot) * 100;
+        const res = tot > 0 ? (sc / tot) * 100 : 0;
+        return s + (isFinite(res) ? res : 0);
       }, 0) / marks.length).toFixed(1)
     : 0;
 
@@ -212,14 +251,29 @@ export default function Dashboard() {
       </div>
 
       <div className="app-shell">
-        <Sidebar activeTab={tab} onTabChange={setTab} user={user} below75={below75} />
+        <Sidebar activeTab={tab} onTabChange={handleTabChange} user={user} below75={below75} />
 
         <main className="main">
 
           {!data ? (
-            <div className="loading-center">
-              <div className="spinner" style={{ width: 28, height: 28 }} />
-              <p style={{ color: 'var(--text-3)', fontSize: 13, marginTop: 12 }}>Loading workspace…</p>
+            <div className="tab-panel animate-in" style={{ padding: '0 4px' }}>
+              <div className="page-hd">
+                <div className="skeleton-item sk-text" style={{ width: '240px', height: '32px' }} />
+              </div>
+              <div className="kpi-grid">
+                <Skeleton type="stat" count={4} />
+              </div>
+              <div className="section-hd" style={{ marginTop: 24 }}>
+                <div className="skeleton-item sk-text" style={{ width: '150px' }} />
+              </div>
+              <div className="att-mini-grid">
+                <Skeleton type="card" count={3} />
+              </div>
+              <style jsx>{`
+                .skeleton-item { background: rgba(255,255,255,0.03); border-radius: 12px; position: relative; overflow: hidden; }
+                .sk-text { height: 20px; }
+                .sk-stat { height: 90px; }
+              `}</style>
             </div>
           ) : (
 
@@ -234,22 +288,22 @@ export default function Dashboard() {
                   <div className="page-hd">
                     <div>
                       <h1 className="page-title">
-                        {greeting()}, <span className="grad-text">{user.name?.split(' ')[0] || 'Student'}</span> 👋
+                        {greeting()}, <span className="grad-text">{user?.name?.split(' ')[0] || 'Student'}</span> 👋
                       </h1>
                       <p className="page-sub">
                         {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                        {user.department ? ' · ' + user.department.replace(/\(.*\)/, '').trim() : ''}
-                        {user.section ? ' · ' + user.section + ' Section' : ''}
+                        {user?.department ? ' · ' + user.department.replace(/\(.*\)/, '').trim() : ''}
+                        {user?.section ? ' · ' + user.section + ' Section' : ''}
                       </p>
                     </div>
                     <div className="hd-meta">
-                      <Link href="/profile" className="profile-corner-btn">
-                        <div className="profile-avatar-small">
-                          {(user.name || 'S')[0].toUpperCase()}
+                      <Link href="/profile" className="profile-corner-pill">
+                        <div className="pcp-avatar">
+                          {(user?.name || 'S')[0].toUpperCase()}
                         </div>
-                        <div className="profile-corner-info">
-                          <span className="profile-corner-name">{user.name?.split(' ')[0]}</span>
-                          <span className="profile-corner-sem">Sem {user.semester}</span>
+                        <div className="pcp-info">
+                          <span className="pcp-name">{user?.name?.split(' ')[0] || 'Student'}</span>
+                          <span className="pcp-sem">Sem {user?.semester || '—'}</span>
                         </div>
                       </Link>
                     </div>
@@ -277,10 +331,10 @@ export default function Dashboard() {
                       delay={120}
                     />
                     <KPICard
-                      label="Semester" value={user.semester || '—'}
+                      label="Semester" value={user?.semester || '—'}
                       color="var(--amber)"
                       icon="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"
-                      sub={user.program?.slice(0, 24)} delay={180}
+                      sub={user?.program?.slice(0, 24) || '—'} delay={180}
                     />
                   </div>
 
@@ -647,7 +701,7 @@ export default function Dashboard() {
               ═══════════════════════════════ */}
               {tab === 'gpa' && (
                 <div className="tab-panel animate-in">
-                  <GpaCalculator courses={courses} />
+                  <GpaCalculator courses={courses} marks={marks} />
                 </div>
               )}
 
@@ -656,7 +710,7 @@ export default function Dashboard() {
               ═══════════════════════════════ */}
               {tab === 'skippro' && (
                 <div className="tab-panel animate-in">
-                  <SkipProEstimator />
+                  <SkipProEstimator attendance={attendance} courses={courses} />
                 </div>
               )}
 
@@ -1105,6 +1159,36 @@ export default function Dashboard() {
         .sum-lbl  { font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
 
         /* ── Responsive ───────────────────────── */
+        .profile-corner-pill {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 5px 12px 5px 5px;
+          border-radius: 999px;
+          background: var(--bg-elevated);
+          border: 1px solid var(--border);
+          cursor: pointer;
+          transition: all 0.18s;
+          text-decoration: none;
+        }
+        .profile-corner-pill:hover {
+          background: var(--bg-active);
+          border-color: var(--accent);
+          transform: translateY(-2px);
+          box-shadow: var(--shadow-sm);
+        }
+        .pcp-avatar {
+          width: 28px; height: 28px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, var(--accent), #4338ca);
+          display: flex; align-items: center; justify-content: center;
+          font-weight: 800; font-size: 12px; color: white;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .pcp-info { display: flex; flex-direction: column; line-height: 1; }
+        .pcp-name { font-size: 12px; font-weight: 600; color: var(--text-1); margin-bottom: 2px; }
+        .pcp-sem { font-size: 9px; color: var(--text-3); font-weight: 500; text-transform: uppercase; letter-spacing: 0.3px; }
+
         @media (max-width: 1200px) {
           .kpi-grid { grid-template-columns: repeat(2, 1fr); }
         }
@@ -1112,6 +1196,7 @@ export default function Dashboard() {
           .main { padding: 60px 16px 24px; }
           .kpi-grid { grid-template-columns: repeat(2, 1fr); }
           .sum-strip { grid-template-columns: repeat(2, 1fr); }
+          .hd-meta { display: none; }
         }
         @media (max-width: 520px) {
           .kpi-grid { grid-template-columns: 1fr 1fr; }

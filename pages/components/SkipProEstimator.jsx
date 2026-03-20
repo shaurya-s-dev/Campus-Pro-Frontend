@@ -30,26 +30,31 @@ const ACADEMIC_CALENDAR = {
   '2026-04-29': 5, '2026-04-30': 1,
 };
 
-export default function SkipProEstimator() {
+export default function AttendancePlanner({ attendance: propAttendance, courses: propCourses }) {
   const [data, setData] = useState(null);
   const [showPopup, setShowPopup] = useState(false);
 
   useEffect(() => {
-    const raw = DataStore.get();
-    if (raw) setData(sanitizeObject(raw));
+    if (!propAttendance) {
+      const raw = DataStore.get();
+      if (raw) setData(sanitizeObject(raw));
+    }
 
-    if (!sessionStorage.getItem('skip-pro-warned')) {
+    if (!sessionStorage.getItem('ap-warned')) {
       setShowPopup(true);
     }
-  }, []);
+  }, [propAttendance]);
 
   const handleDismissPopup = () => {
-    sessionStorage.setItem('skip-pro-warned', 'true');
+    sessionStorage.setItem('ap-warned', 'true');
     setShowPopup(false);
   };
 
-  const attendance = data?.attendance?.attendance || [];
-  const timetable  = data?.timetable || {};
+  const attendance = propAttendance || data?.attendance?.attendance || [];
+  const courses    = propCourses || data?.courses?.courses || [];
+  
+  // Find timetable from data store for day order mapping
+  const timetable  = data?.timetable || DataStore.get()?.timetable || {};
   const schedule   = timetable?.schedule || [];
 
   const processedData = useMemo(() => {

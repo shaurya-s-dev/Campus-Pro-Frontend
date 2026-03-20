@@ -174,6 +174,7 @@ function fmtDate(d) {
 
 /* Flatten table into individual period cards (NO merging) */
 function buildIndividualPeriods(table) {
+  if (!table || !Array.isArray(table)) return [];
   const periods = [];
   table.forEach((slot, i) => {
     if (!slot) return;
@@ -364,7 +365,7 @@ function PeriodCard({ p, status, expanded, onToggle, idx }) {
    MAIN COMPONENT
    ══════════════════════════════════════════════════ */
 export default function TimetableView({ timetableData }) {
-  const schedule   = timetableData?.schedule || MOCK_SCHEDULE;
+  const schedule   = timetableData?.schedule && Array.isArray(timetableData.schedule) ? timetableData.schedule : (timetableData === null ? [] : MOCK_SCHEDULE);
   const batchLabel = timetableData?.batch ? `Batch ${timetableData.batch}` : 'Batch 1';
 
   const today        = new Date();

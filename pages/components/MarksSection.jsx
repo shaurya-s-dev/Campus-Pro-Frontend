@@ -23,11 +23,11 @@ function RadialScore({ pct, color, size = 72 }) {
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}
       style={{ transform: 'rotate(-90deg)', flexShrink: 0 }}>
       <circle cx={size/2} cy={size/2} r={r}
-        fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth={5.5} />
+        fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth={6} />
       <circle cx={size/2} cy={size/2} r={r}
-        fill="none" stroke={color} strokeWidth={5.5}
+        fill="none" stroke={color} strokeWidth={6}
         strokeDasharray={`${fill} ${circ}`} strokeLinecap="round"
-        style={{ transition: 'stroke-dasharray 1.1s cubic-bezier(.4,0,.2,1)' }}
+        style={{ transition: 'stroke-dasharray 1.1s cubic-bezier(.4,0,.2,1)', filter: `drop-shadow(0 0 5px ${color}66)` }}
       />
     </svg>
   );
@@ -112,42 +112,47 @@ function TestBarChart({ tests, color }) {
 
 /* ── Overview summary strip ─────────────────────── */
 function MarksSummaryStrip({ marks, courses = [] }) {
-  // Filter OUT subjects that have 0 credits for AVERAGE calculation
+  // 1. Filter tracks with credits
   const validForAverage = marks.filter(m => {
-    const course = courses.find(c => c.code === m.courseCode);
-    return !course || (parseFloat(course.credit) > 0);
+    const c = courses.find(cc => cc.code === m.courseCode);
+    return !c || (parseFloat(c.credit) > 0);
   });
-  
+
+  // 2. Filter subjects where NOT absent
+  const subjectsWithMarks = validForAverage.filter(m => {
+    const sc = m.overall?.scored;
+    return typeof sc === 'string' && sc !== 'Abs' && sc !== 'AB';
+  });
+
   const hasMarks = marks.length > 0;
   if (!hasMarks) return null;
 
-  // Gauge and Average Grade uses ONLY courses with credits
-  const scoredForAvg = validForAverage.reduce((s, m) => s + (parseFloat(m.overall?.scored) || 0), 0);
-  const maxForAvg    = validForAverage.reduce((s, m) => s + (parseFloat(m.overall?.total) || 1), 0);
+  const scoredForAvg = subjectsWithMarks.reduce((s, m) => s + (parseFloat(m.overall?.scored) || 0), 0);
+  const maxForAvg    = subjectsWithMarks.reduce((s, m) => s + (parseFloat(m.overall?.total)  || 0), 0);
   const avgPct       = maxForAvg > 0 ? (scoredForAvg / maxForAvg) * 100 : 0;
   const avgGrade     = getGrade(avgPct);
 
-  // Total Marks display uses EVERYTHING (even 0-credit ones)
-  const totalScored = marks.reduce((s, m) => s + (parseFloat(m.overall?.scored) || 0), 0);
-  const totalMax    = marks.reduce((s, m) => s + (parseFloat(m.overall?.total) || 0), 0);
+  const totalScored = marks.reduce((s, m) => {
+    const sc = m.overall?.scored;
+    return s + (sc === 'Abs' || sc === 'AB' ? 0 : (parseFloat(sc) || 0));
+  }, 0);
+  const totalMax = marks.reduce((s, m) => s + (parseFloat(m.overall?.total) || 0), 0);
 
   const gradeCounts = {};
-  validForAverage.forEach(m => {
+  subjectsWithMarks.forEach(m => {
     const sc  = parseFloat(m.overall?.scored) || 0;
     const tot = parseFloat(m.overall?.total)  || 1;
     const g = getGrade((sc / tot) * 100);
     gradeCounts[g.grade] = (gradeCounts[g.grade] || 0) + 1;
   });
 
-  const topSubject = [...validForAverage].sort((a, b) => {
+  const sortedSubs = [...subjectsWithMarks].sort((a, b) => {
     const pa = (parseFloat(a.overall?.scored)||0) / (parseFloat(a.overall?.total)||1);
     const pb = (parseFloat(b.overall?.scored)||0) / (parseFloat(b.overall?.total)||1);
     return pb - pa;
-  })[0];
-
-  const topPct = topSubject
-    ? ((parseFloat(topSubject.overall?.scored)||0) / (parseFloat(topSubject.overall?.total)||1) * 100).toFixed(1)
-    : 0;
+  });
+  const topSubject = sortedSubs[0];
+  const topPct = topSubject ? ((parseFloat(topSubject.overall?.scored)||0) / (parseFloat(topSubject.overall?.total)||1) * 100).toFixed(1) : 0;
 
   return (
     <div className="summary-strip">
@@ -170,9 +175,9 @@ function MarksSummaryStrip({ marks, courses = [] }) {
           </div>
           <div className="ss-sub-text">
             {marks.length} Total subjects · 
-            {marks.length > validForAverage.length && (
+            {marks.length > subjectsWithMarks.length && (
               <span style={{ color: 'var(--amber-light)', marginLeft: 6 }}>
-                {marks.length - validForAverage.length} zero-credit courses excluded from average
+                {marks.length - subjectsWithMarks.length} courses excluded (zero-credit or absent)
               </span>
             )}
           </div>
@@ -196,7 +201,7 @@ function MarksSummaryStrip({ marks, courses = [] }) {
             <div key={g} className="ssd-row">
               <span className="ssd-grade" style={{ color: gi.color }}>{g}</span>
               <div className="ssd-bar-track">
-                <div className="ssd-bar-fill" style={{ width: `${(cnt/validForAverage.length)*100}%`, background: gi.color }} />
+                <div className="ssd-bar-fill" style={{ width: `${(cnt/subjectsWithMarks.length)*100}%`, background: gi.color }} />
               </div>
               <span className="ssd-cnt">{cnt}</span>
             </div>
@@ -242,10 +247,7 @@ export default function MarksSection({ marks, courses = [] }) {
   const [expanded, setExpanded] = useState(null);
 
   // Filter OUT subjects that have 0 credits
-  const validMarksForList = marks.filter(m => {
-    const course = courses.find(c => c.code === m.courseCode);
-    return !course || (parseFloat(course.credit) > 0);
-  });
+  const validMarksForList = marks;
 
   const sorted = [...validMarksForList]
     .filter(m => filter === 'all' || m.courseType === filter)
@@ -319,13 +321,19 @@ export default function MarksSection({ marks, courses = [] }) {
             ? testScores[testScores.length-1] > testScores[testScores.length-2] ? 'up' : testScores[testScores.length-1] < testScores[testScores.length-2] ? 'down' : 'flat'
             : null;
 
+          const course = courses?.find(cc => cc.code === m.courseCode);
+          const isZeroCredit = course && parseFloat(course.credit || '1') === 0;
+
           return (
             <div
               key={i}
-              className={`mk-card glass ${isExp ? 'mk-expanded' : ''}`}
+              className={`mk-card glass ${isExp ? 'mk-expanded' : ''} ${isZeroCredit ? 'mk-zero-credit' : ''}`}
               style={{ animationDelay: `${i * 40}ms` }}
             >
               <div className="card-shimmer"></div>
+              {isZeroCredit && (
+                <div className="mk-zero-badge">0 Credit</div>
+              )}
               {/* Top accent line */}
               <div className="mk-accent-line" style={{ background: `linear-gradient(90deg, ${gi.color}, transparent)` }} />
 
@@ -547,6 +555,26 @@ export default function MarksSection({ marks, courses = [] }) {
         .mtt-grade { font-size:9.5px; font-weight:700; padding:1.5px 6px; border-radius:6px; min-width:24px; text-align:center; }
 
         .mk-no-tests { font-size:12px; color:rgba(255,255,255,0.22); font-style:italic; padding:8px 0; }
+
+        .mk-zero-credit {
+          opacity: 0.7;
+          border-style: dashed !important;
+        }
+        .mk-zero-badge {
+          position: absolute;
+          top: 8px;
+          right: 36px;
+          font-size: 9px;
+          font-weight: 700;
+          padding: 2px 7px;
+          border-radius: 10px;
+          background: rgba(245,158,11,0.12);
+          color: var(--amber);
+          border: 1px solid rgba(245,158,11,0.25);
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          z-index: 5;
+        }
 
         /* Responsive */
         @media (max-width:700px) {

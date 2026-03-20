@@ -8,30 +8,11 @@ const ACADEMIA_SESSIONS_URL =
 
 /* ── Detection helpers ───────────────────────────────────────────────────── */
 function detectSessionLimit(data) {
-  if (!data) return false;
-  return data.message === 'SESSION_LIMIT' || data.session?.sessionLimit === true;
+  return data?.errorCode === 'SESSION_LIMIT';
 }
 
 function detectDailyLimit(data) {
-  if (!data) return false;
-  if (data.message === 'DAILY_LIMIT') return true;
-  if (data.session?.dailyLimit) return true;
-  const msg = extractMsgLower(data);
-  return (
-    msg.includes('daily_limit') ||
-    msg.includes('daily limit') ||
-    msg.includes('20 sign') ||
-    msg.includes('12:00 am') ||
-    (msg.includes('daily') && msg.includes('sign'))
-  );
-}
-
-function extractMsgLower(data) {
-  const m = data?.message;
-  const e = data?.error;
-  const s = typeof m === 'string' ? m : typeof m === 'object' && m ? JSON.stringify(m) : '';
-  const se = typeof e === 'string' ? e : '';
-  return (s + ' ' + se).toLowerCase();
+  return data?.errorCode === 'DAILY_LIMIT';
 }
 
 function getDisplayError(data) {
@@ -157,8 +138,12 @@ export default function Login() {
   const [savedCredentials, setSavedCredentials] = useState(null);
   const [countdown, setCountdown] = useState(30);
 
+  const [captchaData, setCaptchaData] = useState(null);
+  const [captchaInput, setCaptchaInput] = useState('');
+  const [captchaError, setCaptchaError] = useState('');
+
   useEffect(() => {
-    if (screen === 'session') {
+    if (screen === 'session' && !captchaData) {
       setCountdown(30);
       const timer = setInterval(() => {
         setCountdown(prev => {
@@ -180,8 +165,34 @@ export default function Login() {
     return () => setSavedCredentials(null);
   }, []);
 
+  const handleRefreshCaptcha = async () => {
+    if (!captchaData?.cdigest) return;
+    try {
+      const u = savedCredentials?.account || account;
+      const p = savedCredentials?.password || password;
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ account: u, password: p }),
+      });
+      const data = await res.json();
+      if (data.errorCode === 'CAPTCHA_REQUIRED' && data.captcha?.image) {
+        setCaptchaData({ image: data.captcha.image, cdigest: data.captcha.cdigest });
+        setCaptchaInput('');
+        setCaptchaError('');
+      }
+    } catch {}
+  };
+
   const handleLogin = async (e) => {
     if (e) e.preventDefault();
+
+    // Validate captcha if required
+    if (captchaData && !captchaInput.trim()) {
+      setCaptchaError('Please enter the CAPTCHA text above.');
+      return;
+    }
+
     setError('');
     setStatus('Initiating login…');
     setLoading(true);
@@ -200,12 +211,39 @@ export default function Login() {
 
     try {
       setStatus('Signing in...');
+      const body = { account: finalAccount, password: finalPassword };
+      if (captchaData) {
+        body.cdigest = captchaData.cdigest;
+        body.captcha = captchaInput.trim();
+      }
+
       const loginRes = await fetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ account, password }),
+        body: JSON.stringify(body),
       });
       const loginData = await loginRes.json();
+
+      // If captcha was required or incorrect
+      if (loginData.errorCode === 'CAPTCHA_REQUIRED') {
+        if (captchaData) setCaptchaError('Incorrect CAPTCHA. Please try again.');
+        if (loginData.captcha?.image) {
+          setCaptchaData({
+            image: loginData.captcha.image,
+            cdigest: loginData.captcha.cdigest,
+          });
+          setCaptchaInput('');
+        } else {
+          setError('CAPTCHA required but image failed to load. Please try again.');
+        }
+        setLoading(false);
+        return;
+      }
+
+      // Clear captcha on any other result
+      setCaptchaData(null);
+      setCaptchaInput('');
+      setCaptchaError('');
 
       // Daily limit — check first (more specific)
       if (detectDailyLimit(loginData)) {
@@ -334,6 +372,47 @@ export default function Login() {
                       </button>
                     </div>
                   </div>
+
+                  {captchaData && (
+                    <div className="captcha-section animate-up">
+                      <div className="captcha-label">Security Check</div>
+                      <p className="captcha-hint">
+                        SRM Academia requires you to solve this challenge. 
+                        Type the characters shown in the image below.
+                      </p>
+                      
+                      <div className="captcha-image-wrap">
+                        <img 
+                          src={`data:image/png;base64,${captchaData.image}`}
+                          alt="CAPTCHA"
+                          className="captcha-image"
+                        />
+                        <button 
+                          type="button" 
+                          className="captcha-refresh"
+                          onClick={handleRefreshCaptcha}
+                          title="Get new CAPTCHA"
+                        >
+                          ↻
+                        </button>
+                      </div>
+                      
+                      <input
+                        type="text"
+                        placeholder="Type characters..."
+                        value={captchaInput}
+                        onChange={e => setCaptchaInput(e.target.value)}
+                        className="captcha-input field-wrap input"
+                        autoComplete="off"
+                        autoFocus
+                      />
+                      
+                      {captchaError && (
+                        <div className="err-box" style={{ marginTop: 10, marginBottom: 0 }}>{captchaError}</div>
+                      )}
+                    </div>
+                  )}
+
                   {error && <div className="err-box">{error}</div>}
                   <button type="submit" className="btn-submit" disabled={loading}>
                     {loading ? <span className="btn-loading"><span className="spinner"/>{status}</span> : 'Login Now →'}
@@ -399,6 +478,16 @@ export default function Login() {
         .eye-btn{position:absolute;right:12px;background:none;border:none;color:rgba(210,230,255,0.22);cursor:pointer;padding:4px;display:flex;align-items:center;transition:color 0.22s}
         .eye-btn:hover{color:#00f5ff}
         .err-box{background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.22);border-radius:9px;padding:9px 12px;margin-bottom:14px;color:#fca5a5;font-size:12px}
+
+        .captcha-section { margin-bottom: 22px; padding: 18px; background: rgba(0,245,255,0.02); border: 1px solid rgba(0,245,255,0.12); border-radius: 14px; }
+        .captcha-label { font-size: 9px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: rgba(210,230,255,0.3); margin-bottom: 8px; }
+        .captcha-hint { font-size: 11.5px; color: rgba(210,230,255,0.4); margin-bottom: 14px; line-height: 1.5; }
+        .captcha-image-wrap { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+        .captcha-image { border-radius: 8px; border: 1px solid rgba(0,245,255,0.2); background: white; padding: 4px; max-height: 52px; }
+        .captcha-refresh { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: rgba(210,230,255,0.4); border-radius: 8px; width: 34px; height: 34px; font-size: 16px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; }
+        .captcha-refresh:hover { background: rgba(0,245,255,0.08); color: #00f5ff; border-color: rgba(0,245,255,0.3); }
+        .captcha-input { width: 100% !important; letter-spacing: 4px; font-family: 'Fira Code', monospace; font-size: 16px !important; text-align: center; padding-left: 12px !important; }
+
         .btn-submit{width:100%;padding:13px;background:linear-gradient(135deg,#ff6b2b,#d43200);border:none;border-radius:10px;color:#fff;font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;cursor:pointer;transition:all 0.22s;box-shadow:0 8px 24px rgba(255,107,43,0.22)}
         .btn-submit:not(:disabled):hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(255,107,43,0.36)}
         .btn-submit:disabled{opacity:0.58;cursor:not-allowed}

@@ -68,6 +68,11 @@ export default function Sidebar({ activeTab, onTabChange, user, below75 }) {
   const isPathActive = (path) => router.pathname === path.split('?')[0];
   const initial = (user?.name || 'S')[0].toUpperCase();
 
+  const handleNavClick = (id) => {
+    onTabChange?.(id);
+    setMobileOpen(false);
+  };
+
   const SidebarContent = () => (
     <aside className={`sidebar${collapsed ? ' c' : ''}`}>
 
@@ -123,30 +128,10 @@ export default function Sidebar({ activeTab, onTabChange, user, below75 }) {
       )}
 
       {/* ── Stats ──────────────────────────────── */}
-      {!collapsed && user && (
-        <div className="stats-row">
-          <div className="stat-item">
-            <span className="stat-v">{user.semester || '—'}</span>
-            <span className="stat-l">Sem</span>
-          </div>
-          <div className="stat-sep" />
-          <div className="stat-item">
-            <span className="stat-v" style={{ color: below75 > 0 ? 'var(--rose)' : 'var(--emerald)' }}>
-              {below75}
-            </span>
-            <span className="stat-l">Danger</span>
-          </div>
-          <div className="stat-sep" />
-          <div className="stat-item">
-            <span className="stat-v">{user.year || '—'}</span>
-            <span className="stat-l">Year</span>
-          </div>
-        </div>
-      )}
+
 
       {/* ── Nav groups ─────────────────────────── */}
       <nav className="nav-wrap">
-        {!collapsed && <div className="nav-label">MAIN</div>}
 
         {NAV_ITEMS.filter(i => i.group === 'main').map(item => {
           const active = isActive(item.id);
@@ -158,6 +143,7 @@ export default function Sidebar({ activeTab, onTabChange, user, below75 }) {
               title={collapsed ? item.label : undefined}
               onMouseEnter={() => setHovered(item.id)}
               onMouseLeave={() => setHovered(null)}
+              onClick={() => handleNavClick(item.id)}
             >
               {active && <span className="active-bar" />}
               <span className="nav-icon">{icons[item.icon]}</span>
@@ -167,7 +153,7 @@ export default function Sidebar({ activeTab, onTabChange, user, below75 }) {
             <button
               key={item.id}
               className={`nav-item${active ? ' nav-active' : ''}`}
-              onClick={() => onTabChange?.(item.id)}
+              onClick={() => handleNavClick(item.id)}
               title={collapsed ? item.label : undefined}
               onMouseEnter={() => setHovered(item.id)}
               onMouseLeave={() => setHovered(null)}
@@ -185,8 +171,7 @@ export default function Sidebar({ activeTab, onTabChange, user, below75 }) {
           );
         })}
 
-        {!collapsed && <div className="nav-label" style={{ marginTop: 10 }}>TOOLS</div>}
-        {collapsed && <div className="nav-divider" />}
+
 
         {NAV_ITEMS.filter(i => i.group === 'tools').map(item => {
           const active = isActive(item.id);
@@ -194,7 +179,7 @@ export default function Sidebar({ activeTab, onTabChange, user, below75 }) {
             <button
               key={item.id}
               className={`nav-item${active ? ' nav-active' : ''}`}
-              onClick={() => onTabChange?.(item.id)}
+              onClick={() => handleNavClick(item.id)}
               title={collapsed ? item.label : undefined}
             >
               {active && <span className="active-bar" />}
@@ -428,21 +413,7 @@ export default function Sidebar({ activeTab, onTabChange, user, below75 }) {
         }
         @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.7;transform:scale(.88)} }
 
-        /* ── Stats ──────────────────────────────── */
-        .stats-row {
-          display: flex;
-          align-items: center;
-          gap: 0;
-          background: var(--bg-elevated);
-          border: 1px solid var(--border);
-          border-radius: 10px;
-          padding: 8px 4px;
-          margin-bottom: 4px;
-        }
-        .stat-item { flex: 1; text-align: center; }
-        .stat-v { display: block; font-family: var(--font-mono); font-size: 13.5px; font-weight: 700; color: var(--text-1); }
-        .stat-l { display: block; font-size: 9px; color: var(--text-4); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 1px; }
-        .stat-sep { width: 1px; height: 28px; background: var(--border); flex-shrink: 0; }
+
 
         /* ── Nav ────────────────────────────────── */
         .nav-wrap { display: flex; flex-direction: column; gap: 1px; flex: 1; margin-top: 4px; }
@@ -463,7 +434,7 @@ export default function Sidebar({ activeTab, onTabChange, user, below75 }) {
           align-items: center;
           gap: 9px;
           width: 100%;
-          padding: 8.5px 10px;
+          padding: 7px 10px;
           border-radius: 9px;
           background: none;
           border: none;
@@ -496,7 +467,7 @@ export default function Sidebar({ activeTab, onTabChange, user, below75 }) {
           font-weight: 600;
         }
         .nav-active .nav-icon { opacity: 1; }
-        .item-center { justify-content: center; padding: 8.5px 0; }
+        .item-center { justify-content: center; padding: 7px 0; }
 
         .active-bar {
           position: absolute;
@@ -556,7 +527,7 @@ export default function Sidebar({ activeTab, onTabChange, user, below75 }) {
           align-items: center;
           gap: 9px;
           width: 100%;
-          padding: 8.5px 10px;
+          padding: 7px 10px;
           border-radius: 9px;
           background: none;
           border: none;
@@ -568,7 +539,7 @@ export default function Sidebar({ activeTab, onTabChange, user, below75 }) {
           text-align: left;
         }
         .theme-btn:hover { background: var(--nav-item-hover); color: var(--text-1); }
-        .theme-mini { justify-content: center; padding: 8.5px 0; }
+        .theme-mini { justify-content: center; padding: 7px 0; }
         .theme-label { flex: 1; font-size: 13px; }
 
         .toggle-track {
@@ -597,7 +568,7 @@ export default function Sidebar({ activeTab, onTabChange, user, below75 }) {
           align-items: center;
           gap: 9px;
           width: 100%;
-          padding: 8.5px 10px;
+          padding: 7px 10px;
           border-radius: 9px;
           background: none;
           border: none;
