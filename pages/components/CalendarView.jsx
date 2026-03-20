@@ -15,6 +15,33 @@ const EVENT_TYPES = {
   special: { label:'Special Day',color:'#10b981', bg:'rgba(16,185,129,0.10)', border:'rgba(16,185,129,0.22)', icon:'⭐' },
 };
 
+const ACADEMIC_CALENDAR_MAP = {
+  '2026-01-14': null, '2026-01-15': null, '2026-01-16': null, '2026-01-26': null,
+  '2026-03-18': null, '2026-03-19': null,
+  '2026-04-01': null, '2026-04-03': null, '2026-04-14': null,
+  '2026-05-01': null,
+};
+
+const isWorkingDay = (date) => {
+  const day = date.getDay();
+  if (day === 0 || day === 6) return false;
+  const ds = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+  if (ACADEMIC_CALENDAR_MAP[ds] === null) return false;
+  return true;
+};
+
+const getDynamicDayOrder = (date) => {
+  if (!isWorkingDay(date)) return null;
+  const semStart = new Date('2026-01-13');
+  let count = 0;
+  const d = new Date(semStart);
+  while (d < date) {
+    if (isWorkingDay(d)) count++;
+    d.setDate(d.getDate() + 1);
+  }
+  return (count % 5) + 1;
+};
+
 const CALENDAR_DATA = {
   'January 2026': {
     events: [
@@ -23,14 +50,7 @@ const CALENDAR_DATA = {
       { date: 15, type: 'holiday', label: 'Thiruvalluvar Day'  },
       { date: 16, type: 'holiday', label: 'Uzhavar Thirunal'  },
       { date: 26, type: 'holiday', label: 'Republic Day'       },
-    ],
-    dayOrders: {
-      2:'D1', 3:'D2', 5:'D3', 6:'D4', 7:'D5',
-      8:'D1', 9:'D2',10:'D3',12:'D4',13:'D5',
-      17:'D1',19:'D2',20:'D3',21:'D4',22:'D5',
-      23:'D1',24:'D2',
-      27:'D3',28:'D4',29:'D5',30:'D1',31:'D2',
-    },
+    ]
   },
   'February 2026': {
     events: [
@@ -38,14 +58,7 @@ const CALENDAR_DATA = {
       { date: 14, type: 'special', label: "Valentine's / Techno Day" },
       { date: 19, type: 'special', label: "SRM Founders' Day"        },
       { date: 26, type: 'exam',    label: 'CAT-2 Prep Week'          },
-    ],
-    dayOrders: {
-      2:'D3', 3:'D4', 4:'D5', 5:'D1', 6:'D2',
-      7:'D3', 9:'D4',10:'D5',11:'D1',12:'D2',
-      13:'D3',14:'D4',16:'D5',17:'D1',18:'D2',
-      19:'D3',20:'D4',21:'D5',23:'D1',24:'D2',
-      25:'D3',26:'D4',27:'D5',28:'D1',
-    },
+    ]
   },
   'March 2026': {
     events: [
@@ -53,14 +66,7 @@ const CALENDAR_DATA = {
       { date: 18, type: 'holiday', label: 'Holi' },
       { date: 19, type: 'holiday', label: "Telugu New Year's Day" },
       { date: 25, type: 'exam',    label: 'CAT-2 Ends' },
-    ],
-    dayOrders: {
-      2:'D2', 3:'D3', 4:'D4', 5:'D5', 6:'D1',
-      9:'D2', 10:'D3', 11:'D4', 12:'D5', 13:'D1',
-      16:'D5', 17:'D1', 20:'D2',
-      23:'D3', 24:'D4', 25:'D5', 26:'D1', 27:'D2',
-      30:'D3', 31:'D4',
-    },
+    ]
   },
   'April 2026': {
     events: [
@@ -69,24 +75,14 @@ const CALENDAR_DATA = {
       { date: 14, type: 'holiday', label: 'Dr. Ambedkar Jayanti'   },
       { date: 21, type: 'exam',    label: 'Model Exams Begin'       },
       { date: 30, type: 'exam',    label: 'Last Day of Instruction' },
-    ],
-    dayOrders: {
-      2:'D2',
-      4:'D3', 6:'D4', 7:'D5', 8:'D1', 9:'D2',
-      10:'D3',13:'D4',
-      15:'D5',16:'D1',17:'D2',20:'D3',
-      21:'D4',
-      22:'D5',23:'D1',24:'D2',27:'D3',28:'D4',
-      29:'D5',30:'D1',
-    },
+    ]
   },
   'May 2026': {
     events: [
       { date: 1,  type: 'holiday', label: 'Labour Day'               },
       { date: 4,  type: 'exam',    label: 'End Semester Exams Begin'  },
       { date: 25, type: 'exam',    label: 'End Semester Exams End'    },
-    ],
-    dayOrders: {},
+    ]
   },
 };
 
@@ -150,9 +146,7 @@ export default function CalendarView() {
     let workingCount = 0;
     for (let d = 1; d <= totalDays; d++) {
       const date = new Date(year, month, d);
-      const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-      const isHoliday = (monthData.events || []).some(e => e.date === d && e.type === 'holiday');
-      if (!isWeekend && !isHoliday) workingCount++;
+      if (isWorkingDay(date)) workingCount++;
     }
     return {
       working:  workingCount,
@@ -177,10 +171,11 @@ export default function CalendarView() {
   const detailData = useMemo(() => {
     if (!selectedDay) return null;
     const data   = CALENDAR_DATA[activeMonth] || {};
+    const date   = new Date(year, month, selectedDay);
     const events = (data.events || []).filter(e => e.date === selectedDay);
-    const order  = data.dayOrders?.[selectedDay];
+    const order  = getDynamicDayOrder(date);
     return { events, order };
-  }, [selectedDay, activeMonth]);
+  }, [selectedDay, activeMonth, year, month]);
 
   const goToMonth = (idx) => {
     if (idx < 0 || idx >= MONTHS.length) return;
@@ -255,17 +250,13 @@ export default function CalendarView() {
               const dayOfWeek = date.getDay();
               const hasEvents = (monthData.events || []).filter(e => e.date === d);
               const isHoliday = hasEvents.some(e => e.type === 'holiday');
-              const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-              
-              const dayOrderValue = monthData.dayOrders?.[d];
-              // Only show day order if it's a working day (Mon-Fri) and not a holiday
-              const order = (isWeekend || isHoliday) ? null : dayOrderValue;
+              const order = getDynamicDayOrder(date);
               
               const selected = selectedDay === d;
               return (
-                <div key={d} className={`grid-day glass-raised ${isToday(d) ? 'is-today' : ''} ${isPast(d) ? 'is-past' : ''} ${selected ? 'is-selected' : ''}`} onClick={() => setSelectedDay(d)}>
+                <div key={d} className={`grid-day glass-raised ${isToday(d) ? 'is-today' : ''} ${isPast(d) ? 'is-past' : ''} ${selected ? 'is-selected' : ''} ${!order ? 'non-working' : ''}`} onClick={() => setSelectedDay(d)}>
                   <span className="day-num">{d}</span>
-                  {order && <span className="day-order">{order}</span>}
+                  {order && <span className="day-order">D{order}</span>}
                   <div className="day-indicators">
                     {hasEvents.map((e, ei) => (
                       <div key={ei} className="ev-pip" style={{ background: EVENT_TYPES[e.type]?.color }} />
@@ -280,7 +271,7 @@ export default function CalendarView() {
             <div className="cal-detail glass-raised animate-up">
               <div className="cd-hd">
                 <div className="cd-title">{selectedDay} {activeMonth}</div>
-                {detailData.order && <div className="cd-order">Order: <strong>{detailData.order}</strong></div>}
+                {detailData.order && <div className="cd-order">Day Order: <strong>D{detailData.order}</strong></div>}
               </div>
               <div className="cd-events">
                 {detailData.events.length === 0 ? (

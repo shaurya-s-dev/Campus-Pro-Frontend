@@ -167,7 +167,7 @@ function TargetCalculator({ marks }) {
             <div className="tc-field">
               <label>Subject</label>
               <select value={selectedSub} onChange={(e) => setSelectedSub(e.target.value)} className="glass">
-                {marks.map(m => (
+                {(marks || []).map(m => (
                   <option key={m.courseCode} value={m.courseCode}>{m.courseName}</option>
                 ))}
               </select>
@@ -245,22 +245,33 @@ export default function MarksSection({ marks = [] }) {
 
   // Global aggregate stats
   const stats = useMemo(() => {
-    if (!marks.length) return null;
-    let scoredTotal = 0, maxTotal = 0;
-    marks.forEach(m => {
-      scoredTotal += parseFloat(m.overall?.scored) || 0;
-      maxTotal    += parseFloat(m.overall?.total) || 0;
+    const list = marks || [];
+    if (!list.length) return null;
+    
+    let scoredTotal = 0, maxTotal = 0, validCount = 0;
+    list.forEach(m => {
+      const sc = parseFloat(m.overall?.scored || '0') || 0;
+      const tot = parseFloat(m.overall?.total || '0') || 0;
+      const course = (courses || []).find(c => c?.courseCode === m.courseCode);
+      const credits = parseFloat(course?.credit || course?.credits || '0') || 0;
+      
+      if (tot > 0 && credits > 0) {
+        scoredTotal += sc;
+        maxTotal += tot;
+        validCount++;
+      }
     });
+
     const avg = maxTotal > 0 ? (scoredTotal / maxTotal) * 100 : 0;
-    const activeComp = marks[0]?.testPerformance?.[0]?.test || 'CAT-2';
+    const activeComp = list[0]?.testPerformance?.[0]?.test || 'CAT-2';
     
     return {
       avg: Math.floor(avg),
       total: `${Math.floor(scoredTotal)}/${Math.floor(maxTotal)}`,
-      count: marks.length,
+      count: list.length,
       active: activeComp
     };
-  }, [marks]);
+  }, [marks, courses]);
 
   if (!marks || marks.length === 0) {
     return (
@@ -301,10 +312,11 @@ export default function MarksSection({ marks = [] }) {
 
       {/* Grid */}
       <div className="marks-grid">
-        {processedMarks.map((m, i) => {
-          const sc  = parseFloat(m.overall?.scored) || 0;
-          const tot = parseFloat(m.overall?.total) || 1;
-          const pct = (sc / tot) * 100;
+        {(processedMarks || []).map((m, i) => {
+          const sc  = parseFloat(m.overall?.scored || '0') || 0;
+          const tot = parseFloat(m.overall?.total || '0') || 1;
+          const pctMatch = (sc / tot) * 100;
+          const pct = isNaN(pctMatch) || !isFinite(pctMatch) ? 0 : pctMatch;
           const neon = getNeonColor(pct);
           const tests = (m.testPerformance || []).slice().reverse(); // Show progression over time
           

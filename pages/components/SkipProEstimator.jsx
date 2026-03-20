@@ -31,9 +31,11 @@ const ACADEMIC_CALENDAR = {
 };
 
 export default function AttendancePlanner({ attendance: propAttendance = [], courses: propCourses = [] }) {
-  const [warned, setWarned] = useState(
-    () => typeof sessionStorage !== 'undefined' && sessionStorage.getItem('ap_warning_ok') === 'true'
-  );
+  const [warned, setWarned] = useState(() => {
+    try {
+      return typeof sessionStorage !== 'undefined' && sessionStorage.getItem('ap_warning_ok') === 'true';
+    } catch { return false; }
+  });
 
   const [data, setData] = useState(null);
 
@@ -135,7 +137,7 @@ export default function AttendancePlanner({ attendance: propAttendance = [], cou
           </p>
           <div style={{display:'flex',flexDirection:'column',gap:8}}>
             <button className="btn btn-primary" onClick={() => {
-              sessionStorage.setItem('ap_warning_ok','true');
+              try { sessionStorage.setItem('ap_warning_ok','true'); } catch {}
               setWarned(true);
             }}>I Understand, Show Me →</button>
             <button className="btn btn-ghost" onClick={() => window.history.back()}>Go Back</button>
@@ -245,9 +247,9 @@ export default function AttendancePlanner({ attendance: propAttendance = [], cou
               
               <div className="card-footer">
                 {d.canSkip > 0 ? (
-                  <span className="footer-msg">You can safely skip <strong>{d.canSkip}</strong> more classes.</span>
+                  <span className="footer-msg">Safe to skip <strong>{d.canSkip}</strong> more.</span>
                 ) : (
-                  <span className="footer-msg risk">You must attend <strong>{d.classesNeeded}</strong> more to reach 75%.</span>
+                  <span className="footer-msg risk">Need <strong>{d.classesNeeded}</strong> more classes.</span>
                 )}
               </div>
             </div>

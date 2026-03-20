@@ -13,9 +13,56 @@ import MarksSection from '../components/MarksSection';
 const AuroraBackground = dynamic(() => import('@/components/AuroraBackground'), { ssr: false });
 const AttendancePlannerContent = dynamic(() => import('./components/SkipProEstimator'), { ssr: false });
 const HelpCenterContent = dynamic(() => import('./components/HelpCenterContent'), { ssr: false });
-const BottomNav = dynamic(() => import('../components/BottomNav'), { ssr: false });
 const ReportIssueContent = dynamic(() => import('./components/ReportIssueContent'), { ssr: false });
 const CalendarView = dynamic(() => import('./components/CalendarView'), { ssr: false });
+
+/* ── Storage Wrapper ──────────────────────────── */
+const safeGet = (key) => { try { return sessionStorage.getItem(key); } catch { return null; } };
+const safeSet = (key, val) => { try { sessionStorage.setItem(key, val); } catch {} };
+
+/* ── Timetable Helper ─────────────────── */
+const isHoliday = (date) => {
+  const ds = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+  return ACADEMIC_CALENDAR[ds] === null;
+};
+const isWorkingDay = (date) => {
+  const day = date.getDay();
+  if (day === 0 || day === 6) return false;
+  if (isHoliday(date)) return false;
+  return true;
+};
+const getDayOrder = (date) => {
+  if (!isWorkingDay(date)) return null;
+  const semStart = new Date('2026-01-13');
+  let count = 0;
+  const d = new Date(semStart);
+  while (d < date) {
+    if (isWorkingDay(d)) count++;
+    d.setDate(d.getDate() + 1);
+  }
+  return (count % 5) + 1;
+};
+
+/* ── Mobile Bottom Nav ─────────────────── */
+const MobileBottomNav = ({ tab, onTabChange }) => (
+  <nav className="mobile-bottom-nav">
+    {[
+      { tab: 'overview',    icon: '⊞', label: 'Home'       },
+      { tab: 'attendance',  icon: '✓', label: 'Attendance'  },
+      { tab: 'marks',       icon: '📊', label: 'Marks'      },
+      { tab: 'timetable',  icon: '🕐', label: 'Timetable'  },
+      { tab: 'gpa',         icon: '🎓', label: 'GPA'        },
+    ].map(item => (
+      <button key={item.tab}
+        onClick={() => onTabChange(item.tab)}
+        className={tab === item.tab ? 'active' : ''}
+      >
+        <span className="nav-icon">{item.icon}</span>
+        <span className="nav-label">{item.label}</span>
+      </button>
+    ))}
+  </nav>
+);
 
 /* ══════════════════════════════════════════════════
    EXPORT PDF LOGIC 
@@ -34,13 +81,17 @@ const handleExport = (attendance, marks, user) => {
     </tr>
   `).join('');
 
-  const marksRows = marks.map(m => `
-    <tr>
-      <td>${m.title}<br/><span style="color:#666;font-size:11px">${m.courseCode}</span></td>
-      <td>${m.overall?.scored} / ${m.overall?.total}</td>
-      <td>${(parseFloat(m.overall?.scored)/parseFloat(m.overall?.total)*100).toFixed(1)}%</td>
-    </tr>
-  `).join('');
+  const marksRows = (marks || []).map(m => {
+    const s = parseFloat(m.overall?.scored || '0') || 0;
+    const t = parseFloat(m.overall?.total || '0') || 1;
+    return `
+      <tr>
+        <td>${m.title || 'Subject'}<br/><span style="color:#666;font-size:11px">${m.courseCode || '—'}</span></td>
+        <td>${s} / ${t}</td>
+        <td>${((s / t) * 100).toFixed(1)}%</td>
+      </tr>
+    `;
+  }).join('');
 
   printWindow.document.write(`
     <html>
@@ -338,34 +389,33 @@ function TodayClasses({ timetable }) {
   const [now, setNow] = useState(new Date('2026-03-21T01:21:32+05:30')); // Lock to current metadata time for demo consistency
   const nowMin = now.getHours() * 60 + now.getMinutes();
   
-  const todayKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
-  const dayOrder = ACADEMIC_CALENDAR[todayKey];
-  
-  const schedule = (timetable?.schedule || MOCK_SCHEDULE).find(s => s.day === dayOrder)?.table || [];
-  
-  const liveIdx = schedule.findIndex((s, i) => s && nowMin >= SLOTS[i]?.startMin && nowMin < SLOTS[i]?.endMin);
-  const nextIdx = schedule.findIndex((s, i) => s && nowMin < SLOTS[i]?.startMin && (liveIdx === -1 || i > liveIdx));
-  const isPastAll = schedule.every((s, i) => !s || nowMin >= SLOTS[i]?.endMin);
-  const dayName = now.toLocaleDateString('en-US', { weekday: 'long' });
-  const isWeekend = now.getDay() === 0 || now.getDay() === 6;
-  const todayDayOrder = isWeekend ? null : dayOrder;
+  const todayDayOrder = getDayOrder(now);
 
   if (!todayDayOrder) {
+    const isWeekend = now.getDay() === 0 || now.getDay() === 6;
     return (
       <div className="glass today-classes-card" style={{ padding: '32px', marginBottom: 24, borderRadius: 18, border: '1px solid rgba(255,255,255,0.06)', textAlign:'center', color:'rgba(255,255,255,0.3)' }}>
-        <div style={{fontSize:32, marginBottom:8}}>🎉</div>
+        <div style={{fontSize:32, marginBottom:8}}>{isWeekend ? '🎉' : '🏖'}</div>
         <div style={{fontSize:15, fontWeight:600}}>No classes today</div>
-        <div style={{fontSize:12, marginTop:4}}>Enjoy your {now.getDay() === 6 ? 'Saturday' : 'Sunday'}!</div>
+        <div style={{fontSize:12, marginTop:4}}>
+          {isWeekend ? `Enjoy your ${now.getDay() === 0 ? 'Sunday' : 'Saturday'}!` : 'Today is a scheduled holiday.'}
+        </div>
       </div>
     );
   }
+
+  const schedule = (timetable?.schedule || MOCK_SCHEDULE).find(s => s.day === todayDayOrder)?.table || [];
+  const liveIdx = (schedule || []).findIndex((s, i) => s && nowMin >= SLOTS[i]?.startMin && nowMin < SLOTS[i]?.endMin);
+  const nextIdx = (schedule || []).findIndex((s, i) => s && nowMin < SLOTS[i]?.startMin && (liveIdx === -1 || i > liveIdx));
+  const isPastAll = (schedule || []).every((s, i) => !s || nowMin >= SLOTS[i]?.endMin);
+  const dayName = now.toLocaleDateString('en-US', { weekday: 'long' });
 
   return (
     <div className="glass today-classes-card" style={{ padding: '18px 20px', marginBottom: 24, borderRadius: 18, border: '1px solid rgba(255,255,255,0.06)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-1)', margin: 0 }}>Today's Classes</h3>
         <span style={{color:'var(--neon-cyan)', fontWeight:700, fontSize:12}}>
-          {dayName.toUpperCase()}{todayDayOrder ? ` · DAY ORDER ${todayDayOrder}` : ' · NO CLASSES'}
+          {dayName.toUpperCase()} · DAY ORDER {todayDayOrder}
         </span>
       </div>
 
@@ -446,18 +496,38 @@ function TodayClasses({ timetable }) {
 }
 
 const GPACalculator = ({ courses }) => {
-  const SRM_GRADES = [
-    { label: 'O',  range: '91-100', points: 10 },
-    { label: 'A+', range: '81-90',  points: 9  },
-    { label: 'A',  range: '71-80',  points: 8  },
-    { label: 'B+', range: '61-70',  points: 7  },
-    { label: 'B',  range: '56-60',  points: 6  },
-    { label: 'C',  range: '50-55',  points: 5  },
-    { label: 'P',  range: '45-49',  points: 4  },
-    { label: 'F',  range: '0-44',   points: 0  },
-  ];
+  const GRADE_POINTS = {
+    'O':  10,  // 91-100 — Outstanding
+    'A+': 9,   // 81-90  — Excellent  
+    'A':  8,   // 71-80  — Very Good
+    'B+': 7,   // 61-70  — Good
+    'B':  6,   // 56-60  — Above Average
+    'C':  5,   // 50-55  — Average
+    'P':  4,   // 45-49  — Pass
+    'F':  0,   // 0-44   — Fail
+  };
 
-  const gradePoints = Object.fromEntries(SRM_GRADES.map(g => [g.label, g.points]));
+  const calculateSGPA = (items) => {
+    const totalCredits = (items || []).reduce((sum, s) => sum + (parseFloat(s.credits) || 0), 0);
+    const totalPoints  = (items || []).reduce((sum, s) => {
+      const cr = parseFloat(s.credits) || 0;
+      const pt = GRADE_POINTS[s.grade] ?? 0;
+      return sum + (cr * pt);
+    }, 0);
+    if (totalCredits === 0) return 0;
+    return totalPoints / totalCredits;
+  };
+
+  const sgpaToLetterGrade = (v) => {
+    if (v >= 9.5) return 'O';
+    if (v >= 8.5) return 'A+';
+    if (v >= 7.5) return 'A';
+    if (v >= 6.5) return 'B+';
+    if (v >= 5.5) return 'B';
+    if (v >= 4.5) return 'C';
+    if (v >= 3.5) return 'P';
+    return 'F';
+  };
 
   const buildSubjects = (rawCourses) => {
     if (!rawCourses || rawCourses.length === 0) return [];
@@ -485,30 +555,20 @@ const GPACalculator = ({ courses }) => {
     }
   }, [courses]);
 
-  const totalCredits = subjects.reduce((s, x) => s + (x.credits || 0), 0);
-  const totalPoints  = subjects.reduce((s, x) => s + (x.credits || 0) * (gradePoints[x.grade] ?? 0), 0);
-  const sgpa = totalCredits > 0 ? totalPoints / totalCredits : 0;
+  const totalCredits = (subjects || []).reduce((s, x) => s + (parseFloat(x.credits) || 0), 0);
+  const sgpa = calculateSGPA(subjects);
 
-  const sgpaToGrade = (v) => {
-    if (v >= 9.5) return 'O';
-    if (v >= 8.5) return 'A+';
-    if (v >= 7.5) return 'A';
-    if (v >= 6.5) return 'B+';
-    if (v >= 5.5) return 'B';
-    if (v >= 4.5) return 'C';
-    if (v >= 4.0) return 'P';
-    return 'F';
-  };
+  const gradeLabel = sgpaToLetterGrade(sgpa);
 
-  const validPrev = prevSems.filter(s => s.points !== '' && s.credits !== '');
-  const totalPrevPoints  = validPrev.reduce((s, x) => s + parseFloat(x.points || 0) * parseFloat(x.credits || 0), 0);
-  const totalPrevCredits = validPrev.reduce((s, x) => s + parseFloat(x.credits || 0), 0);
-  const allPoints  = totalPrevPoints + totalPoints;
-  const allCredits = totalPrevCredits + totalCredits;
-  const cgpa = allCredits > 0 ? allPoints / allCredits : 0;
+  const validPrev = (prevSems || []).filter(s => s.points !== '' && s.credits !== '');
+  const currentPoints = sgpa * totalCredits;
+  const prevPoints    = validPrev.reduce((s, x) => s + (parseFloat(x.points) || 0) * (parseFloat(x.credits) || 0), 0);
+  const prevCredits   = validPrev.reduce((s, x) => s + (parseFloat(x.credits) || 0), 0);
+  const allCredits    = totalCredits + prevCredits;
+  const cgpa = allCredits > 0 ? (currentPoints + prevPoints) / allCredits : 0;
 
   const updateSubjectGrade = (id, grade) => {
-    setSubjects(prev => prev.map(s => s.id === id ? { ...s, grade } : s));
+    setSubjects(prev => (prev || []).map(s => s.id === id ? { ...s, grade } : s));
   };
 
   const addSubject = () => {
@@ -522,7 +582,6 @@ const GPACalculator = ({ courses }) => {
   };
 
   const sgpaColor = sgpa >= 9 ? 'var(--neon-green)' : sgpa >= 7 ? 'var(--neon-yellow)' : sgpa >= 5 ? '#ff9500' : 'var(--neon-red)';
-  const gradeLabel = sgpaToGrade(sgpa);
 
   return (
     <div className="tab-panel animate-in" style={{display:'grid', gridTemplateColumns:'320px 1fr', gap:24, alignItems:'start'}}>
@@ -886,6 +945,7 @@ export default function Dashboard() {
   const [data, setData] = useState(null);
   const [tab, setTab] = useState('overview');
   const [showAttendanceWarning, setShowAttendanceWarning] = useState(false);
+  const [isSidebarOpen, setSidebarOpen] = useState(false);
 
   const { theme } = useTheme();
 
@@ -899,32 +959,33 @@ export default function Dashboard() {
   // Deduplicate attendance by course code for snapshot grid
   const uniqueAttendance = useMemo(() => {
     if (!attendance || !Array.isArray(attendance)) return [];
-    return attendance.filter((item, index, self) =>
+    return (attendance || []).filter((item, index, self) =>
       item && index === self.findIndex(a => a?.courseCode === item.courseCode)
     );
   }, [attendance]);
 
   /* ── Memoised stats to avoid repeated filter/reduce in render ── */
   const courseStats = useMemo(() => ({
-    theory: courses.filter(c => c?.slotType === 'Theory').length,
-    practical: courses.filter(c => c?.slotType === 'Practical').length,
-    credits: courses.reduce((s, c) => s + (parseFloat(c?.credit) || 0), 0),
+    theory: (courses || []).filter(c => c?.slotType === 'Theory').length,
+    practical: (courses || []).filter(c => c?.slotType === 'Practical').length,
+    credits: (courses || []).reduce((s, c) => s + (parseFloat(c?.credit || c?.credits || '0') || 0), 0),
   }), [courses]);
 
   const avgAtt = useMemo(() => {
-    if (!uniqueAttendance.length) return 0;
-    const sum = uniqueAttendance.reduce((acc, curr) => {
-      const conducted = parseFloat(curr?.hoursConducted) || 0;
-      const absent = parseFloat(curr?.hoursAbsent) || 0;
+    if (!uniqueAttendance || !uniqueAttendance.length) return 0;
+    const sum = (uniqueAttendance || []).reduce((acc, curr) => {
+      const conducted = parseFloat(curr?.hoursConducted || '0') || 0;
+      const absent = parseFloat(curr?.hoursAbsent || '0') || 0;
       const attended = conducted - absent;
       return acc + (conducted > 0 ? (attended / conducted) * 100 : 0);
     }, 0);
-    return parseFloat((sum / uniqueAttendance.length).toFixed(2));
+    const val = sum / uniqueAttendance.length;
+    return (isNaN(val) || !isFinite(val) ? 0 : val).toFixed(1);
   }, [uniqueAttendance]);
 
-  const safeAtt = uniqueAttendance.filter(a => {
-    const conducted = parseFloat(a?.hoursConducted) || 0;
-    const absent = parseFloat(a?.hoursAbsent) || 0;
+  const safeAtt = (uniqueAttendance || []).filter(a => {
+    const conducted = parseFloat(a?.hoursConducted || '0') || 0;
+    const absent = parseFloat(a?.hoursAbsent || '0') || 0;
     const attended = conducted - absent;
     const pct = conducted > 0 ? (attended / conducted) * 100 : 0;
     return pct >= 75;
@@ -963,12 +1024,13 @@ export default function Dashboard() {
   // Update URL when tab changes
   const handleTabChange = (newTab) => {
     if (newTab === 'skippro') {
-      const acknowledged = sessionStorage.getItem('ap_warning_ok') === 'true';
+      const acknowledged = safeGet('ap_warning_ok') === 'true';
       if (!acknowledged) {
         setShowAttendanceWarning(true);
       }
     }
     setTab(newTab);
+    setSidebarOpen(false);
     router.push(`/dashboard?tab=${newTab}`, undefined, { shallow: true });
   };
 
@@ -980,23 +1042,21 @@ export default function Dashboard() {
       <AuroraBackground />
 
       <div className="app-shell" style={{ position: 'relative', zIndex: 1 }}>
-        <Sidebar activeTab={tab} onTabChange={handleTabChange} user={user} below75={below75} />
+        <div className={`sidebar-overlay ${isSidebarOpen ? 'open' : ''}`} onClick={() => setSidebarOpen(false)} />
+        <Sidebar 
+          activeTab={tab} 
+          onTabChange={handleTabChange} 
+          user={user} 
+          below75={below75} 
+          isOpen={isSidebarOpen} 
+        />
 
         <header className="mobile-header">
+          <button className="hamburger" onClick={() => setSidebarOpen(true)}>☰</button>
           <div className="mh-brand">
-            <img
-              src="/logos/campuspro-wordmark.svg"
-              alt="CampusPro"
-              style={{ width: 140, height: 'auto' }}
-            />
+            <img src="/logos/campuspro-wordmark.svg" alt="CampusPro" style={{ width: 120, height: 'auto' }} />
           </div>
-          <div className="mh-user">
-            <div className="mh-avatar">{(String(user?.name || 'S'))[0]}</div>
-            <div>
-              <div className="mh-name">{String(user?.name || '').split(' ')[0] || 'Student'}</div>
-              <div className="mh-reg">{user?.regNumber || '—'}</div>
-            </div>
-          </div>
+          <button className="refresh-btn" onClick={() => window.location.reload()}>↻</button>
         </header>
 
         <main className="main-content">
@@ -1080,19 +1140,19 @@ export default function Dashboard() {
                       label="Attendance" value={`${avgAtt}%`}
                       color="var(--cyan)"
                       icon="M12 2v20m10-10H2"
-                      sub={`${safeAtt} safe · ${below75} at risk`} delay={0}
+                      sub={`${safeAtt} ON TRACK · ${below75} BELOW 75%`} delay={0}
                     />
                     <KPICard
                       label="Avg Score" value={`${avgScore}%`}
                       color="var(--purple)"
                       icon="M18 20V10m-6 10V4M6 20v-6"
-                      sub={`${marks.length} subjects tracked`} delay={60}
+                      sub="Your overall performance" delay={60}
                     />
                     <KPICard
-                      label="Subjects" value={courses.length}
+                      label="Subjects" value={(courses || []).length}
                       color="var(--green)"
                       icon="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"
-                      sub={`${courseStats.theory} theory · ${courseStats.practical} lab`}
+                      sub={`${courseStats.theory} Theory · ${courseStats.practical} Lab`}
                       delay={120}
                     />
                     <KPICard
@@ -1111,9 +1171,9 @@ export default function Dashboard() {
                       <div className="alert-icon">
                         <Ico d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zm0-7v-2m0-4h.01" size={14} />
                       </div>
-                      <span><strong>{below75} subject{below75 > 1 ? 's' : ''}</strong> below 75% attendance</span>
-                      <button className="alert-cta" onClick={() => setTab('attendance')}>
-                        View Attendance
+                      <span>You're below 75% in <strong>{below75} subject{below75 > 1 ? 's' : ''}</strong> — don't skip any more classes</span>
+                      <button className="alert-cta" onClick={() => handleTabChange('attendance')}>
+                        Check Attendance
                       </button>
                     </div>
                   )}
@@ -1121,29 +1181,30 @@ export default function Dashboard() {
                   {/* Attendance mini grid */}
                   <div className="section-hd">
                     <h2 className="section-title">Attendance Snapshot</h2>
-                    <button className="link-btn" onClick={() => setTab('attendance')}>View all</button>
+                    <button className="link-btn" onClick={() => setTab('attendance')}>See details</button>
                   </div>
                   <div className="att-mini-grid">
                     {uniqueAttendance.length === 0 ? (
                       <div className="empty-state">No attendance records found.</div>
-                    ) : uniqueAttendance.map((a, i) => {
-                      const conducted = parseFloat(a.hoursConducted) || 0;
-                      const absent = parseFloat(a.hoursAbsent) || 0;
+                    ) : (uniqueAttendance || []).map((a, i) => {
+                      const conducted = parseFloat(a.hoursConducted || '0') || 0;
+                      const absent = parseFloat(a.hoursAbsent || '0') || 0;
                       const attended = conducted - absent;
-                      const pctMatch = conducted > 0 ? (attended / conducted) * 100 : parseFloat(a.attendancePercentage) || 0;
-                      const pct = parseFloat(pctMatch.toFixed(2));
+                      const pctMatch = conducted > 0 ? (attended / conducted) * 100 : parseFloat(a.attendancePercentage || '0') || 0;
+                      const pctVal = isNaN(pctMatch) || !isFinite(pctMatch) ? 0 : pctMatch;
+                      const pct = parseFloat(pctVal.toFixed(1));
                       const neon = getNeonColor(pct);
 
-                      const canSkip = conducted > 0 ? Math.floor((attended - 0.75 * conducted) / 0.75) : 0;
-                      const classesNeeded = (pct < 75 && conducted > 0) ? Math.ceil((0.75 * conducted - attended) / 0.25) : 0;
+                      const canSkip = Math.floor((attended - 0.75 * conducted) / 0.75);
+                      const mustAttend = Math.ceil((0.75 * conducted - attended) / 0.25);
 
                       let mTxt = "", mClr = "", mBg = "", mBdr = "";
                       if (conducted === 0) {
                         mTxt = "No classes yet"; mClr = "var(--text-3)"; mBg = "rgba(255,255,255,0.02)"; mBdr = "rgba(255,255,255,0.05)";
-                      } else if (canSkip < 0) {
-                        mTxt = `Deficit: -${classesNeeded}`; mClr = "var(--neon-red)"; mBg = "var(--neon-red-dim)"; mBdr = "var(--neon-red-border)";
+                      } else if (canSkip <= 0) {
+                        mTxt = `Need ${mustAttend} more classes`; mClr = "var(--neon-red)"; mBg = "var(--neon-red-dim)"; mBdr = "var(--neon-red-border)";
                       } else {
-                        mTxt = `Margin: +${canSkip}`; mClr = canSkip > 2 ? "var(--neon-green)" : "var(--neon-yellow)"; mBg = canSkip > 2 ? "var(--neon-green-dim)" : "var(--neon-yellow-dim)"; mBdr = canSkip > 2 ? "var(--neon-green-border)" : "var(--neon-yellow-border)";
+                        mTxt = `Safe to skip ${canSkip} more`; mClr = canSkip > 2 ? "var(--neon-green)" : "var(--neon-yellow)"; mBg = canSkip > 2 ? "var(--neon-green-dim)" : "var(--neon-yellow-dim)"; mBdr = canSkip > 2 ? "var(--neon-green-border)" : "var(--neon-yellow-border)";
                       }
 
                       return (
@@ -1374,9 +1435,9 @@ export default function Dashboard() {
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                       <button className="btn btn-accent" onClick={() => handleExport(attendance, marks, user)} style={{ fontSize: 11, padding: '8px 16px', borderRadius: '8px' }}>
-                        📄 Export Report Card
+                        📄 Get Report Card
                       </button>
-                      <span className="tag tag-accent">{marks.length} subjects</span>
+                      <span className="tag tag-accent">{(marks || []).length} subjects</span>
                     </div>
                   </div>
                   <MarksSection marks={marks} courses={courses} />
@@ -1555,11 +1616,11 @@ export default function Dashboard() {
           )}
         </main>
 
-        <BottomNav activeTab={tab} onTabChange={handleTabChange} below75={below75} />
+        <MobileBottomNav tab={tab} onTabChange={handleTabChange} />
       </div>
 
       <style jsx global>{`
-        body { background: #04050d; overflow-x: hidden; }
+        html, body { overflow-x: hidden; max-width: 100vw; background: #04050d; }
         @keyframes floatBlob { 0%,100% { transform: translate(0,0) scale(1); } 33% { transform: translate(40px,-28px) scale(1.06); } 66% { transform: translate(-24px,18px) scale(0.96); } }
         @keyframes floatBlob2 { 0%,100% { transform: translate(0,0) scale(1); } 40% { transform: translate(-35px,22px) scale(1.04); } 70% { transform: translate(28px,-15px) scale(0.98); } }
         @keyframes floatBlob3 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(20px,30px) scale(1.07); } }
@@ -1576,6 +1637,70 @@ export default function Dashboard() {
         .dash-blob-3 { position: absolute; width: 420px; height: 420px; top: 38%; left: 52%; border-radius: 50%; background: radial-gradient(circle at 50% 50%, rgba(167,139,250,0.07) 0%, rgba(167,139,250,0.03) 50%, transparent 70%); filter: blur(50px); animation: floatBlob3 16s ease-in-out infinite 4s; }
         .dash-blob-4 { position: absolute; width: 300px; height: 300px; top: 60%; left: 20%; border-radius: 50%; background: radial-gradient(circle at 50% 50%, rgba(244,63,94,0.05) 0%, transparent 70%); filter: blur(50px); animation: floatBlob4 22s ease-in-out infinite 8s; }
         .dash-bg-vignette { position: absolute; inset: 0; background: radial-gradient(ellipse 80% 70% at 50% 50%, transparent 50%, rgba(5,6,15,0.55) 100%); }
+
+        .mobile-bottom-nav { display: none; }
+        .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 199; backdrop-filter: blur(4px); }
+
+        @media (max-width: 768px) {
+          .sidebar-overlay.open { display: block; }
+          .mobile-bottom-nav {
+            display: flex;
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            background: rgba(10, 10, 20, 0.95);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(255,255,255,0.08);
+            z-index: 100;
+            padding: 8px 0 max(8px, env(safe-area-inset-bottom));
+          }
+          .mobile-bottom-nav button {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3px;
+            background: none;
+            border: none;
+            color: rgba(255,255,255,0.4);
+            cursor: pointer;
+            padding: 4px 0;
+            transition: color 0.2s;
+          }
+          .mobile-bottom-nav button.active { color: #818cf8; }
+          .mobile-bottom-nav .nav-icon { font-size: 20px; }
+          .mobile-bottom-nav .nav-label { font-size: 10px; font-weight: 600; }
+          
+          .main-content {
+            padding: 16px !important;
+            padding-bottom: 100px !important;
+            margin-left: 0 !important;
+            width: 100% !important;
+          }
+          .stats-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; }
+          .attendance-snapshot-grid, .marks-grid, .gpa-layout, .cc-grid { grid-template-columns: 1fr !important; }
+          .page-title { font-size: 28px !important; }
+          .profile-pill { display: none !important; }
+          
+          button, .nav-item, select, .grade-select { min-height: 44px !important; }
+          .subject-chip { padding: 10px 14px !important; }
+          
+          .mobile-header {
+            display: flex !important;
+            position: sticky; top: 0; z-index: 150;
+            background: rgba(4, 5, 13, 0.8);
+            backdrop-filter: blur(12px);
+            padding: 12px 16px;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+          }
+          .hamburger, .refresh-btn {
+            background: none; border: none; color: white;
+            font-size: 20px; cursor: pointer;
+            width: 40px; height: 40px;
+            display: flex; alignItems: center; justifyContent: center;
+          }
+        }
 
         @media (max-width: 860px) { .dash-bg { opacity: 0.2; } }
         @media (prefers-reduced-motion: reduce) { 

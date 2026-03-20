@@ -44,7 +44,7 @@ const NAV_ITEMS = [
   { id: 'calendar',   label: 'Calendar',    icon: 'calendar',   group: 'tools' },
 ];
 
-export default function Sidebar({ activeTab, onTabChange, user, below75 }) {
+export default function Sidebar({ activeTab, onTabChange, user, below75, isOpen }) {
   const router = useRouter();
   const { theme, toggle } = useTheme();
   const [collapsed, setCollapsed] = useState(false);
@@ -71,7 +71,7 @@ export default function Sidebar({ activeTab, onTabChange, user, below75 }) {
   };
 
   const SidebarContent = () => (
-    <aside className={`sidebar${collapsed ? ' c' : ''}`}>
+    <aside className={`sidebar${collapsed ? ' c' : ''}${isOpen ? ' open' : ''}`}>
 
       {/* ── Brand ──────────────────────────────── */}
       <div className="brand">
