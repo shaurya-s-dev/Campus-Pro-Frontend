@@ -169,7 +169,7 @@ export default function AttendancePlanner({ attendance: propAttendance = [], cou
         <div className="summary-strip">
           <div className="sum-item glass">
             <span className="sum-val" style={{ color: 'var(--emerald)' }}>{summary.safe}</span>
-            <span className="sum-lbl">Safe</span>
+            <span className="sum-lbl">ON TRACK</span>
           </div>
           <div className="sum-item glass">
             <span className="sum-val" style={{ color: 'var(--amber)' }}>{summary.caution}</span>
@@ -177,7 +177,7 @@ export default function AttendancePlanner({ attendance: propAttendance = [], cou
           </div>
           <div className="sum-item glass">
             <span className="sum-val" style={{ color: 'var(--rose)' }}>{summary.risk}</span>
-            <span className="sum-lbl">At Risk</span>
+            <span className="sum-lbl">BELOW 75%</span>
           </div>
         </div>
       </header>
@@ -209,7 +209,7 @@ export default function AttendancePlanner({ attendance: propAttendance = [], cou
                   <div className="course-code">{d.courseCode}</div>
                 </div>
                 <div className={`skip-badge ${d.status}`}>
-                  {d.canSkip > 0 ? `Skip ${d.canSkip}` : d.canSkip === 0 ? 'No Margin' : `Need ${d.classesNeeded}`}
+                  {d.canSkip > 0 ? `Skip: ${d.canSkip}` : d.canSkip === 0 ? 'Limit Hit' : `Need: ${d.classesNeeded}`}
                 </div>
               </div>
 
@@ -247,9 +247,9 @@ export default function AttendancePlanner({ attendance: propAttendance = [], cou
               
               <div className="card-footer">
                 {d.canSkip > 0 ? (
-                  <span className="footer-msg">Safe to skip <strong>{d.canSkip}</strong> more.</span>
+                  <span className="footer-msg">Can skip <strong>{d.canSkip}</strong> more classes safely.</span>
                 ) : (
-                  <span className="footer-msg risk">Need <strong>{d.classesNeeded}</strong> more classes.</span>
+                  <span className="footer-msg risk">Attend next <strong>{d.classesNeeded}</strong> classes to reach 75%.</span>
                 )}
               </div>
             </div>

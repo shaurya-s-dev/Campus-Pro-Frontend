@@ -241,25 +241,34 @@ function Skeleton({ type = 'card', count = 1 }) {
   );
 }
 
-function CircleProgress({ pct, color = 'var(--accent)', size = 56 }) {
-  const r = size / 2 - 5;
-  const circ = 2 * Math.PI * r;
-  const dash = circ * Math.min(pct / 100, 1);
+const getRingColor = (pct) => {
+  if (pct >= 85) return '#39ff14';
+  if (pct >= 75) return '#ffe600';
+  if (pct >= 60) return '#ff9500';
+  return '#ff2d55';
+};
+
+function CircleProgress({ pct, size = 56 }) {
+  const r = 26;
+  const circumference = 2 * Math.PI * r;
+  const dashOffset = circumference - (pct / 100) * circumference;
+  const color = getRingColor(pct);
+
   return (
-    <div className="cp-wrap" style={{ width: size, height: size }}>
-      <svg width={size} height={size} style={{ transform: 'rotate(-90deg)', flexShrink: 0 }} className="no-transition">
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,.05)" strokeWidth={6} />
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={6}
-          strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
-          style={{
-            transition: 'stroke-dasharray 1.2s cubic-bezier(.4,1.56,.64,1)',
-            filter: `drop-shadow(0 0 6px ${color})`
-          }}
+    <div className="cp-wrap" style={{ width: 64, height: 64 }}>
+      <svg width="64" height="64" viewBox="0 0 64 64">
+        <circle cx="32" cy="32" r="26" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="5"/>
+        <circle cx="32" cy="32" r="26" fill="none" stroke={color} strokeWidth="5"
+          strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={dashOffset}
+          transform="rotate(-90 32 32)"
+          style={{ transition: 'stroke-dashoffset 1s ease-out', filter: `drop-shadow(0 0 4px ${color})` }}
         />
       </svg>
     </div>
   );
 }
+
+const cls = (n) => `${Math.abs(n)} ${Math.abs(n) === 1 ? 'class' : 'classes'}`;
 
 /* ══════════════════════════════════════════════════
    SMART ALERTS PANEL
@@ -278,106 +287,85 @@ function SmartAlerts({ attendance, marks }) {
     sessionStorage.setItem('dismissed_alerts', JSON.stringify(newD));
   };
 
+  const alertStyles = {
+    danger:  { bg: 'rgba(255,45,85,0.08)',  border: 'rgba(255,45,85,0.25)',  color: '#ff2d55', label: 'Action needed' },
+    warning: { bg: 'rgba(255,214,10,0.08)', border: 'rgba(255,214,10,0.25)', color: '#ffe600', label: 'Heads up' },
+    success: { bg: 'rgba(57,255,20,0.08)',  border: 'rgba(57,255,20,0.25)',  color: '#39ff14', label: 'Great work' },
+  };
+
   const alerts = useMemo(() => {
     const res = [];
+    const attList = Array.isArray(attendance) ? attendance : [];
     
-    // 1. At-risk attendance (<75%)
-    const atRisk = (attendance || []).filter(s => {
+    const atRisk = attList.filter(s => {
       const conducted = parseFloat(s?.hoursConducted) || 0;
       const absent = parseFloat(s?.hoursAbsent) || 0;
-      const attended = conducted - absent;
-      return conducted > 0 && (attended / conducted) < 0.75;
+      const pct = conducted > 0 ? (conducted - absent) / conducted : 1;
+      return conducted > 0 && pct < 0.75;
     });
     if (atRisk.length > 0) res.push({
-      id: 'at_risk_att',
-      type: 'danger',
-      icon: '⚠️',
+      id: 'at_risk_att', type: 'danger', icon: '⚠️',
       message: `${atRisk.length} subject${atRisk.length > 1 ? 's' : ''} below 75% — attendance deficit detected.`,
       subjects: atRisk.map(s => s.courseTitle)
     });
 
-    // 2. Borderline attendance (75-80%)
-    const borderline = (attendance || []).filter(s => {
+    const borderline = attList.filter(s => {
       const conducted = parseFloat(s?.hoursConducted) || 0;
       const absent = parseFloat(s?.hoursAbsent) || 0;
-      const pct = conducted > 0 ? ((conducted - absent) / conducted) : 1;
+      const pct = conducted > 0 ? (conducted - absent) / conducted : 1;
       return conducted > 0 && pct >= 0.75 && pct < 0.82;
     });
     if (borderline.length > 0) res.push({
-      id: 'borderline_att',
-      type: 'warning',
-      icon: '🟡',
+      id: 'borderline_att', type: 'warning', icon: '🟡',
       message: `${borderline.length} subject${borderline.length > 1 ? 's are' : ' is'} nearing the 75% danger zone.`,
       subjects: borderline.map(s => s.courseTitle)
     });
 
-    // 3. Low marks (<60% average)
-    const lowMarks = (marks || []).filter(m => {
-      const sc = parseFloat(m.overall?.scored);
-      const to = parseFloat(m.overall?.total) || 1;
-      return to > 0 && (sc / to) < 0.6;
-    });
-    if (lowMarks.length > 0) res.push({
-      id: 'low_marks',
-      type: 'danger',
-      icon: '📉',
-      message: `${lowMarks.length} subject${lowMarks.length > 1 ? 's' : ''} with internal marks below 60%.`,
-      subjects: lowMarks.map(m => m.title)
-    });
-
-    // 4. Achievement: Perfect Attendance
-    const perfect = (attendance || []).filter(s => {
-      const conducted = parseFloat(s?.hoursConducted) || 0;
-      const absent = parseFloat(s?.hoursAbsent) || 0;
-      return conducted > 5 && absent === 0;
-    });
-    if (perfect.length > 0) res.push({
-      id: 'perfect_att',
-      type: 'success',
-      icon: '🔥',
-      message: `Elite Performance: Perfect 100% attendance in ${perfect.length} subject${perfect.length > 1 ? 's' : ''}.`
-    });
-
     return res.filter(a => !dismissed.includes(a.id));
-  }, [attendance, marks, dismissed]);
+  }, [attendance, dismissed]);
 
   if (alerts.length === 0) return null;
 
   return (
-    <div className="smart-alerts-container">
-      {alerts.map((a, i) => (
-        <div key={a.id} className={`alert-card al-${a.type} animate-down`} style={{ animationDelay: `${i * 100}ms` }}>
-          <div className="al-icon">
-            <span style={{fontSize: 22, lineHeight: 1}}>{a.icon}</span>
-          </div>
-          <div className="al-content">
-            <div className="al-msg">{a.message}</div>
-            {a.subjects && (
-              <div style={{display:'flex', flexWrap:'wrap', gap:6, marginTop:8}}>
-                {a.subjects.map((s, si) => (
-                  <span key={si} style={{
-                    background:'rgba(255,255,255,0.08)',
-                    border:'1px solid rgba(255,255,255,0.15)',
-                    borderRadius:6,
-                    padding:'2px 10px',
-                    fontSize:11,
-                    color:'rgba(255,255,255,0.7)',
-                  }}>{s}</span>
-                ))}
+    <div className="smart-alerts-container" style={{ marginBottom: 20 }}>
+      {alerts.map((alert) => {
+        const style = alertStyles[alert.type] || alertStyles.warning;
+        return (
+          <div key={alert.id} style={{
+            background: style.bg,
+            border: `1px solid ${style.border}`,
+            borderRadius: 14,
+            padding: '14px 16px',
+            marginBottom: 10,
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: 12,
+          }}>
+            <span style={{fontSize: 20, lineHeight: 1}}>{alert.icon}</span>
+            <div style={{flex: 1}}>
+              <div style={{fontSize: 14, color: 'white', fontWeight: 600, lineHeight: 1.4}}>
+                {alert.message}
               </div>
-            )}
-          </div>
-          <button 
-            onClick={() => handleDismiss(a.id)}
-            style={{
+              {alert.subjects && (
+                <div style={{display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8}}>
+                  {alert.subjects.map((s, i) => (
+                    <span key={i} style={{
+                      background: 'rgba(255,255,255,0.08)',
+                      border: '1px solid rgba(255,255,255,0.12)',
+                      borderRadius: 6, padding: '2px 10px',
+                      fontSize: 11, color: 'rgba(255,255,255,0.65)',
+                    }}>{s}</span>
+                  ))}
+                </div>
+              )}
+            </div>
+            <button onClick={() => handleDismiss(alert.id)} style={{
               background: 'none', border: 'none',
-              color: 'rgba(255,255,255,0.4)', cursor: 'pointer',
-              fontSize: 18, lineHeight: 1, padding: '0 4px',
-              flexShrink: 0,
-            }}
-          >×</button>
-        </div>
-      ))}
+              color: 'rgba(255,255,255,0.3)', cursor: 'pointer', fontSize: 18, lineHeight: 1,
+            }}>×</button>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -531,19 +519,17 @@ const GPACalculator = ({ courses }) => {
 
   const buildSubjects = (rawCourses) => {
     if (!rawCourses || rawCourses.length === 0) return [];
-    const seen = new Map();
-    rawCourses.forEach(c => {
-      const credit = parseFloat(c?.credit || c?.credits || '0');
-      if (credit <= 0) return;
-      const rawName = c?.title || c?.name || 'Unknown';
-      const baseName = rawName.replace(/\s*(Lab|Laboratory|Practical)\s*$/i, '').trim();
-      if (seen.has(baseName)) {
-        seen.get(baseName).credits += credit;
-      } else {
-        seen.set(baseName, { name: baseName, credits: credit, grade: 'O' });
-      }
-    });
-    return Array.from(seen.values()).map((s, i) => ({ ...s, id: i + 1 }));
+    
+    // DO NOT merge theory+lab — keep them separate
+    // Only exclude zero-credit courses
+    return (rawCourses || [])
+      .filter(c => parseFloat(c?.credit || c?.credits || '0') > 0)
+      .map((c, i) => ({
+        id: i + 1,
+        name: (c.title || c.name || 'Unknown').replace(/\(.*?\)/g, '').trim(),
+        credits: parseFloat(c?.credit || c?.credits || '0'),
+        grade: 'O',
+      }));
   };
 
   const [subjects, setSubjects] = useState(() => buildSubjects(courses));
@@ -667,7 +653,7 @@ const GPACalculator = ({ courses }) => {
               padding:'8px 16px', borderRadius:10,
               background:'linear-gradient(135deg, #6366f1, #8b5cf6)',
               border:'none', color:'white', fontWeight:700, fontSize:13, cursor:'pointer',
-            }}>⚡ Re-import</button>
+            }}>⚡ Sync Courses</button>
           </div>
 
           {subjects.length === 0 ? (
@@ -819,58 +805,52 @@ const GPACalculator = ({ courses }) => {
    STREAK TRACKER
    ══════════════════════════════════════════════════ */
 function StreakTracker({ attendance }) {
-  const perfect = attendance.filter(s => {
-    const conducted = parseFloat(s?.hoursConducted) || 0;
-    return conducted > 0 && parseFloat(s?.hoursAbsent) === 0;
-  });
+  const attList = Array.isArray(attendance) ? attendance : [];
   
-  const safe = attendance.filter(s => {
-    const conducted = parseFloat(s?.hoursConducted) || 0;
-    const absent = parseFloat(s?.hoursAbsent) || 0;
-    return conducted > 0 && ((conducted - absent) / conducted) >= 0.75;
-  });
-
-  useEffect(() => {
-    if (perfect.length >= 3 && typeof confetti === 'function') {
-      confetti({
-        particleCount: 150,
-        spread: 70,
-        origin: { y: 0.6 },
-        colors: ['#00f5a0', '#00d4ff', '#bf5af2']
-      });
-    }
-  }, [perfect.length]);
+  const stats = [
+    {
+      emoji: '🔥',
+      value: attList.filter(s => {
+        const cond = parseFloat(s?.hoursConducted) || 0;
+        const abs = parseFloat(s?.hoursAbsent) || 0;
+        return cond > 0 && abs === 0;
+      }).length,
+      label: 'Perfect', sub: '100% attended', color: '#39ff14', dim: 'rgba(57,255,20,0.1)', border: 'rgba(57,255,20,0.25)',
+    },
+    {
+      emoji: '✅',
+      value: attList.filter(s => {
+        const cond = parseFloat(s?.hoursConducted) || 0;
+        const abs = parseFloat(s?.hoursAbsent) || 0;
+        const pct = cond > 0 ? (cond - abs) / cond : 1;
+        return cond > 0 && pct >= 0.75;
+      }).length,
+      label: 'ON TRACK ✓', sub: 'Above 75%', color: '#00d4ff', dim: 'rgba(0,212,255,0.1)', border: 'rgba(0,212,255,0.25)',
+    },
+    {
+      emoji: '⚠️',
+      value: attList.filter(s => {
+        const cond = parseFloat(s?.hoursConducted) || 0;
+        const abs = parseFloat(s?.hoursAbsent) || 0;
+        const pct = cond > 0 ? (cond - abs) / cond : 1;
+        return cond > 0 && pct < 0.75;
+      }).length,
+      label: 'BELOW 75%', sub: 'Action needed', color: '#ff2d55', dim: 'rgba(255,45,85,0.1)', border: 'rgba(255,45,85,0.25)',
+    },
+  ];
 
   return (
-    <div className="streak-section animate-up" style={{ animationDelay: '300ms' }}>
-      <div className="section-hd">
-        <h2 className="section-title">Attendance Streaks</h2>
-      </div>
-      <div className="streak-card glass">
-        <div className="streak-grid">
-          <div className="streak-stat">
-            <div className="ss-icon">🔥</div>
-            <div className="ss-val">{perfect.length}</div>
-            <div className="ss-lbl">PERFECT</div>
-            <div className="ss-sub">100% Attended</div>
+    <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: 24, marginTop: 24 }}>
+      <div style={{fontSize: 16, fontWeight: 800, color: 'white', marginBottom: 16}}>Attendance Streaks</div>
+      <div className="streak-grid" style={{display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12}}>
+        {stats.map(stat => (
+          <div key={stat.label} style={{ background: stat.dim, border: `1px solid ${stat.border}`, borderRadius: 16, padding: '16px 12px', textAlign: 'center' }}>
+            <div style={{fontSize: 28, marginBottom: 6}}>{stat.emoji}</div>
+            <div style={{ fontSize: 32, fontWeight: 900, color: stat.color, textShadow: `0 0 12px ${stat.color}`, lineHeight: 1 }}>{stat.value}</div>
+            <div style={{fontSize: 12, fontWeight: 700, color: 'white', marginTop: 4}}>{stat.label}</div>
+            <div style={{fontSize: 10, color: 'rgba(255,255,255,0.4)', marginTop: 2}}>{stat.sub}</div>
           </div>
-          <div className="streak-stat">
-            <div className="ss-icon" style={{ filter: 'grayscale(0) brightness(1.2)' }}>✅</div>
-            <div className="ss-val">{safe.length}</div>
-            <div className="ss-lbl">SAFE</div>
-            <div className="ss-sub">Above 75%</div>
-          </div>
-        </div>
-        {perfect.length > 0 && (
-          <div className="streak-footer">
-            <div className="sf-lbl">Perfect subjects:</div>
-            <div className="sf-list">
-              {perfect.map((s, i) => (
-                <span key={i} className="sf-item">{s.courseTitle}</span>
-              ))}
-            </div>
-          </div>
-        )}
+        ))}
       </div>
     </div>
   );
@@ -907,32 +887,22 @@ function useCountUp(endValStr) {
    ══════════════════════════════════════════════════ */
 function KPICard({ label, value, sub, color, icon, delay = 0 }) {
   const animatedValue = useCountUp(value);
-  const neonColor = color.replace('var(--', '').replace(')', '');
-  const neonValue = `var(--neon-${neonColor})`;
   
   return (
     <div className="kpi glass glass-hover animate-up" style={{ 
       animationDelay: `${delay}ms`,
-      border: `1px solid var(--neon-${neonColor}-border)`,
-      boxShadow: `0 0 20px var(--neon-${neonColor}-dim)`,
-      background: `linear-gradient(135deg, var(--neon-${neonColor}-dim), transparent)`
+      border: `1px solid ${color}25`,
+      background: `linear-gradient(135deg, ${color}0a, transparent)`,
+      overflow: 'hidden', position: 'relative'
     }}>
-      <div className="kpi-accent" style={{ background: `linear-gradient(90deg, var(--neon-${neonColor}), transparent)` }} />
       <div className="kpi-header">
-        <div className="kpi-icon-wrap" style={{ color: `var(--neon-${neonColor})`, background: `var(--neon-${neonColor}-dim)`, border: `1px solid var(--neon-${neonColor}-border)` }}>
+        <div className="kpi-icon-wrap" style={{ color: color, background: `${color}15`, border: `1px solid ${color}25` }}>
           <Ico d={icon} size={15} />
         </div>
-        <span className="kpi-label">{label}</span>
+        <span className="kpi-label" style={{ color: `${color}99`, fontWeight: 700, letterSpacing: '0.1em', fontSize: 11 }}>{label}</span>
       </div>
-      <div className="kpi-value" style={{ color: `var(--neon-${neonColor})`, textShadow: `var(--neon-${neonColor}-glow)` }}>{animatedValue}</div>
-      {sub && <div className="kpi-sub">{sub}</div>}
-
-      {/* Mini sparkline visualization hint */}
-      <div className="kpi-mini-viz" style={{ color: `var(--neon-${neonColor})` }}>
-        <svg width="40" height="20" viewBox="0 0 40 20" fill="none" stroke="currentColor" strokeWidth="1.5">
-          <path d="M2 15 L10 12 L18 16 L26 8 L34 10 L38 2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.3 }} />
-        </svg>
-      </div>
+      <div className="kpi-value" style={{ color: color, fontSize: 36, fontWeight: 900, textShadow: `0 0 16px ${color}80`, margin: '6px 0 4px', lineHeight: 1 }}>{animatedValue}</div>
+      {sub && <div className="kpi-sub" style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>{sub}</div>}
     </div>
   );
 }
@@ -1137,46 +1107,35 @@ export default function Dashboard() {
                   {/* KPI grid */}
                   <div className="kpi-grid">
                     <KPICard
-                      label="Attendance" value={`${avgAtt}%`}
-                      color="var(--cyan)"
+                      label="ATTENDANCE" value={`${avgAtt}%`}
+                      color="#39ff14"
                       icon="M12 2v20m10-10H2"
                       sub={`${safeAtt} ON TRACK · ${below75} BELOW 75%`} delay={0}
                     />
                     <KPICard
-                      label="Avg Score" value={`${avgScore}%`}
-                      color="var(--purple)"
+                      label="AVG SCORE" value={`${avgScore}%`}
+                      color="#bf5af2"
                       icon="M18 20V10m-6 10V4M6 20v-6"
-                      sub="Your overall performance" delay={60}
+                      sub={`${marks?.length || 0} subjects tracked`} delay={60}
                     />
                     <KPICard
-                      label="Subjects" value={(courses || []).length}
-                      color="var(--green)"
+                      label="SUBJECTS" value={(courses || []).length}
+                      color="#00d4ff"
                       icon="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"
                       sub={`${courseStats.theory} Theory · ${courseStats.practical} Lab`}
                       delay={120}
                     />
                     <KPICard
-                      label="Semester" value={user?.semester || '—'}
-                      color="var(--yellow)"
+                      label="SEMESTER" value={user?.semester || '—'}
+                      color="#ffe600"
                       icon="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"
-                      sub={user?.program?.slice(0, 24) || '—'} delay={180}
+                      sub="B.Tech Student" delay={180}
                     />
                   </div>
 
                   <TodayClasses timetable={timetable} />
 
                   {/* Alert banner */}
-                  {below75 > 0 && (
-                    <div className="alert-strip animate-down">
-                      <div className="alert-icon">
-                        <Ico d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zm0-7v-2m0-4h.01" size={14} />
-                      </div>
-                      <span>You're below 75% in <strong>{below75} subject{below75 > 1 ? 's' : ''}</strong> — don't skip any more classes</span>
-                      <button className="alert-cta" onClick={() => handleTabChange('attendance')}>
-                        Check Attendance
-                      </button>
-                    </div>
-                  )}
 
                   {/* Attendance mini grid */}
                   <div className="section-hd">
@@ -1192,42 +1151,41 @@ export default function Dashboard() {
                       const attended = conducted - absent;
                       const pctMatch = conducted > 0 ? (attended / conducted) * 100 : parseFloat(a.attendancePercentage || '0') || 0;
                       const pctVal = isNaN(pctMatch) || !isFinite(pctMatch) ? 0 : pctMatch;
-                      const pct = parseFloat(pctVal.toFixed(1));
-                      const neon = getNeonColor(pct);
+                      const pct = parseFloat(pctVal.toFixed(2));
+                      const color = getRingColor(pct);
 
                       const canSkip = Math.floor((attended - 0.75 * conducted) / 0.75);
-                      const mustAttend = Math.ceil((0.75 * conducted - attended) / 0.25);
+                      const mustAttend = canSkip < 0 ? Math.ceil((0.75 * conducted - attended) / 0.25) : 0;
 
-                      let mTxt = "", mClr = "", mBg = "", mBdr = "";
-                      if (conducted === 0) {
-                        mTxt = "No classes yet"; mClr = "var(--text-3)"; mBg = "rgba(255,255,255,0.02)"; mBdr = "rgba(255,255,255,0.05)";
-                      } else if (canSkip <= 0) {
-                        mTxt = `Need ${mustAttend} more classes`; mClr = "var(--neon-red)"; mBg = "var(--neon-red-dim)"; mBdr = "var(--neon-red-border)";
-                      } else {
-                        mTxt = `Safe to skip ${canSkip} more`; mClr = canSkip > 2 ? "var(--neon-green)" : "var(--neon-yellow)"; mBg = canSkip > 2 ? "var(--neon-green-dim)" : "var(--neon-yellow-dim)"; mBdr = canSkip > 2 ? "var(--neon-green-border)" : "var(--neon-yellow-border)";
-                      }
+                      const getAdvice = () => {
+                        if (conducted === 0) return { icon: 'ℹ', color: 'rgba(255,255,255,0.4)', text: 'No classes yet' };
+                        if (canSkip > 3) return { icon: '✓', color: '#39ff14', text: `You can skip ${cls(canSkip)} more safely` };
+                        if (canSkip > 0) return { icon: '⚠', color: '#ffe600', text: `Only ${canSkip} ${canSkip === 1 ? 'skip' : 'skips'} left — don't miss` };
+                        if (canSkip === 0) return { icon: '⚠', color: '#ffe600', text: `At the limit — attend all classes` };
+                        return { icon: '🚨', color: '#ff2d55', text: `Attend next ${cls(mustAttend)} to reach 75%` };
+                      };
+                      
+                      const advice = getAdvice();
 
                       return (
                         <div key={a.courseCode || i} className="att-mini-card glass animate-up" style={{ 
                           animationDelay: `${i * 40}ms`,
-                          borderLeft: `3px solid ${neon.color}`,
-                          boxShadow: `inset 0 0 30px ${neon.dim}, -2px 0 12px ${neon.color}40`
+                          borderLeft: `3px solid ${color}`,
+                          padding: '16px'
                         }}>
-                          <div className="am-row">
-                            <CircleProgress pct={pct} color={neon.color} size={42} />
-                            <div className="am-main">
-                              <div className="am-name">{a.courseTitle}</div>
-                              <div className="am-meta">
-                                <span className="am-code">{a.courseCode}</span>
-                                <span className="am-pct" style={{ color: neon.color, textShadow: neon.glow, fontWeight: 800 }}>{pct}%</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <CircleProgress pct={pct} size={42} />
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontSize: 13, fontWeight: 700, color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.courseTitle}</div>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 }}>
+                                <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)' }}>{a.courseCode}</span>
+                                <span style={{ color: color, textShadow: `0 0 8px ${color}`, fontWeight: 800, fontSize: 12 }}>{pct}%</span>
                               </div>
                             </div>
                           </div>
-                          <div className="am-footer" style={{ 
-                            color: mClr, background: mBg, borderColor: mBdr, padding: '4px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: '700', marginTop: '8px', border: '1px solid', textAlign: 'center',
-                            boxShadow: `0 0 10px ${mBg}`
-                          }}>
-                            {mTxt}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 12, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                             <span style={{ color: advice.color, fontSize: 14 }}>{advice.icon}</span>
+                             <span style={{ color: advice.color, fontSize: 12, fontWeight: 600 }}>{advice.text}</span>
                           </div>
                         </div>
                       );
@@ -1262,8 +1220,8 @@ export default function Dashboard() {
                   <div className="sum-strip">
                     {[
                       { v: `${avgAtt}%`, l: 'Average', c: 'var(--neon-cyan)', icon: 'M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16z' },
-                      { v: safeAtt, l: 'Safe ≥ 75%', c: 'var(--neon-green)', icon: 'M22 11.08V12a10 10 0 1 1-5.93-9.14M22 4L12 14.01l-3-3' },
-                      { v: below75, l: 'At Risk', c: 'var(--neon-red)', icon: 'M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zm0-7v-2m0-4h.01' },
+                      { v: safeAtt, l: 'ON TRACK', c: 'var(--neon-green)', icon: 'M22 11.08V12a10 10 0 1 1-5.93-9.14M22 4L12 14.01l-3-3' },
+                      { v: below75, l: 'BELOW 75%', c: 'var(--neon-red)', icon: 'M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zm0-7v-2m0-4h.01' },
                       { v: uniqueAttendance.length, l: 'Subjects', c: 'var(--neon-yellow)', icon: 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z' },
                     ].map((s, i) => (
                       <div key={i} className="sum-pill glass-raised animate-up" style={{ 
@@ -1293,32 +1251,25 @@ export default function Dashboard() {
                       const neon = getNeonColor(pct);
 
                       // Margin (classes can skip while staying ABOVE 75%):
-                      const canSkip = conducted > 0
-                        ? Math.floor((attended - 0.75 * conducted) / 0.75)
-                        : 0;
-
-                      // Deficit (classes needed to REACH 75%):
-                      const classesNeeded = pct < 75 && conducted > 0
-                        ? Math.ceil((0.75 * conducted - attended) / 0.25)
-                        : 0;
+                      const classesNeeded = canSkip < 0 ? Math.ceil((0.75 * conducted - attended) / 0.25) : 0;
 
                       const dataStatus = pct >= 85 ? 'safe' : pct >= 75 ? 'caution' : 'atrisk';
-                      const statusLabel = pct >= 85 ? 'Excellent' : pct >= 75 ? 'Safe' : 'At Risk';
-                      const statusClr = neon.color;
+                      const statusLabel = pct >= 85 ? 'EXCELLENT ✓' : pct >= 75 ? 'ON TRACK ✓' : 'BELOW 75%';
+                      const statusClr = getRingColor(pct);
 
                       const facultyName = a.facultyName?.split('(')[0]?.trim() || '—';
 
                       return (
                         <div key={a.courseCode || i} className="att-card glass animate-up" data-status={dataStatus} style={{ 
                           animationDelay: `${i * 40}ms`,
-                          borderLeft: `3px solid ${neon.color}`,
-                          boxShadow: `inset 0 0 30px ${neon.dim}, -2px 0 12px ${neon.color}40`
+                          borderLeft: `3px solid ${statusClr}`,
+                          boxShadow: `inset 0 0 30px ${statusClr}10, -2px 0 12px ${statusClr}40`
                         }}>
 
                           <div className="ac-body">
                             {/* ── Row 1: Circle + Course info + % ── */}
                             <div className="ac-top">
-                              <CircleProgress pct={pct} color={neon.color} size={58} />
+                              <CircleProgress pct={pct} size={58} />
 
                               <div className="ac-course">
                                 <div className="ac-title">{a.courseTitle}</div>
@@ -1339,8 +1290,8 @@ export default function Dashboard() {
                               </div>
 
                               <div className="ac-pct-block">
-                                <div className="ac-pct" style={{ color: neon.color, textShadow: neon.glow, fontWeight: 800 }}>{pct}%</div>
-                                <span className="ac-status-tag" style={{ color: statusClr, background: neon.dim, border: `1px solid ${neon.border}` }}>
+                                <div className="ac-pct" style={{ color: statusClr, textShadow: `0 0 8px ${statusClr}60`, fontWeight: 800 }}>{pct}%</div>
+                                <span className="ac-status-tag" style={{ color: statusClr, background: `${statusClr}15`, border: `1px solid ${statusClr}44` }}>
                                   {statusLabel}
                                 </span>
                               </div>
@@ -1349,16 +1300,16 @@ export default function Dashboard() {
                             {/* ── Segmented progress bar ── */}
                             <div className="ac-bar-wrap">
                               <div className="ac-bar-bg">
-                                <div className="ac-bar-fill progress-fill" style={{ width: `${pct}%`, '--fill-color': neon.color }} />
+                                <div className="ac-bar-fill progress-fill" style={{ width: `${pct}%`, '--fill-color': statusClr }} />
                                 {/* 75% danger threshold marker */}
                                 <div className="ac-marker" style={{ left: '75%' }} title="Minimum 75% required">
-                                  <div className="ac-marker-line" style={{ background: 'var(--neon-red)' }} />
-                                  <span className="ac-marker-lbl" style={{ color: 'var(--neon-red)' }}>75%</span>
+                                  <div className="ac-marker-line" style={{ background: '#ff2d55' }} />
+                                  <span className="ac-marker-lbl" style={{ color: '#ff2d55' }}>75%</span>
                                 </div>
                                 {/* 85% safe threshold marker */}
                                 <div className="ac-marker" style={{ left: '85%' }} title="85% for comfortable buffer">
-                                  <div className="ac-marker-line" style={{ background: 'var(--neon-green)' }} />
-                                  <span className="ac-marker-lbl" style={{ color: 'var(--neon-green)' }}>85%</span>
+                                  <div className="ac-marker-line" style={{ background: '#39ff14' }} />
+                                  <span className="ac-marker-lbl" style={{ color: '#39ff14' }}>85%</span>
                                 </div>
 
                               </div>
@@ -1367,12 +1318,12 @@ export default function Dashboard() {
                             {/* ── Stats grid ─── */}
                             <div className="ac-stats">
                               <div className="ac-stat">
-                                <span className="ac-stat-v" style={{ color: 'var(--neon-green)', textShadow: 'var(--neon-green-glow)' }}>{attended}</span>
+                                <span className="ac-stat-v" style={{ color: '#39ff14', textShadow: '0 0 8px rgba(57,255,20,0.4)' }}>{attended}</span>
                                 <span className="ac-stat-l">Attended</span>
                               </div>
                               <div className="ac-stat-sep" />
                               <div className="ac-stat">
-                                <span className="ac-stat-v" style={{ color: absent > 0 ? 'var(--neon-red)' : 'var(--text-3)', textShadow: absent > 0 ? 'var(--neon-red-glow)' : 'none' }}>{absent}</span>
+                                <span className="ac-stat-v" style={{ color: absent > 0 ? '#ff2d55' : 'var(--text-3)', textShadow: absent > 0 ? '0 0 8px rgba(255,45,85,0.4)' : 'none' }}>{absent}</span>
                                 <span className="ac-stat-l">Absent</span>
                               </div>
                               <div className="ac-stat-sep" />
@@ -1383,34 +1334,28 @@ export default function Dashboard() {
                               <div className="ac-stat-sep" />
 
                               {/* Smart advice cell */}
-                              {conducted === 0 ? (
-                                <div className="ac-advice" style={{ background: 'rgba(255,255,255,0.02)', borderLeft: '2px solid rgba(255,255,255,0.05)' }}>
-                                  <span className="adv-ico">ℹ</span>
-                                  <div>
-                                    <div className="adv-main">No classes conducted yet</div>
-                                    <div className="adv-sub">Need 75% minimum · Currently at {pct}%</div>
+                              {(() => {
+                                const advice = (conducted > 0) ? (
+                                  canSkip > 3 ? { icon: '✓', color: '#39ff14', text: `Can skip: +${canSkip} more classes safely` } :
+                                  canSkip > 0 ? { icon: '⚠', color: '#ffe600', text: `Only ${canSkip} ${canSkip === 1 ? 'skip' : 'skips'} left — don't miss` } :
+                                  canSkip === 0 ? { icon: '⚠', color: '#ffe600', text: `At the limit — attend all classes` } :
+                                  { icon: '🚨', color: '#ff2d55', text: `Deficit: ${cls(classesNeeded)} needed for 75%` }
+                                ) : { icon: 'ℹ', color: 'rgba(255,255,255,0.4)', text: 'No classes yet' };
+
+                                return (
+                                  <div className="ac-advice" style={{ 
+                                    background: `${advice.color}12`,
+                                    borderColor: `${advice.color}33`,
+                                    borderLeft: `2px solid ${advice.color}`
+                                  }}>
+                                    <span className="adv-ico" style={{ color: advice.color }}>{advice.icon}</span>
+                                    <div>
+                                      <div className="adv-main" style={{ color: advice.color }}>{advice.text}</div>
+                                      <div className="adv-sub">You're at {pct}% attendance</div>
+                                    </div>
                                   </div>
-                                </div>
-                              ) : canSkip <= 0 ? (
-                                <div className="ac-advice danger" style={{ background: 'var(--neon-red-dim)', borderColor: 'var(--neon-red-border)' }}>
-                                  <span className="adv-ico">🚨</span>
-                                  <div>
-                                    <div className="adv-main">Deficit: <strong style={{ color: 'var(--neon-red)', textShadow: 'var(--neon-red-glow)' }}>{classesNeeded} classes</strong></div>
-                                    <div className="adv-sub">Need 75% minimum · Currently at {pct}%</div>
-                                  </div>
-                                </div>
-                              ) : (
-                                <div className={`ac-advice ${canSkip > 3 ? 'safe' : 'warn'}`} style={{ 
-                                  background: canSkip > 3 ? 'var(--neon-green-dim)' : 'var(--neon-yellow-dim)',
-                                  borderColor: canSkip > 3 ? 'var(--neon-green-border)' : 'var(--neon-yellow-border)'
-                                }}>
-                                  <span className="adv-ico">{canSkip > 3 ? '✓' : '⚠'}</span>
-                                  <div>
-                                    <div className="adv-main">Margin: <strong style={{ color: canSkip > 3 ? 'var(--neon-green)' : 'var(--neon-yellow)', textShadow: canSkip > 3 ? 'var(--neon-green-glow)' : 'var(--neon-yellow-glow)' }}>{canSkip} classes</strong></div>
-                                    <div className="adv-sub">Need 75% minimum · Currently at {pct}%</div>
-                                  </div>
-                                </div>
-                              )}
+                                );
+                              })()}
                             </div>
                           </div>
                         </div>
@@ -1435,7 +1380,7 @@ export default function Dashboard() {
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                       <button className="btn btn-accent" onClick={() => handleExport(attendance, marks, user)} style={{ fontSize: 11, padding: '8px 16px', borderRadius: '8px' }}>
-                        📄 Get Report Card
+                        📄 Download Report
                       </button>
                       <span className="tag tag-accent">{(marks || []).length} subjects</span>
                     </div>

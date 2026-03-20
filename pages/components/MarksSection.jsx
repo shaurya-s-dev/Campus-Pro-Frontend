@@ -17,6 +17,27 @@ const getNeonColor = (pct) => {
 const MiniLineChart = ({ data }) => {
   if (!data || data.length === 0) return null;
   
+  if (data.length === 1) {
+    const scored = parseFloat(data[0].marks?.scored || data[0].scored || 0);
+    const total = parseFloat(data[0].marks?.total || data[0].total || 1) || 1;
+    const pct = Math.round((scored / total) * 100);
+    const color = pct >= 85 ? '#39ff14' : pct >= 70 ? '#ffe600' : pct >= 55 ? '#ff9500' : '#ff2d55';
+    
+    return (
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        height: 100, gap: 16,
+        background: 'rgba(255,255,255,0.03)',
+        borderRadius: 12, margin: '12px 0',
+      }}>
+        <div style={{textAlign: 'center'}}>
+          <div style={{fontSize: 32, fontWeight: 900, color, textShadow: `0 0 12px ${color}`}}>{pct}%</div>
+          <div style={{fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 2}}>{data[0].test}: {scored}/{total}</div>
+        </div>
+      </div>
+    );
+  }
+  
   const W = 400, H = 140, padL = 36, padR = 16, padT = 12, padB = 28;
   const chartW = W - padL - padR;
   const chartH = H - padT - padB;
@@ -208,7 +229,7 @@ function TargetCalculator({ marks }) {
                 <div className="res-mini-bar">
                   <div className="res-p" style={{ width: `${(needed/remaining)*100}%` }} />
                 </div>
-                <span className="res-sub">Currently: {scored.toFixed(1)} / {totalWeight.toFixed(0)} scored · Need {threshold}% total</span>
+                <span className="res-sub">Currently: {scored.toFixed(1)} / {totalWeight.toFixed(0)} scored · Baseline: {threshold}% total</span>
               </div>
             )}
           </div>
