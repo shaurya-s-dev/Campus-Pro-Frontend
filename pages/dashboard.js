@@ -9,12 +9,11 @@ import TimetableView from '../components/TimetableView';
 import { DataStore, requireAuth, sanitizeObject } from '@/lib/security';
 import MarksSection from '../components/MarksSection';
 
-const AuroraBackground = dynamic(() => import('@/components/AuroraBackground'), { ssr: false });
-const AttendancePlannerContent = dynamic(() => import('../components/SkipProEstimator'), { ssr: false });
-const GpaCalculator = dynamic(() => import('../components/GpaCalculator'), { ssr: false });
-const HelpCenterContent = dynamic(() => import('../components/HelpCenterContent'), { ssr: false });
-const ReportIssueContent = dynamic(() => import('../components/ReportIssueContent'), { ssr: false });
-const CalendarView = dynamic(() => import('../components/CalendarView'), { ssr: false });
+const AttendancePlannerContent = dynamic(() => import('./components/SkipProEstimator'), { ssr: false });
+const GpaCalculator = dynamic(() => import('./components/GpaCalculator'), { ssr: false });
+const HelpCenterContent = dynamic(() => import('./components/HelpCenterContent'), { ssr: false });
+const ReportIssueContent = dynamic(() => import('./components/ReportIssueContent'), { ssr: false });
+const CalendarView = dynamic(() => import('./components/CalendarView'), { ssr: false });
 
 // Show only on mobile — 5 key tabs
 const MOBILE_NAV = [
