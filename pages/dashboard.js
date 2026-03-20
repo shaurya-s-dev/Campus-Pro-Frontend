@@ -150,46 +150,6 @@ export default function Dashboard() {
     }
   }, [tab, courses.length]);
   const { theme } = useTheme();
-  const vantaRef = useRef(null);
-  const vantaEffect = useRef(null);
-
-  useEffect(() => {
-    if (!data) return; // only init after data loads
-    
-    const loadVanta = async () => {
-      const THREE = await import('three');
-      const VANTA = await import('vanta/dist/vanta.net.min');
-      
-      if (!vantaEffect.current && vantaRef.current) {
-        vantaEffect.current = VANTA.default({
-          el: vantaRef.current,
-          THREE: THREE,
-          mouseControls: false,
-          touchControls: false,
-          gyroControls: false,
-          minHeight: 200.00,
-          minWidth: 200.00,
-          scale: 1.00,
-          scaleMobile: 1.00,
-          color: theme === 'dark' ? 0x6366f1 : 0x4f46e5,
-          backgroundColor: theme === 'dark' ? 0x04050d : 0xf3f4fb,
-          backgroundAlpha: 1,
-          points: 6.00,
-          maxDistance: 22.00,
-          spacing: 20.00,
-        });
-      }
-    };
-    loadVanta();
-
-    return () => {
-      if (vantaEffect.current) {
-        vantaEffect.current.destroy();
-        vantaEffect.current = null;
-      }
-    };
-  }, [data, theme]);
-
   useEffect(() => {
     if (!requireAuth(router)) return;
     const raw = DataStore.get();
@@ -264,7 +224,12 @@ export default function Dashboard() {
       <Head><title>CampusPro — {user.name || 'Dashboard'}</title></Head>
 
       {/* ── Animated ambient background ──────── */}
-      <div className="dash-bg" ref={vantaRef} aria-hidden="true">
+      <div className="dash-bg" aria-hidden="true">
+        <div className="dash-bg-grid" />
+        <div className="dash-blob-1" />
+        <div className="dash-blob-2" />
+        <div className="dash-blob-3" />
+        <div className="dash-blob-4" />
         <div className="dash-bg-vignette" />
       </div>
 
