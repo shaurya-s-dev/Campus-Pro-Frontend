@@ -197,7 +197,15 @@ export default function CalendarPage() {
     const data   = CALENDAR_DATA[activeMonth] || {};
     const events = (data.events || []).filter(e => e.date === selectedDay);
     const order  = data.dayOrders?.[selectedDay];
-    return { events, order };
+    
+    // Derive hol/wknd
+    const [monthName, year] = activeMonth.split(' ');
+    const month = MONTH_NAMES.indexOf(monthName);
+    const d = new Date(parseInt(year), month, selectedDay);
+    const isWknd = d.getDay() === 0 || d.getDay() === 6;
+    const isHol = events.some(e => e.type === 'holiday');
+    
+    return { events, order, isHol, isWknd };
   }, [selectedDay, activeMonth]);
 
   const goToMonth = useCallback((idx) => {
@@ -450,7 +458,7 @@ export default function CalendarPage() {
                             ) : (
                               <span className="day-num">{d}</span>
                             )}
-                            {order && !isHol && (
+                            {order && !isHol && !isWknd && (
                               <span className={`order-tag ${isExam ? 'ot-exam' : 'ot-reg'}`}>
                                 {order}
                               </span>
@@ -487,7 +495,7 @@ export default function CalendarPage() {
                           <span className="dp-daynum">{selectedDay}</span>
                           <span className="dp-month">{activeMonth.split(' ')[0]}</span>
                         </div>
-                        {detailData.order && (
+                        {detailData.order && !detailData.isHol && !detailData.isWknd && (
                           <div className="dp-order">{detailData.order}</div>
                         )}
                         <button className="dp-close" onClick={() => setSelectedDay(null)}>
@@ -515,7 +523,9 @@ export default function CalendarPage() {
                         </div>
                       ) : (
                         <div className="dp-empty">
-                          {detailData.order ? '📚 Regular class day' : 'No events scheduled'}
+                          {detailData.isHol ? `🏝️ ${detailData.events.find(e => e.type === 'holiday')?.label || 'Holiday'}` : 
+                           detailData.isWknd ? '😴 Weekend — No Classes' : 
+                           detailData.order ? '📚 Regular class day' : 'No events scheduled'}
                         </div>
                       )}
                     </div>

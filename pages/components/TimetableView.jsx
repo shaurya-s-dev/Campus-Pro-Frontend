@@ -370,10 +370,12 @@ export default function TimetableView({ timetableData }) {
 
   const today        = new Date();
   const todayKey     = dateKey(today);
+  const dow          = today.getDay(); // 0=Sun, 6=Sat
+  
   const todayOrder   = ACADEMIC_CALENDAR[todayKey];        // number|null|undefined
-  const isHoliday    = todayOrder === null;
-  const isWeekend    = todayOrder === undefined;
-  const hasTodayClass= typeof todayOrder === 'number';
+  const isWeekend    = (dow === 0 || dow === 6);
+  const isHoliday    = !isWeekend && todayOrder === null;
+  const hasTodayClass= !isWeekend && typeof todayOrder === 'number';
   const holidayName  = HOLIDAY_NAMES[todayKey] || 'Holiday';
   const nextDay      = (isHoliday || isWeekend) ? nextClassDay(today) : null;
 
@@ -439,9 +441,9 @@ export default function TimetableView({ timetableData }) {
         {/* ── TODAY BANNER ─────────────────────── */}
         {isHoliday && (
           <div className="today-banner banner-holiday">
-            <span className="tb-emoji">🎉</span>
+            <span className="tb-emoji">🏝️</span>
             <div className="tb-text">
-              <strong>{holidayName}</strong> — No Classes Today
+              <strong>Holiday — {holidayName}</strong>
               {nextDay && (
                 <span className="tb-next">Next class day: {fmtDate(nextDay.date)} (Day {nextDay.dayOrder})</span>
               )}
@@ -452,7 +454,7 @@ export default function TimetableView({ timetableData }) {
           <div className="today-banner banner-weekend">
             <span className="tb-emoji">😴</span>
             <div className="tb-text">
-              <strong>Weekend!</strong> — Enjoy your break
+              <strong>Weekend</strong> — No Classes Scheduled
               {nextDay && (
                 <span className="tb-next">Next class day: {fmtDate(nextDay.date)} (Day {nextDay.dayOrder})</span>
               )}
