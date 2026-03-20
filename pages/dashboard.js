@@ -9,9 +9,11 @@ import TimetableView from '../components/TimetableView';
 import { DataStore, requireAuth, sanitizeObject } from '@/lib/security';
 import MarksSection from '../components/MarksSection';
 
+const AuroraBackground = dynamic(() => import('@/components/AuroraBackground'), { ssr: false });
 const AttendancePlannerContent = dynamic(() => import('./components/SkipProEstimator'), { ssr: false });
 const GpaCalculator = dynamic(() => import('./components/GpaCalculator'), { ssr: false });
 const HelpCenterContent = dynamic(() => import('./components/HelpCenterContent'), { ssr: false });
+const BottomNav = dynamic(() => import('../components/BottomNav'), { ssr: false });
 const ReportIssueContent = dynamic(() => import('./components/ReportIssueContent'), { ssr: false });
 const CalendarView = dynamic(() => import('./components/CalendarView'), { ssr: false });
 
@@ -155,31 +157,31 @@ export default function Dashboard() {
 
   /* ── Derived data ───────────────────────────── */
   const user       = data?.user || {};
-  const attendance = data?.attendance?.attendance || [];
-  const marks      = data?.marks?.marks           || [];
-  const timetable  = data?.timetable              || null;
-  const courses    = data?.courses?.courses       || [];
+  const attendance = (data?.attendance?.attendance || []).filter(Boolean);
+  const marks      = (data?.marks?.marks           || []).filter(Boolean);
+  const timetable  = data?.timetable               || null;
+  const courses    = (data?.courses?.courses       || []).filter(Boolean);
 
   // Deduplicate attendance by course code for snapshot grid
   const uniqueAttendance = useMemo(() => {
     if (!attendance || !Array.isArray(attendance)) return [];
     return attendance.filter((item, index, self) =>
-      index === self.findIndex(a => a.courseCode === item.courseCode)
+      item && index === self.findIndex(a => a?.courseCode === item.courseCode)
     );
   }, [attendance]);
 
   /* ── Memoised stats to avoid repeated filter/reduce in render ── */
   const courseStats = useMemo(() => ({
-    theory:    courses.filter(c => c.slotType === 'Theory').length,
-    practical: courses.filter(c => c.slotType === 'Practical').length,
-    credits:   courses.reduce((s, c) => s + (parseFloat(c.credit) || 0), 0),
+    theory:    courses.filter(c => c?.slotType === 'Theory').length,
+    practical: courses.filter(c => c?.slotType === 'Practical').length,
+    credits:   courses.reduce((s, c) => s + (parseFloat(c?.credit) || 0), 0),
   }), [courses]);
 
   const avgAtt = useMemo(() => {
     if (!uniqueAttendance.length) return 0;
     const sum = uniqueAttendance.reduce((acc, curr) => {
-      const conducted = parseFloat(curr.hoursConducted) || 0;
-      const absent = parseFloat(curr.hoursAbsent) || 0;
+      const conducted = parseFloat(curr?.hoursConducted) || 0;
+      const absent = parseFloat(curr?.hoursAbsent) || 0;
       const attended = conducted - absent;
       return acc + (conducted > 0 ? (attended / conducted) * 100 : 0);
     }, 0);
@@ -187,8 +189,8 @@ export default function Dashboard() {
   }, [uniqueAttendance]);
 
   const safeAtt = uniqueAttendance.filter(a => {
-    const conducted = parseFloat(a.hoursConducted) || 0;
-    const absent = parseFloat(a.hoursAbsent) || 0;
+    const conducted = parseFloat(a?.hoursConducted) || 0;
+    const absent = parseFloat(a?.hoursAbsent) || 0;
     const attended = conducted - absent;
     const pct = conducted > 0 ? (attended / conducted) * 100 : 0;
     return pct >= 75;
@@ -250,9 +252,24 @@ export default function Dashboard() {
       <AuroraBackground />
 
       <div className="app-shell" style={{ position: 'relative', zIndex: 1 }}>
-        <div className="sb-desk">
-          <Sidebar activeTab={tab} onTabChange={handleTabChange} user={user} below75={below75} />
-        </div>
+        <Sidebar activeTab={tab} onTabChange={handleTabChange} user={user} below75={below75} />
+
+        <header className="mobile-header">
+          <div className="mh-brand">
+            <img 
+              src="/logos/campuspro-wordmark.svg" 
+              alt="CampusPro"
+              style={{ width: 140, height: 'auto' }}
+            />
+          </div>
+          <div className="mh-user">
+            <div className="mh-avatar">{(String(user?.name || 'S'))[0]}</div>
+            <div>
+              <div className="mh-name">{String(user?.name || '').split(' ')[0] || 'Student'}</div>
+              <div className="mh-reg">{user?.regNumber || '—'}</div>
+            </div>
+          </div>
+        </header>
 
         <main className="main-content">
 
@@ -289,7 +306,7 @@ export default function Dashboard() {
                       </h1>
                       <p className="page-sub">
                         {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                        {user?.department ? ' · ' + user.department.replace(/\(.*\)/, '').trim() : ''}
+                        {user?.department && typeof user.department === 'string' ? ' · ' + user.department.replace(/\(.*\)/, '').trim() : ''}
                         {user?.section ? ' · ' + user.section + ' Section' : ''}
                       </p>
                     </div>
@@ -678,9 +695,10 @@ export default function Dashboard() {
 
                   <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))', gap:14 }}>
                     {courses.map((c, i) => {
+                      if (!c) return null;
                       const isTheory = c.slotType === 'Theory';
                       const bar = isTheory ? '#6366f1' : '#10b981';
-                      const faculty = c.faculty?.split('(')[0]?.trim() || '—';
+                      const faculty = typeof c.faculty === 'string' ? c.faculty.split('(')[0]?.trim() || '—' : '—';
                       return (
                         <div key={i} className="cc-card glass animate-up" style={{ animationDelay:`${i*40}ms`, borderRadius:'var(--radius-lg)', overflow:'hidden', padding:0, transition:'transform .2s,box-shadow .2s' }}
                           onMouseEnter={e=>e.currentTarget.style.transform='translateY(-4px)'}
@@ -814,34 +832,7 @@ export default function Dashboard() {
           )}
         </main>
 
-        <nav className="mobile-bottom-nav">
-          {MOBILE_NAV.map(item => {
-            const iconsMap = {
-              grid: "M3 3h7v7H3z M14 3h7v7h-7z M14 14h7v7h-7z M3 14h7v7H3z",
-              chart: "M22 12l-4 4m0 0l-4-4m4 4V8M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16z",
-              award: "M12 15l-2 5l2-1l2 1l-2-5z M12 2a7 7 0 1 0 0 14a7 7 0 0 0 0 -14z",
-              clock: "M12 6v6l4 2 M12 2a10 10 0 1 0 0 20a10 10 0 0 0 0 -20z",
-              book: "M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z",
-              target: "M12 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"
-            };
-            const iconD = iconsMap[item.icon];
-
-            return (
-              <button
-                key={item.id}
-                className={`mbn-item ${tab === item.id ? 'mbn-active' : ''}`}
-                onClick={() => handleTabChange(item.id)}
-              >
-                <span className="mbn-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d={iconD} />
-                  </svg>
-                </span>
-                <span className="mbn-label">{item.label}</span>
-              </button>
-            );
-          })}
-        </nav>
+        <BottomNav activeTab={tab} onTabChange={handleTabChange} below75={below75} />
       </div>
 
       <style jsx global>{`
@@ -1020,22 +1011,39 @@ export default function Dashboard() {
         .ap-warning-modal { max-width: 460px; width: 100%; border-radius: var(--radius-xl); padding: 32px; border: 1px solid var(--amber-border); }
 
         .install-banner { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); width: calc(100% - 32px); max-width: 420px; background: var(--card-bg); border: 1px solid var(--accent-border); border-radius: 16px; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; z-index: 9999; box-shadow: 0 8px 32px rgba(0,0,0,0.5); backdrop-filter: blur(20px); }
-        .mobile-bottom-nav { display: none; position: fixed; bottom: 0; left: 0; right: 0; height: 64px; background: var(--sidebar-bg); border-top: 1px solid var(--sidebar-border); backdrop-filter: blur(20px); z-index: 100; grid-template-columns: repeat(5, 1fr); align-items: center; padding-bottom: env(safe-area-inset-bottom); }
-        .mbn-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; background: none; border: none; color: var(--text-4); cursor: pointer; padding: 8px 4px; border-radius: 10px; transition: all 0.15s; }
-        .mbn-active { color: var(--accent-light) !important; background: var(--accent-dim); }
-        .mbn-label { font-size: 10px; font-weight: 600; }
+        .mobile-header { display: none; }
 
-        @media (max-width: 860px) {
-          .app-shell { flex-direction: column; }
-          .main-content { padding: 16px 14px 80px; }
-          .hd-meta { display: none; }
-          .mobile-bottom-nav { display: grid; }
-          .sb-desk { display: none !important; }
-        }
-        @media (max-width: 640px) {
-          .kpi-grid { grid-template-columns: 1fr 1fr; }
-          .sum-strip { grid-template-columns: 1fr 1fr; }
-          .page-title { font-size: 22px; }
+        @media (max-width: 768px) {
+          .mobile-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            background: rgba(10,10,20,0.9);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+          }
+          .mh-brand {
+            font-family: var(--font-mono);
+            font-size: 14px;
+            color: #fff;
+          }
+          .mh-brand strong { color: #6366f1; }
+          .mh-user { display: flex; align-items: center; gap: 8px; }
+          .mh-avatar {
+            width: 30px; height: 30px;
+            background: linear-gradient(135deg,#6366f1,#8b5cf6);
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 13px; color: #fff;
+          }
+          .mh-name { font-size: 12px; font-weight: 600; color: #fff; }
+          .mh-reg { font-size: 9px; color: rgba(255,255,255,0.35); font-family: var(--font-mono); }
+          
+          .hd-meta { display: none !important; }
         }
       `}</style>
     </>
