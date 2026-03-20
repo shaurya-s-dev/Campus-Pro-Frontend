@@ -8,21 +8,30 @@ import Sidebar from '@/components/Sidebar';
 import TimetableView from '../components/TimetableView';
 import { DataStore, requireAuth, sanitizeObject } from '@/lib/security';
 import MarksSection from '../components/MarksSection';
-import GpaCalculator from './components/GpaCalculator';
-import SkipProEstimator from './components/SkipProEstimator';
-import CalendarView from './components/CalendarView';
-import HelpCenterContent from './components/HelpCenterContent';
-import ReportIssueContent from './components/ReportIssueContent';
 
-const AuroraBackground = dynamic(() => import('../components/AuroraBackground'), { ssr: false });
+const AuroraBackground = dynamic(() => import('@/components/AuroraBackground'), { ssr: false });
+const AttendancePlannerContent = dynamic(() => import('./components/SkipProEstimator'), { ssr: false });
+const GpaCalculator = dynamic(() => import('./components/GpaCalculator'), { ssr: false });
+const HelpCenterContent = dynamic(() => import('./components/HelpCenterContent'), { ssr: false });
+const ReportIssueContent = dynamic(() => import('./components/ReportIssueContent'), { ssr: false });
+const CalendarView = dynamic(() => import('./components/CalendarView'), { ssr: false });
 
 // Show only on mobile — 5 key tabs
 const MOBILE_NAV = [
-  { id: 'overview',    label: 'Home'       },
-  { id: 'attendance',  label: 'Attendance' },
-  { id: 'marks',       label: 'Marks'      },
-  { id: 'timetable',   label: 'Timetable'  },
-  { id: 'courses',     label: 'Courses'    },
+  { id: 'overview',    label: 'Home',       icon: 'grid' },
+  { id: 'attendance',  label: 'Attendance', icon: 'chart' },
+  { id: 'marks',       label: 'Marks',      icon: 'award' },
+  { id: 'timetable',   label: 'Timetable',  icon: 'clock' },
+  { id: 'courses',     label: 'Courses',    icon: 'book' },
+  { id: 'skippro',     label: 'Planner',    icon: 'target' },
+];
+
+const SUPPORT_NAV = [
+  { id: 'gpa',         label: 'GPA Calculator', icon: 'percent' },
+  { id: 'calendar',    label: 'Academic Calendar', icon: 'calendar' },
+  { id: 'profile',     label: 'My Profile', icon: 'user' },
+  { id: 'help',        label: 'Help Center', icon: 'help' },
+  { id: 'reportissue', label: 'Report Issue', icon: 'flag' },
 ];
 
 /* ── SVG Icon ─────────────────────────────────────── */
@@ -152,6 +161,14 @@ export default function Dashboard() {
   const timetable  = data?.timetable              || null;
   const courses    = data?.courses?.courses       || [];
 
+  // Deduplicate attendance by course code for snapshot grid
+  const uniqueAttendance = useMemo(() => {
+    if (!attendance || !Array.isArray(attendance)) return [];
+    return attendance.filter((item, index, self) =>
+      index === self.findIndex(a => a.courseCode === item.courseCode)
+    );
+  }, [attendance]);
+
   /* ── Memoised stats to avoid repeated filter/reduce in render ── */
   const courseStats = useMemo(() => ({
     theory:    courses.filter(c => c.slotType === 'Theory').length,
@@ -159,25 +176,26 @@ export default function Dashboard() {
     credits:   courses.reduce((s, c) => s + (parseFloat(c.credit) || 0), 0),
   }), [courses]);
 
-  const avgAtt   = attendance.length
-    ? (attendance.reduce((s, a) => {
-        const c = parseFloat(a.hoursConducted) || 0;
-        const p = c > 0 ? ((c - (parseFloat(a.hoursAbsent) || 0)) / c) * 100 : parseFloat(a.attendancePercentage) || 0;
-        return s + (isFinite(p) ? p : 0);
-      }, 0) / attendance.length).toFixed(1)
-    : 0;
+  const avgAtt = useMemo(() => {
+    if (!uniqueAttendance.length) return 0;
+    const sum = uniqueAttendance.reduce((acc, curr) => {
+      const conducted = parseFloat(curr.hoursConducted) || 0;
+      const absent = parseFloat(curr.hoursAbsent) || 0;
+      const attended = conducted - absent;
+      return acc + (conducted > 0 ? (attended / conducted) * 100 : 0);
+    }, 0);
+    return parseFloat((sum / uniqueAttendance.length).toFixed(2));
+  }, [uniqueAttendance]);
 
-  const below75  = attendance.filter((a) => {
-    const c = parseFloat(a.hoursConducted) || 0;
-    const p = c > 0 ? ((c - (parseFloat(a.hoursAbsent) || 0)) / c) * 100 : parseFloat(a.attendancePercentage) || 0;
-    return (isFinite(p) ? p : 0) < 75;
+  const safeAtt = uniqueAttendance.filter(a => {
+    const conducted = parseFloat(a.hoursConducted) || 0;
+    const absent = parseFloat(a.hoursAbsent) || 0;
+    const attended = conducted - absent;
+    const pct = conducted > 0 ? (attended / conducted) * 100 : 0;
+    return pct >= 75;
   }).length;
-
-  const safeAtt  = attendance.filter((a) => {
-    const c = parseFloat(a.hoursConducted) || 0;
-    const p = c > 0 ? ((c - (parseFloat(a.hoursAbsent) || 0)) / c) * 100 : parseFloat(a.attendancePercentage) || 0;
-    return (isFinite(p) ? p : 0) >= 75;
-  }).length;
+  
+  const below75 = uniqueAttendance.length - safeAtt;
 
   const avgScore = marks.length
     ? (marks.reduce((s, m) => {
@@ -362,9 +380,9 @@ export default function Dashboard() {
                     <button className="link-btn" onClick={() => setTab('attendance')}>View all →</button>
                   </div>
                   <div className="att-mini-grid">
-                    {attendance.length === 0 ? (
+                    {uniqueAttendance.length === 0 ? (
                       <div className="empty-state">No attendance records found.</div>
-                    ) : attendance.map((a, i) => {
+                    ) : uniqueAttendance.map((a, i) => {
                       const conducted = parseFloat(a.hoursConducted) || 0;
                       const absent    = parseFloat(a.hoursAbsent) || 0;
                       const attended  = conducted - absent;
@@ -442,13 +460,15 @@ export default function Dashboard() {
                 <div className="tab-panel animate-in">
                   <div className="page-hd">
                     <div className="sc-titles-group">
-                      <h1 className="page-title">Attendance</h1>
+                      <div className="page-title-bar">
+                        <h1 className="page-title">Attendance</h1>
+                      </div>
                       <p className="section-helper">
-                        Your official attendance records directly from SRM Academia. 
-                        Safe subjects are ≥75%. Margin shows classes you can afford to skip.
+                        View detailed breakdown of your attendance per subject. 
+                        Minimum 75% required to be safe. 85% recommended for buffer.
                       </p>
                     </div>
-                    <span className="tag tag-accent">{attendance.length} subjects</span>
+                    <span className="tag tag-accent">{uniqueAttendance.length} subjects</span>
                   </div>
 
                   {/* ── Summary strip ─────────────────── */}
@@ -457,7 +477,7 @@ export default function Dashboard() {
                       { v: `${avgAtt}%`, l: 'Average',    c: 'var(--accent-light)', icon: 'M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16z' },
                       { v: safeAtt,      l: 'Safe ≥ 75%', c: 'var(--emerald)',       icon: 'M22 11.08V12a10 10 0 1 1-5.93-9.14M22 4L12 14.01l-3-3' },
                       { v: below75,      l: 'At Risk',    c: 'var(--rose)',           icon: 'M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zm0-7v-2m0-4h.01' },
-                      { v: attendance.length, l: 'Subjects', c: 'var(--amber)',      icon: 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z' },
+                      { v: uniqueAttendance.length, l: 'Subjects', c: 'var(--amber)',      icon: 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z' },
                     ].map((s, i) => (
                       <div key={i} className="sum-pill glass-raised animate-up" style={{ animationDelay: `${i * 45}ms` }}>
                         <div className="sp-icon" style={{ color: s.c, background: `${s.c}12`, border: `1px solid ${s.c}20` }}>
@@ -471,32 +491,34 @@ export default function Dashboard() {
 
                   {/* ── Attendance cards ──────────────── */}
                   <div className="att-cards">
-                    {attendance.length === 0 ? (
+                    {uniqueAttendance.length === 0 ? (
                       <div className="empty-state">No attendance records found.</div>
-                    ) : attendance.map((a, i) => { // key uses courseCode for stability
+                    ) : uniqueAttendance.map((a, i) => { 
                       const conducted  = parseFloat(a.hoursConducted) || 0;
                       const absent     = parseFloat(a.hoursAbsent) || 0;
                       const attended   = conducted - absent;
-                      const pctMatch   = conducted > 0 ? (attended / conducted) * 100 : parseFloat(a.attendancePercentage) || 0;
-                      const pct        = parseFloat(pctMatch.toFixed(2));
+                      const percentage = conducted > 0 ? (attended / conducted) * 100 : 0;
+                      const pct        = parseFloat(percentage.toFixed(2));
                       const clr        = attColor(pct);
 
-                      // Classes needed to reach 75% / classes that can be skipped
-                      const toReach75 = Math.ceil((0.75 * conducted - attended) / 0.25);
-                      const canSkip75 = Math.floor((attended - 0.75 * conducted) / 0.75);
+                      // Margin (classes can skip while staying ABOVE 75%):
+                      const canSkip = conducted > 0 
+                        ? Math.floor((attended - 0.75 * conducted) / 0.75) 
+                        : 0;
 
-                      const status =
-                        pct >= 85 ? { label: 'Excellent', clr: 'var(--emerald)' } :
-                        pct >= 75 ? { label: 'Safe',      clr: 'var(--amber)'   } :
-                                    { label: 'At Risk',   clr: 'var(--rose)'    };
+                      // Deficit (classes needed to REACH 75%):
+                      const classesNeeded = pct < 75 && conducted > 0
+                        ? Math.ceil((0.75 * conducted - attended) / 0.25)
+                        : 0;
+
+                      const dataStatus = pct >= 85 ? 'safe' : pct >= 75 ? 'caution' : 'atrisk';
+                      const statusLabel = pct >= 85 ? 'Excellent' : pct >= 75 ? 'Safe' : 'At Risk';
+                      const statusClr = pct >= 85 ? 'var(--emerald)' : pct >= 75 ? 'var(--amber)' : 'var(--rose)';
 
                       const facultyName = a.facultyName?.split('(')[0]?.trim() || '—';
 
                       return (
-                        <div key={a.courseCode || i} className="att-card glass animate-up" style={{ animationDelay: `${i * 40}ms` }}>
-
-                          {/* Left accent stripe */}
-                          <div className="ac-stripe" style={{ background: clr }} />
+                        <div key={a.courseCode || i} className="att-card glass animate-up" data-status={dataStatus} style={{ animationDelay: `${i * 40}ms` }}>
 
                           <div className="ac-body">
                             {/* ── Row 1: Circle + Course info + % ── */}
@@ -523,8 +545,8 @@ export default function Dashboard() {
 
                               <div className="ac-pct-block">
                                 <div className="ac-pct" style={{ color: clr }}>{pct}%</div>
-                                <span className="ac-status-tag" style={{ color: status.clr, background: `${status.clr}12`, border: `1px solid ${status.clr}22` }}>
-                                  {status.label}
+                                <span className="ac-status-tag" style={{ color: statusClr, background: `${statusClr}12`, border: `1px solid ${statusClr}22` }}>
+                                  {statusLabel}
                                 </span>
                               </div>
                             </div>
@@ -532,7 +554,7 @@ export default function Dashboard() {
                             {/* ── Segmented progress bar ── */}
                             <div className="ac-bar-wrap">
                               <div className="ac-bar-bg">
-                                <div className="ac-bar-fill" style={{ width: `${Math.min(pct, 100)}%`, background: `linear-gradient(90deg, ${clr}99, ${clr})` }} />
+                                <div className="ac-bar-fill" style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${clr}99, ${clr})` }} />
                                 {/* 75% danger threshold marker */}
                                 <div className="ac-marker" style={{ left: '75%' }} title="Minimum 75% required">
                                   <div className="ac-marker-line" style={{ background: 'var(--rose)' }} />
@@ -574,27 +596,19 @@ export default function Dashboard() {
                                     <div className="adv-sub">Need 75% minimum · Currently at {pct}%</div>
                                   </div>
                                 </div>
-                              ) : canSkip75 < 0 ? (
+                              ) : canSkip <= 0 ? (
                                 <div className="ac-advice danger">
                                   <span className="adv-ico">🚨</span>
                                   <div>
-                                    <div className="adv-main">Deficit: <strong style={{ color: 'var(--rose)' }}>-{toReach75} classes</strong></div>
-                                    <div className="adv-sub">Need 75% minimum · Currently at {pct}%</div>
-                                  </div>
-                                </div>
-                              ) : canSkip75 === 0 ? (
-                                <div className="ac-advice warn">
-                                  <span className="adv-ico">⚠</span>
-                                  <div>
-                                    <div className="adv-main">Margin: <strong style={{ color: 'var(--amber)' }}>0 classes</strong></div>
+                                    <div className="adv-main">Deficit: <strong style={{ color: 'var(--rose)' }}>{classesNeeded} classes</strong></div>
                                     <div className="adv-sub">Need 75% minimum · Currently at {pct}%</div>
                                   </div>
                                 </div>
                               ) : (
-                                <div className={`ac-advice ${canSkip75 > 3 ? 'safe' : 'warn'}`}>
-                                  <span className="adv-ico">{canSkip75 > 3 ? '✓' : '⚠'}</span>
+                                <div className={`ac-advice ${canSkip > 3 ? 'safe' : 'warn'}`}>
+                                  <span className="adv-ico">{canSkip > 3 ? '✓' : '⚠'}</span>
                                   <div>
-                                    <div className="adv-main">Margin: <strong style={{ color: canSkip75 > 3 ? 'var(--emerald)' : 'var(--amber)' }}>+{canSkip75} classes</strong></div>
+                                    <div className="adv-main">Margin: <strong style={{ color: canSkip > 3 ? 'var(--emerald)' : 'var(--amber)' }}>{canSkip} classes</strong></div>
                                     <div className="adv-sub">Need 75% minimum · Currently at {pct}%</div>
                                   </div>
                                 </div>
@@ -648,30 +662,34 @@ export default function Dashboard() {
               {/* ═══════════════════════════════
                   COURSES TAB
               ═══════════════════════════════ */}
-              {tab === 'courses' && (
-                <div className="tab-panel animate-in">
-                  <div className="page-hd">
-                    <div className="sc-titles-group">
-                      <h1 className="page-title">Courses</h1>
-                      <p className="section-helper">
-                        All subjects you are currently enrolled in for this semester, 
-                        including faculty details, room locations, and credits.
-                      </p>
-                    </div>
-                    <span className="tag tag-accent">{courses.length} enrolled</span>
-                  </div>
+               {tab === 'courses' && (
+                 <div className="tab-panel animate-in">
+                   <div className="page-hd">
+                     <div className="sc-titles-group">
+                       <div className="page-title-bar">
+                         <h1 className="page-title">Courses</h1>
+                       </div>
+                       <p className="section-helper">
+                         All subjects you are currently enrolled in for this semester, 
+                         including faculty details, room locations, and credits.
+                       </p>
+                     </div>
+                     <span className="tag tag-accent">{courses.length} enrolled</span>
+                   </div>
 
-                  <div className="cs-strip">
-                    {[
-                      { l: 'Theory',    v: courseStats.theory,    c: 'var(--accent-light)' },
-                      { l: 'Practical', v: courseStats.practical, c: 'var(--emerald)' },
-                      { l: 'Total Credits', v: courseStats.credits,  c: 'var(--amber)' },
-                    ].map((s, i) => (
-                      <div key={i} className="cs-pill glass-raised">
-                        <span className="cs-val" style={{ color: s.c }}>{s.v}</span>
-                        <span className="cs-lbl">{s.l}</span>
-                      </div>
-                    ))}
+                   <div className="courses-summary-strip">
+                    <div className="css-chip">
+                      <span className="css-num">{courseStats.theory}</span>
+                      <span className="css-label">Theory</span>
+                    </div>
+                    <div className="css-chip">
+                      <span className="css-num">{courseStats.practical}</span>
+                      <span className="css-label">Practical</span>
+                    </div>
+                    <div className="css-chip css-chip-accent">
+                      <span className="css-num">{courseStats.credits}</span>
+                      <span className="css-label">Total Credits</span>
+                    </div>
                   </div>
 
                   <div className="courses-grid">
@@ -680,44 +698,35 @@ export default function Dashboard() {
                     ) : courses.map((c, i) => {
                       const isTheory  = c.slotType === 'Theory';
                       const faculty   = c.faculty?.split('(')[0]?.trim() || '—';
-                      const accentClr = isTheory ? 'var(--accent-light)' : 'var(--emerald)';
-                      const barClr    = isTheory ? '#6366f1' : '#10b981';
                       return (
-                        <div key={c.code || i} className="cc-card glass glass-hover animate-up" style={{ animationDelay: `${i * 40}ms`, position:'relative' }}>
-                          <div className="card-shimmer"></div>
-                          {/* Top accent stripe */}
-                          <div className="cc-stripe" style={{ background: `linear-gradient(90deg, ${barClr}, transparent)` }} />
-                          <div className="cc-body">
-                            <div className="cc-top">
+                        <div key={c.code || i} className="course-card glass glass-hover animate-up" style={{ animationDelay: `${i * 40}ms` }}>
+                          <div className="cc-header">
+                            <div className="cc-left">
                               <span className="cc-code">{c.code}</span>
-                              <span className={`tag ${isTheory ? 'tag-accent' : 'tag-emerald'}`} style={{ fontSize: 9.5 }}>
-                                {c.slotType || '—'}
+                              <span className={`cc-type-badge ${isTheory ? 'badge-theory' : 'badge-lab'}`}>
+                                {c.slotType || 'Theory'}
                               </span>
                             </div>
-                            <div className="cc-title">{c.title}</div>
-                            <div className="cc-faculty">
-                              <div className="cc-fav" style={{ color: accentClr, background: `${barClr}18`, border: `1px solid ${barClr}33` }}>
-                                {faculty[0] || '?'}
-                              </div>
-                              <span className="cc-fname">{faculty}</span>
+                            <span className="cc-credits">{c.credit} cr</span>
+                          </div>
+                          
+                          <h3 className="cc-title">{c.title}</h3>
+                          
+                          <div className="cc-meta">
+                            <div className="cc-meta-row">
+                              <span className="cc-meta-icon">👤</span>
+                              <span className="cc-meta-text">{faculty}</span>
                             </div>
-                            <div className="cc-info">
-                              <div className="ci">
-                                <span className="ci-ico">🏫</span>
-                                <span className="ci-v">{c.room || '—'}</span>
-                                <span className="ci-l">Room</span>
-                              </div>
-                              <div className="ci">
-                                <span className="ci-ico">🕐</span>
-                                <span className="ci-v">{c.slot || '—'}</span>
-                                <span className="ci-l">Slot</span>
-                              </div>
-                              <div className="ci">
-                                <span className="ci-ico">⭐</span>
-                                <span className="ci-v">{c.credit || '0'}</span>
-                                <span className="ci-l">Credits</span>
-                              </div>
+                            <div className="cc-meta-row">
+                              <span className="cc-meta-icon">📍</span>
+                              <span className="cc-meta-text">{c.room || '—'} · {c.slot || '?'} Slot</span>
                             </div>
+                            {c.section && (
+                              <div className="cc-meta-row">
+                                <span className="cc-meta-icon">🆔</span>
+                                <span className="cc-section">Section {c.section}</span>
+                              </div>
+                            )}
                           </div>
                         </div>
                       );
@@ -770,7 +779,7 @@ export default function Dashboard() {
                   
                   {/* Actual planner content — only show if warning acknowledged */}
                   {!showAttendanceWarning && (
-                    <SkipProEstimator 
+                    <AttendancePlannerContent 
                       attendance={attendance} 
                       courses={courses} 
                     />
@@ -814,16 +823,10 @@ export default function Dashboard() {
               chart: "M22 12l-4 4m0 0l-4-4m4 4V8M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16z",
               award: "M12 15l-2 5l2-1l2 1l-2-5z M12 2a7 7 0 1 0 0 14a7 7 0 0 0 0 -14z",
               clock: "M12 6v6l4 2 M12 2a10 10 0 1 0 0 20a10 10 0 0 0 0 -20z",
-              book: "M4 19.5A2.5 2.5 0 0 1 6.5 17H20 M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"
+              book: "M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z",
+              target: "M12 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"
             };
-            const iconIdMap = {
-              overview: 'grid',
-              attendance: 'chart',
-              marks: 'award',
-              timetable: 'clock',
-              courses: 'book'
-            };
-            const iconD = iconsMap[iconIdMap[item.id]];
+            const iconD = iconsMap[item.icon];
 
             return (
               <button
@@ -894,8 +897,8 @@ export default function Dashboard() {
         :global(.kpi:hover) { transform: translateY(-5px); }
         :global(.kpi-header) { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
         :global(.kpi-icon-wrap) { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-        :global(.kpi-label) { font-size: 11.5px; color: var(--text-2); font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; }
-        :global(.kpi-value) { font-family: var(--font-mono); font-size: 32px; font-weight: 800; letter-spacing: -1.2px; line-height: 1; }
+        :global(.kpi-label) { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-3); font-weight: 600; margin-top: 6px; }
+        :global(.kpi-value) { font-family: var(--font-mono); font-size: 36px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; }
         :global(.kpi-sub)   { font-size: 11.5px; color: var(--text-3); margin-top: 6px; }
         :global(.kpi-mini-viz) { position: absolute; bottom: 12px; right: 12px; opacity: 0.5; }
 
@@ -948,9 +951,55 @@ export default function Dashboard() {
         .adv-ico { font-size: 20px; }
         .adv-main { font-size: 13px; font-weight: 700; color: var(--text-1); }
         .adv-sub { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+        .glass {
+          box-shadow: 
+            0 1px 0 rgba(255,255,255,0.05) inset,
+            0 0 0 1px rgba(255,255,255,0.04) inset;
+        }
+
         .ac-advice.danger { border-left-color: var(--rose); }
         .ac-advice.warn { border-left-color: var(--amber); }
         .ac-advice.safe { border-left-color: var(--emerald); }
+
+        .att-card[data-status="safe"]    { border-left: 3px solid var(--emerald); }
+        .att-card[data-status="caution"] { border-left: 3px solid var(--amber); }
+        .att-card[data-status="atrisk"]  { border-left: 3px solid var(--rose); }
+
+        .page-title-bar {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 6px;
+        }
+        .page-title-bar::before {
+          content: '';
+          width: 4px;
+          height: 32px;
+          background: linear-gradient(180deg, var(--accent), transparent);
+          border-radius: 2px;
+          flex-shrink: 0;
+        }
+
+        /* Courses UI */
+        .courses-summary-strip { display: flex; gap: 12px; margin-bottom: 24px; }
+        .css-chip { display: flex; align-items: center; gap: 8px; padding: 6px 14px; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 100px; }
+        .css-chip-accent { border-color: var(--accent-border); background: var(--accent-dim); }
+        .css-num { font-family: var(--font-mono); font-size: 14px; font-weight: 700; color: var(--text-1); }
+        .css-label { font-size: 11px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.5px; }
+
+        .course-card { padding: 20px; border-radius: 16px; display: flex; flex-direction: column; gap: 14px; }
+        .cc-header { display: flex; justify-content: space-between; align-items: flex-start; }
+        .cc-left { display: flex; flex-direction: column; gap: 4px; }
+        .cc-code { font-family: var(--font-mono); font-size: 11px; color: var(--text-4); font-weight: 600; }
+        .cc-type-badge { font-size: 9px; font-weight: 800; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; width: fit-content; }
+        .badge-theory { background: var(--accent-dim); color: var(--accent-light); }
+        .badge-lab { background: var(--emerald-dim); color: var(--emerald); }
+        .cc-credits { font-size: 12px; font-weight: 700; color: var(--amber); }
+        .cc-title { font-size: 16px; font-weight: 700; color: var(--text-1); line-height: 1.3; }
+        .cc-meta { display: flex; flex-direction: column; gap: 8px; }
+        .cc-meta-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-3); }
+        .cc-meta-icon { opacity: 0.7; font-size: 14px; }
+        .cc-section { color: var(--accent-light); font-weight: 600; }
 
         /* Attendance Planner Warning */
         .ap-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }

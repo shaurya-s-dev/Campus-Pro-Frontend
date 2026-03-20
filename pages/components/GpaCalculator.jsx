@@ -22,7 +22,7 @@ const gradeMap = Object.fromEntries(GRADE_SCALE.map(g => [g.grade, g]));
    STATE MANAGEMENT
    ══════════════════════════════════════════════════ */
 let idCounter = 10000;
-const newSubject = () => ({ id: idCounter++, name: '', credits: 3, grade: 'O', locked: false });
+const newSubject = () => ({ id: idCounter++, name: '', credits: 3, grade: '', locked: false });
 const defaultSubs = [];
 
 function reducer(state, action) {
@@ -116,7 +116,7 @@ function ArcGauge({ value, max = 10, size = 148, label }) {
           fill={color} fontSize={28} fontWeight={700}
           fontFamily="'Fira Code', monospace"
           style={{ transition:'fill .4s' }}>
-          {value.toFixed(2)}
+          {value > 0 ? value.toFixed(2) : '--'}
         </text>
         <text x={size/2} y={size/2 + 20} textAnchor="middle"
           fill="rgba(240,240,250,0.3)" fontSize={12}
@@ -174,8 +174,9 @@ function SubjectRow({ s, idx, dispatch, isWeak, isStrong }) {
           className="row-select"
           value={s.grade}
           onChange={e => dispatch({ type:'UPDATE', id:s.id, field:'grade', value:e.target.value })}
-          style={{ color: g.textColor, '--grade-bg': `${g.color}15` }}
+          style={{ color: g?.textColor || 'var(--text-3)', '--grade-bg': g ? `${g.color}15` : 'var(--bg-elevated)' }}
         >
+          <option value="">Select Grade</option>
           {GRADE_SCALE.map(g => (
             <option key={g.grade} value={g.grade}>{g.grade} — {g.label} ({g.points} pts)</option>
           ))}
@@ -472,31 +473,35 @@ export default function GpaCalculator({ courses = [] }) {
     const seen = new Map();
     
     importable.forEach(c => {
-      // Normalize name — "Physics" theory + lab = one entry
-      const baseName = c.title.replace(/\s*(Lab|Laboratory|Practical|Theory)\s*$/i, '').trim();
+      const baseName = c.title.replace(/\s*(Lab|Laboratory|Practical|Theory|Practice|Laboratory-Credits)\s*$/i, '').trim();
       
       if (seen.has(baseName)) {
         const existing = seen.get(baseName);
-        existing.credit = String(parseFloat(existing.credit) + parseFloat(c.credit));
+        const existingCredit = parseFloat(existing.credit);
+        const newCredit = parseFloat(c.credit);
+        if (newCredit > existingCredit) {
+          existing.credit = c.credit;
+        }
+        existing._mergeCount = (existing._mergeCount || 0) + 1;
       } else {
-        seen.set(baseName, { ...c, title: baseName });
+        seen.set(baseName, { ...c, title: baseName, _mergeCount: 0 });
       }
     });
 
     const merged = Array.from(seen.values());
-    const totalInput = courseData.length;
-    const finalCount = merged.length;
+    const mergedCount = merged.filter(c => c._mergeCount > 0).length;
+    const excludedCount = courseData.length - importable.length;
     
-    setSkippedCount(totalInput - importable.length);
-    if (totalInput > finalCount) {
-      setImportNote(`${totalInput - finalCount} courses merged or excluded`);
-    }
+    const parts = [];
+    if (mergedCount > 0) parts.push(`${mergedCount} theory+lab pair${mergedCount > 1 ? 's' : ''} merged`);
+    if (excludedCount > 0) parts.push(`${excludedCount} zero-credit course${excludedCount > 1 ? 's' : ''} excluded`);
+    if (parts.length > 0) setImportNote(parts.join(' · '));
 
     const newSubs = merged.map((c, i) => ({
       id: 20000 + i,
       name: c.title,
       credits: parseFloat(c.credit) || 3,
-      grade: 'O',
+      grade: '',
       locked: false
     }));
     dispatch({ type: 'IMPORT', subjects: newSubs });
@@ -570,8 +575,9 @@ export default function GpaCalculator({ courses = [] }) {
             </div>
             
             {importNote && (
-              <div style={{ padding: '8px 16px', fontSize: '11px', color: 'var(--amber)', background: 'var(--amber-dim)', borderBottom: '1px solid var(--amber-border)' }}>
-                ℹ️ {importNote}
+              <div className="gpa-info-banner">
+                <span className="gib-icon">ℹ️</span>
+                <span className="gib-text">{importNote}</span>
               </div>
             )}
 
@@ -688,6 +694,20 @@ export default function GpaCalculator({ courses = [] }) {
           padding:0 14px 8px; font-size:9.5px; color:var(--text-4); text-transform:uppercase; letter-spacing:.6px; font-weight:600;
         }
         .subjects-list { display:flex; flex-direction:column; gap:7px; margin-bottom:12px; min-height: 100px; }
+        
+        .gpa-info-banner {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 10px 14px;
+          background: rgba(245,158,11,0.08);
+          border: 1px solid rgba(245,158,11,0.25);
+          border-radius: 10px;
+          margin-bottom: 16px;
+          font-size: 13px;
+          color: var(--amber);
+        }
+        .gib-icon { font-size: 16px; }
         
         .section-helper { font-size: 12.5px; color: var(--text-3); margin-top: 4px; margin-bottom: 16px; line-height: 1.6; max-width: 600px; }
         .gpa-empty { padding: 40px 20px; text-align: center; background: rgba(0,0,0,0.1); border-radius: 12px; border: 1px dashed var(--border); }

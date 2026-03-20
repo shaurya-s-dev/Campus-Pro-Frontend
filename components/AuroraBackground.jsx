@@ -1,19 +1,19 @@
 import { useEffect, useRef } from 'react';
 
 const ORBS = [
-  { x:.15, y:.25, r:.60, vx: .00018, vy: .00012, h:248, s:85, l:52, a:.16, phase:0.0 },
-  { x:.78, y:.12, r:.55, vx:-.00014, vy: .00016, h:270, s:90, l:58, a:.14, phase:1.2 },
-  { x:.45, y:.82, r:.65, vx: .00010, vy:-.00013, h:195, s:88, l:52, a:.12, phase:2.4 },
-  { x:.88, y:.60, r:.50, vx:-.00016, vy:-.00014, h:312, s:82, l:52, a:.13, phase:0.8 },
-  { x:.22, y:.70, r:.45, vx: .00020, vy: .00010, h:222, s:78, l:57, a:.11, phase:3.1 },
-  { x:.62, y:.42, r:.40, vx:-.00012, vy: .00018, h:262, s:87, l:62, a:.10, phase:1.7 },
-  { x:.50, y:.15, r:.38, vx: .00014, vy: .00012, h:285, s:80, l:55, a:.09, phase:2.0 },
+  { x:.15, y:.25, r:.60, vx: .00018, vy: .00012, h:248, s:85, l:52, a:.10, phase:0.0 }, // was .16
+  { x:.78, y:.12, r:.55, vx:-.00014, vy: .00016, h:270, s:90, l:58, a:.09, phase:1.2 }, // was .14
+  { x:.45, y:.82, r:.65, vx: .00010, vy:-.00013, h:195, s:88, l:52, a:.08, phase:2.4 }, // was .12
+  { x:.88, y:.60, r:.50, vx:-.00016, vy:-.00014, h:312, s:82, l:52, a:.08, phase:0.8 }, // was .13
+  { x:.22, y:.70, r:.45, vx: .00020, vy: .00010, h:222, s:78, l:57, a:.07, phase:3.1 }, // was .11
+  { x:.62, y:.42, r:.40, vx:-.00012, vy: .00018, h:262, s:87, l:62, a:.06, phase:1.7 }, // was .10
+  { x:.50, y:.15, r:.38, vx: .00014, vy: .00012, h:285, s:80, l:55, a:.06, phase:2.0 }, // was .09
 ];
 
 const RINGS = [
-  { r:.38, count:56, speed: .0018, wobble:12, a:.07, hue:248 },
-  { r:.28, count:36, speed:-.0025, wobble: 6, a:.05, hue:270 },
-  { r:.50, count:70, speed: .0011, wobble:18, a:.04, hue:220 },
+  { r:.38, count:56, speed: .0018, wobble:12, a:.04, hue:248 }, // was .07
+  { r:.28, count:36, speed:-.0025, wobble: 6, a:.03, hue:270 }, // was .05
+  { r:.50, count:70, speed: .0011, wobble:18, a:.025, hue:220 }, // was .04
 ];
 
 function makeStars(n) {
@@ -45,7 +45,7 @@ function makeParticles(n) {
     vx: (Math.random() - 0.5) * 0.0004,
     vy: -0.0003 - Math.random() * 0.0004,
     r: 0.8 + Math.random() * 2,
-    a: 0.06 + Math.random() * 0.18,
+    a: 0.04 + Math.random() * 0.08, // was 0.06 + Math.random() * 0.18
     hue: 220 + Math.random() * 80,
   }));
 }

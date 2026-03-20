@@ -26,7 +26,7 @@ const gradeMap = Object.fromEntries(GRADE_SCALE.map(g => [g.grade, g]));
    STATE MANAGEMENT
    ══════════════════════════════════════════════════ */
 let idCounter = 10;
-const newSubject = () => ({ id: idCounter++, name: '', credits: 3, grade: 'O', locked: false });
+const newSubject = () => ({ id: idCounter++, name: '', credits: 3, grade: '', locked: false });
 const defaultSubs = [
   { id: 1, name: 'Data Structures and Algorithms', credits: 4, grade: 'O',  locked: false },
   { id: 2, name: 'Object Oriented Programming',    credits: 4, grade: 'A+', locked: false },
@@ -120,7 +120,7 @@ function ArcGauge({ value, max = 10, size = 148, label }) {
           fill={color} fontSize={28} fontWeight={700}
           fontFamily="'Fira Code', monospace"
           style={{ transition:'fill .4s' }}>
-          {value.toFixed(2)}
+          {value > 0 ? value.toFixed(2) : '--'}
         </text>
         <text x={size/2} y={size/2 + 20} textAnchor="middle"
           fill="rgba(240,240,250,0.3)" fontSize={12}
@@ -178,8 +178,9 @@ function SubjectRow({ s, idx, dispatch, isWeak, isStrong }) {
           className="row-select"
           value={s.grade}
           onChange={e => dispatch({ type:'UPDATE', id:s.id, field:'grade', value:e.target.value })}
-          style={{ color: g.textColor, '--grade-bg': `${g.color}15` }}
+          style={{ color: g?.textColor || 'var(--text-3)', '--grade-bg': g ? `${g.color}15` : 'var(--bg-elevated)' }}
         >
+          <option value="">Select Grade</option>
           {GRADE_SCALE.map(g => (
             <option key={g.grade} value={g.grade}>{g.grade} — {g.label} ({g.points} pts)</option>
           ))}
@@ -452,24 +453,47 @@ export default function Calculator() {
   const { subjects, prevSGPA, prevCredits, target } = state;
   const { theme } = useTheme();
   
-  const [skippedCount, setSkippedCount] = useState(0);
+  const [importNote, setImportNote] = useState('');
 
   const handleImport = () => {
     const rawData = DataStore.get();
-    const courses = rawData?.courses?.courses || [];
-    const importable = courses.filter(c => parseFloat(c.credit) > 0);
-    setSkippedCount(courses.length - importable.length);
+    const courseData = rawData?.courses?.courses || [];
+    const importable = courseData.filter(c => parseFloat(c.credit || '0') > 0);
     
-    if (importable.length > 0) {
-      const newSubs = importable.map((c, i) => ({
-        id: 1000 + i,
-        name: c.title || c.courseName || 'Untitled',
-        credits: parseFloat(c.credit) || 3,
-        grade: 'O',
-        locked: false
-      }));
-      dispatch({ type: 'IMPORT', subjects: newSubs });
-    }
+    const seen = new Map();
+    importable.forEach(c => {
+      const baseName = c.title.replace(/\s*(Lab|Laboratory|Practical|Theory|Practice|Laboratory-Credits)\s*$/i, '').trim();
+      
+      if (seen.has(baseName)) {
+        const existing = seen.get(baseName);
+        const existingCredit = parseFloat(existing.credit);
+        const newCredit = parseFloat(c.credit);
+        if (newCredit > existingCredit) {
+          existing.credit = c.credit;
+        }
+        existing._mergeCount = (existing._mergeCount || 0) + 1;
+      } else {
+        seen.set(baseName, { ...c, title: baseName, _mergeCount: 0 });
+      }
+    });
+
+    const merged = Array.from(seen.values());
+    const mergedCount = merged.filter(c => c._mergeCount > 0).length;
+    const excludedCount = courseData.length - importable.length;
+    
+    const parts = [];
+    if (mergedCount > 0) parts.push(`${mergedCount} theory+lab pair${mergedCount > 1 ? 's' : ''} merged`);
+    if (excludedCount > 0) parts.push(`${excludedCount} zero-credit course${excludedCount > 1 ? 's' : ''} excluded`);
+    if (parts.length > 0) setImportNote(parts.join(' · '));
+
+    const newSubs = merged.map((c, i) => ({
+      id: 20000 + i,
+      name: c.title,
+      credits: parseFloat(c.credit) || 3,
+      grade: '',
+      locked: false
+    }));
+    dispatch({ type: 'IMPORT', subjects: newSubs });
   };
 
   // Core calc
@@ -556,9 +580,10 @@ export default function Calculator() {
                 </div>
               </div>
               
-              {skippedCount > 0 && (
-                <div style={{ padding: '8px 16px', fontSize: '11px', color: 'var(--amber)', background: 'var(--amber-dim)', borderBottom: '1px solid var(--amber-border)' }}>
-                  ⚠️ {skippedCount} zero-credit courses excluded from calculation
+              {importNote && (
+                <div className="gpa-info-banner">
+                  <span className="gib-icon">ℹ️</span>
+                  <span className="gib-text">{importNote}</span>
                 </div>
               )}
 
@@ -745,6 +770,20 @@ export default function Calculator() {
         }
         .cgpa-result-label { font-size:11px; color:var(--text-3); text-transform:uppercase; letter-spacing:.6px; font-weight:600; }
         .cgpa-result-val { font-family:var(--font-mono); font-size:26px; font-weight:700; }
+
+        .gpa-info-banner {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 10px 14px;
+          background: rgba(245,158,11,0.08);
+          border: 1px solid rgba(245,158,11,0.25);
+          border-radius: 10px;
+          margin-bottom: 16px;
+          font-size: 13px;
+          color: var(--amber);
+        }
+        .gib-icon { font-size: 16px; }
 
         /* Responsive */
         @media (max-width:1000px) { .calc-layout { grid-template-columns:1fr; } }
