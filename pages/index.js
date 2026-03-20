@@ -3,6 +3,9 @@ import { useTheme } from '@/context/ThemeContext';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { TokenStore, DataStore } from '@/lib/security';
+import dynamic from 'next/dynamic';
+
+const LoginBackground = dynamic(() => import('../components/LoginBackground'), { ssr: false });
 
 const ACADEMIA_SESSIONS_URL =
   'https://academia.srmist.edu.in/accounts/p/10002227248/announcement/sessions-reminder?servicename=ZohoCreator&serviceurl=https://academia.srmist.edu.in/portal/academia-academic-services/redirectFromLogin&service_language=en';
@@ -307,30 +310,9 @@ export default function Login() {
         <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
       </Head>
 
-      <div className="bg-base" />
-      <div className="grid-lines" />
-      <div className="scanlines" />
-      <div className="orb orb-a" />
-      <div className="orb orb-b" />
-
-      <div className="root" style={{ position: 'relative', zIndex: 2 }}>
+      <LoginBackground />
+      <div className="root" style={{ position: 'relative', zIndex: 1 }}>
         <div className="page-col">
-          <div className="orbital-wrap">
-            <div className="ring ring-outer"><div className="ring-ball ball-outer" /></div>
-            <div className="ring ring-inner"><div className="ring-ball ball-inner" /></div>
-            <div className="orbital-core">
-              <svg width="34" height="34" viewBox="0 0 40 40" fill="none">
-                <circle cx="20" cy="8" r="3" fill="white"/><circle cx="8" cy="28" r="3" fill="white"/>
-                <circle cx="32" cy="28" r="3" fill="white"/><circle cx="20" cy="20" r="4.5" fill="white" opacity="0.95"/>
-                <line x1="20" y1="8" x2="20" y2="20" stroke="white" strokeWidth="1.5" opacity="0.75"/>
-                <line x1="8" y1="28" x2="20" y2="20" stroke="white" strokeWidth="1.5" opacity="0.75"/>
-                <line x1="32" y1="28" x2="20" y2="20" stroke="white" strokeWidth="1.5" opacity="0.75"/>
-                <line x1="8" y1="28" x2="32" y2="28" stroke="white" strokeWidth="1.5" opacity="0.32"/>
-                <line x1="20" y1="8" x2="8" y2="28" stroke="white" strokeWidth="1.5" opacity="0.32"/>
-                <line x1="20" y1="8" x2="32" y2="28" stroke="white" strokeWidth="1.5" opacity="0.32"/>
-              </svg>
-            </div>
-          </div>
 
           <div className="card">
             <div className="corner tl"/><div className="corner tr"/>

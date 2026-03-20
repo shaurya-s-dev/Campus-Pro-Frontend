@@ -180,7 +180,7 @@ function SubjectRow({ s, idx, dispatch, isWeak, isStrong }) {
           onChange={e => dispatch({ type:'UPDATE', id:s.id, field:'grade', value:e.target.value })}
           style={{ color: g?.textColor || 'var(--text-3)', background: g ? `${g.color}15` : 'var(--bg-elevated)' }}
         >
-          <option value="">Select Grade</option>
+          <option value="">— Select Grade —</option>
           {GRADE_SCALE.map(g => (
             <option key={g.grade} value={g.grade}>{g.grade} — {g.label} ({g.points} pts)</option>
           ))}

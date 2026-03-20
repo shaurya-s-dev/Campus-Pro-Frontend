@@ -649,58 +649,64 @@ export default function Dashboard() {
                 <div className="tab-panel animate-in">
                   <div className="page-hd">
                     <div className="sc-titles-group">
-                      <div className="page-title-bar">
-                        <h1 className="page-title">Courses</h1>
-                      </div>
-                      <p className="section-helper">
-                        All subjects you are currently enrolled in for this semester, 
-                        including faculty details, room locations, and credits.
-                      </p>
+                      <h1 className="page-title">My Courses</h1>
+                      <p className="section-helper">Complete enrollment list for SRM Even Semester 2025-26.</p>
                     </div>
-                    <span className="tag tag-accent">{courses.length} enrolled</span>
                   </div>
 
-                  {/* Summary strip */}
-                  <div className="courses-strip">
-                    {[
-                      { label:'Theory',        val: courseStats.theory,    color:'var(--accent-light)' },
-                      { label:'Practical',     val: courseStats.practical, color:'var(--emerald)' },
-                      { label:'Total Credits', val: courseStats.credits,   color:'var(--amber)' },
-                    ].map((s,i) => (
-                      <div key={i} className="cs-chip glass">
-                        <span className="cs-num" style={{color:s.color}}>{s.val}</span>
-                        <span className="cs-lbl">{s.label}</span>
+                  {/* Summary Strip - 3 Styled Chips */}
+                  {(() => {
+                    const theoryCount = courses.filter(c => c.slotType === 'Theory').length;
+                    const labCount = courses.filter(c => c.slotType === 'Practical').length;
+                    const totalCredits = courses.reduce((acc, c) => acc + (parseFloat(c.credit) || 0), 0);
+                    return (
+                      <div style={{ display:'flex', gap:10, marginBottom:24, flexWrap:'wrap' }}>
+                        <div className="glass" style={{ padding:'8px 16px', borderRadius:100, border:'1px solid rgba(255,255,255,.06)', display:'flex', alignItems:'center', gap:8 }}>
+                          <span style={{ fontSize:15, fontWeight:800, color:'var(--accent-light)' }}>{theoryCount}</span>
+                          <span style={{ fontSize:10, fontWeight:700, color:'var(--text-3)', textTransform:'uppercase', letterSpacing:.5 }}>Theory</span>
+                        </div>
+                        <div className="glass" style={{ padding:'8px 16px', borderRadius:100, border:'1px solid rgba(255,255,255,.06)', display:'flex', alignItems:'center', gap:8 }}>
+                          <span style={{ fontSize:15, fontWeight:800, color:'var(--emerald)' }}>{labCount}</span>
+                          <span style={{ fontSize:10, fontWeight:700, color:'var(--text-3)', textTransform:'uppercase', letterSpacing:.5 }}>Practical</span>
+                        </div>
+                        <div className="glass" style={{ padding:'8px 16px', borderRadius:100, border:'1px solid rgba(255,255,255,.06)', display:'flex', alignItems:'center', gap:8 }}>
+                          <span style={{ fontSize:15, fontWeight:800, color:'var(--amber)' }}>{totalCredits}</span>
+                          <span style={{ fontSize:10, fontWeight:700, color:'var(--text-3)', textTransform:'uppercase', letterSpacing:.5 }}>Total Credits</span>
+                        </div>
                       </div>
-                    ))}
-                  </div>
+                    );
+                  })()}
 
-                  {/* Card grid */}
-                  <div className="courses-grid">
-                    {courses.length === 0 ? (
-                      <div className="empty-state">No enrolled courses found.</div>
-                    ) : courses.map((c, i) => {
+                  <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))', gap:14 }}>
+                    {courses.map((c, i) => {
                       const isTheory = c.slotType === 'Theory';
-                      const barColor = isTheory ? '#6366f1' : '#10b981';
-                      const faculty  = c.faculty?.split('(')[0]?.trim() || '—';
+                      const bar = isTheory ? '#6366f1' : '#10b981';
+                      const faculty = c.faculty?.split('(')[0]?.trim() || '—';
                       return (
-                        <div key={i} className="cc-card glass animate-up" style={{ animationDelay:`${i*45}ms` }}>
-                          <div className="cc-bar" style={{ background: barColor }} />
-                          <div className="cc-body">
-                            <div className="cc-top-row">
-                              <span className="cc-code">{c.code}</span>
-                              <span className={`tag ${isTheory ? 'tag-accent' : 'tag-emerald'}`}>{c.slotType}</span>
+                        <div key={i} className="cc-card glass animate-up" style={{ animationDelay:`${i*40}ms`, borderRadius:'var(--radius-lg)', overflow:'hidden', padding:0, transition:'transform .2s,box-shadow .2s' }}
+                          onMouseEnter={e=>e.currentTarget.style.transform='translateY(-4px)'}
+                          onMouseLeave={e=>e.currentTarget.style.transform='translateY(0)'}>
+                          <div style={{ height:3, background:bar }} />
+                          <div style={{ padding:16, display:'flex', flexDirection:'column', gap:10 }}>
+                            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                              <span style={{ fontFamily:'var(--font-mono)', fontSize:10, color:'var(--accent-light)' }}>{c.code}</span>
+                              <span className={`tag ${isTheory?'tag-accent':'tag-emerald'}`} style={{fontSize:9}}>{c.slotType}</span>
                             </div>
-                            <div className="cc-title">{c.title}</div>
-                            <div className="cc-faculty">
-                              <div className="cc-fav" style={{ background: barColor+'22', color: barColor, border:`1px solid ${barColor}44` }}>
-                                {faculty[0]}
+                            <div style={{ fontSize:13.5, fontWeight:600, color:'var(--text-1)', lineHeight:1.4 }}>{c.title}</div>
+                            <div style={{ display:'flex', alignItems:'center', gap:9, paddingBottom:10, borderBottom:'1px solid rgba(255,255,255,.06)' }}>
+                              <div style={{ width:26, height:26, borderRadius:7, background:bar+'22', border:`1px solid ${bar}44`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:700, color:bar, flexShrink:0 }}>
+                                {faculty[0]||'?'}
                               </div>
-                              <span className="cc-fname">{faculty}</span>
+                              <span style={{ fontSize:12, color:'var(--text-3)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{faculty}</span>
                             </div>
-                            <div className="cc-info-grid">
-                              <div className="ci"><span>🏫</span><strong>{c.room||'—'}</strong><small>Room</small></div>
-                              <div className="ci"><span>🕐</span><strong>{c.slot||'—'}</strong><small>Slot</small></div>
-                              <div className="ci"><span>⭐</span><strong>{c.credit||'0'}</strong><small>Credits</small></div>
+                            <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)' }}>
+                              {[['🏫',c.room||'—','Room'],['🕐',c.slot||'—','Slot'],['⭐',c.credit||'0','Credits']].map(([icon,val,lbl],j)=>(
+                                <div key={j} style={{ display:'flex', flexDirection:'column', alignItems:'center', padding:'8px 4px', borderRight:j<2?'1px solid rgba(255,255,255,.05)':'none', gap:2 }}>
+                                  <span style={{fontSize:13}}>{icon}</span>
+                                  <strong style={{ fontFamily:'var(--font-mono)', fontSize:12, color:'var(--text-1)' }}>{val}</strong>
+                                  <small style={{ fontSize:9, color:'var(--text-3)', textTransform:'uppercase', letterSpacing:.4 }}>{lbl}</small>
+                                </div>
+                              ))}
                             </div>
                           </div>
                         </div>
