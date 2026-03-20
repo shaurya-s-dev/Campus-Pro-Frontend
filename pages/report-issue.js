@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
+import AuroraBackground from '@/components/AuroraBackground';
 import Sidebar from '@/components/Sidebar';
 import { DataStore, requireAuth, sanitizeObject } from '@/lib/security';
 
@@ -83,17 +84,9 @@ export default function ReportIssue() {
   return (
     <>
       <Head><title>Report Issue — CampusPro</title></Head>
+      <AuroraBackground />
 
-      <div className="dash-bg" aria-hidden="true">
-        <div className="dash-bg-grid" />
-        <div className="dash-blob-1" />
-        <div className="dash-blob-2" />
-        <div className="dash-blob-3" />
-        <div className="dash-blob-4" />
-        <div className="dash-bg-vignette" />
-      </div>
-
-      <div className="page-root">
+      <div className="page-root" style={{ position: 'relative', zIndex: 1 }}>
         <Sidebar activeTab="report" user={data.user} />
         
         <main className="main-content">

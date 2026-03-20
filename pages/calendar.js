@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import AuroraBackground from '@/components/AuroraBackground';
 
 /* ════════════════════════════════════════════════════
    CONSTANTS
@@ -229,16 +230,9 @@ export default function CalendarPage() {
     <>
       <Head><title>Academic Calendar — CampusPro</title></Head>
 
-      <div className="dash-bg" aria-hidden="true">
-        <div className="dash-bg-grid" />
-        <div className="dash-blob-1" />
-        <div className="dash-blob-2" />
-        <div className="dash-blob-3" />
-        <div className="dash-blob-4" />
-        <div className="dash-bg-vignette" />
-      </div>
+      <AuroraBackground />
 
-      <div className="page">
+      <div className="page" style={{ position: 'relative', zIndex: 1 }}>
 
         {/* ── TOP BAR ─────────────────────────── */}
         <div className="top-bar">

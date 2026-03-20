@@ -4,6 +4,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useTheme } from '@/context/ThemeContext';
 import { DataStore, TokenStore, requireAuth, logout } from '@/lib/security';
+import AuroraBackground from '@/components/AuroraBackground';
 
 /* ── Icon helper ─────────────────────────────────── */
 const Ico = ({ d, size = 16, sw = 1.8 }) => (
@@ -163,17 +164,9 @@ export default function ProfilePage() {
     <>
       <Head><title>Profile — CampusPro</title></Head>
 
-      {/* Animated ambient background */}
-      <div className="dash-bg" aria-hidden="true">
-        <div className="dash-bg-grid" />
-        <div className="dash-blob-1" />
-        <div className="dash-blob-2" />
-        <div className="dash-blob-3" />
-        <div className="dash-blob-4" />
-        <div className="dash-bg-vignette" />
-      </div>
+      <AuroraBackground />
 
-      <div className="page">
+      <div className="page" style={{ position: 'relative', zIndex: 1 }}>
 
         {/* Back nav */}
         <Link href="/dashboard" className="back-btn animate-up">

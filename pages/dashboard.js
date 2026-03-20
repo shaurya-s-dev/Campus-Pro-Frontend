@@ -12,6 +12,7 @@ import SkipProEstimator from './components/SkipProEstimator';
 import CalendarView from './components/CalendarView';
 import HelpCenterContent from './components/HelpCenterContent';
 import ReportIssueContent from './components/ReportIssueContent';
+import AuroraBackground from '../components/AuroraBackground';
 
 // Show only on mobile — 5 key tabs
 const MOBILE_NAV = [
@@ -223,17 +224,9 @@ export default function Dashboard() {
     <>
       <Head><title>CampusPro — {user.name || 'Dashboard'}</title></Head>
 
-      {/* ── Animated ambient background ──────── */}
-      <div className="dash-bg" aria-hidden="true">
-        <div className="dash-bg-grid" />
-        <div className="dash-blob-1" />
-        <div className="dash-blob-2" />
-        <div className="dash-blob-3" />
-        <div className="dash-blob-4" />
-        <div className="dash-bg-vignette" />
-      </div>
+      <AuroraBackground />
 
-      <div className="app-shell">
+      <div className="app-shell" style={{ position: 'relative', zIndex: 1 }}>
         <div className="sb-desk">
           <Sidebar activeTab={tab} onTabChange={handleTabChange} user={user} below75={below75} />
         </div>

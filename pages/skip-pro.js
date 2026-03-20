@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import Sidebar from '@/components/Sidebar';
 import { DataStore, requireAuth, sanitizeObject } from '@/lib/security';
+import AuroraBackground from '@/components/AuroraBackground';
 
 /* ── Academic Calendar Data ─────────────────────────── */
 const ACADEMIC_CALENDAR = {
@@ -125,16 +126,9 @@ export default function SkipPro() {
     <>
       <Head><title>Attendance Planner — CampusPro</title></Head>
 
-      <div className="dash-bg" aria-hidden="true">
-        <div className="dash-bg-grid" />
-        <div className="dash-blob-1" />
-        <div className="dash-blob-2" />
-        <div className="dash-blob-3" />
-        <div className="dash-blob-4" />
-        <div className="dash-bg-vignette" />
-      </div>
+      <AuroraBackground />
 
-      <div className="page-root">
+      <div className="page-root" style={{ position: 'relative', zIndex: 1 }}>
         <Sidebar activeTab="skippro" user={data.user} />
         
         <main className="main-content">

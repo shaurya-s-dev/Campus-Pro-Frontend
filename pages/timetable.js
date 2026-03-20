@@ -1,13 +1,16 @@
 import Head from 'next/head';
 import TimetableView from '@/components/TimetableView';
+import AuroraBackground from '@/components/AuroraBackground';
 
 export default function TimetablePage() {
   return (
     <>
       <Head><title>Timetable — CampusPro</title></Head>
+      <AuroraBackground />
       <div style={{
         minHeight:'100vh',
-        background:'#04040b',
+        position: 'relative',
+        zIndex: 1,
         padding:'40px 24px',
         maxWidth:900,
         margin:'0 auto',
