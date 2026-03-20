@@ -449,6 +449,14 @@ export default function GpaCalculator({ courses = [] }) {
   const { theme } = useTheme();
   
   const [skippedCount, setSkippedCount] = useState(0);
+  const [importNote, setImportNote] = useState('');
+
+  // Auto-import on mount if empty
+  useEffect(() => {
+    if (subjects.length === 0) {
+      handleImport();
+    }
+  }, []);
 
   const handleImport = () => {
     // Priority: passed prop > DataStore
@@ -460,12 +468,33 @@ export default function GpaCalculator({ courses = [] }) {
       return;
     }
 
-    const skipped = courseData.length - importable.length;
-    setSkippedCount(skipped);
+    // Group duplicates — same subject name/code base = one entry, sum credits
+    const seen = new Map();
     
-    const newSubs = importable.map((c, i) => ({
+    importable.forEach(c => {
+      // Normalize name — "Physics" theory + lab = one entry
+      const baseName = c.title.replace(/\s*(Lab|Laboratory|Practical|Theory)\s*$/i, '').trim();
+      
+      if (seen.has(baseName)) {
+        const existing = seen.get(baseName);
+        existing.credit = String(parseFloat(existing.credit) + parseFloat(c.credit));
+      } else {
+        seen.set(baseName, { ...c, title: baseName });
+      }
+    });
+
+    const merged = Array.from(seen.values());
+    const totalInput = courseData.length;
+    const finalCount = merged.length;
+    
+    setSkippedCount(totalInput - importable.length);
+    if (totalInput > finalCount) {
+      setImportNote(`${totalInput - finalCount} courses merged or excluded`);
+    }
+
+    const newSubs = merged.map((c, i) => ({
       id: 20000 + i,
-      name: c.title || c.courseName || 'Untitled Course',
+      name: c.title,
       credits: parseFloat(c.credit) || 3,
       grade: 'O',
       locked: false
@@ -536,14 +565,13 @@ export default function GpaCalculator({ courses = [] }) {
                 >
                   ⚡ Import My Courses
                 </button>
-                <button className="btn btn-ghost" style={{ fontSize:11, padding:'6px 12px' }} onClick={() => dispatch({ type:'DEMO' })}>Load Sample</button>
                 <button className="btn btn-ghost" style={{ fontSize:11, padding:'6px 12px' }} onClick={() => dispatch({ type:'RESET' })}>Clear</button>
               </div>
             </div>
             
-            {skippedCount > 0 && (
+            {importNote && (
               <div style={{ padding: '8px 16px', fontSize: '11px', color: 'var(--amber)', background: 'var(--amber-dim)', borderBottom: '1px solid var(--amber-border)' }}>
-                ⚠️ {skippedCount} zero-credit courses excluded from calculation
+                ℹ️ {importNote}
               </div>
             )}
 

@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useTheme } from '@/context/ThemeContext';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { TokenStore, DataStore } from '@/lib/security';
@@ -141,6 +142,43 @@ export default function Login() {
   const [captchaData, setCaptchaData] = useState(null);
   const [captchaInput, setCaptchaInput] = useState('');
   const [captchaError, setCaptchaError] = useState('');
+
+  const { theme } = useTheme();
+  const vantaRef = useRef(null);
+  const vantaEffect = useRef(null);
+
+  useEffect(() => {
+    // Dynamically import to avoid SSR issues
+    const loadVanta = async () => {
+      const THREE = await import('three');
+      const VANTA = await import('vanta/dist/vanta.rings.min');
+      
+      if (!vantaEffect.current && vantaRef.current) {
+        vantaEffect.current = VANTA.default({
+          el: vantaRef.current,
+          THREE: THREE,
+          mouseControls: true,
+          touchControls: true,
+          gyroControls: false,
+          minHeight: 200.00,
+          minWidth: 200.00,
+          scale: 1.00,
+          scaleMobile: 1.00,
+          color: 0x818cf8,          // lighter indigo/violet — premium feel
+          backgroundColor: theme === 'dark' ? 0x04050d : 0xf3f4fb,
+          backgroundAlpha: 1,
+        });
+      }
+    };
+    loadVanta();
+
+    return () => {
+      if (vantaEffect.current) {
+        vantaEffect.current.destroy();
+        vantaEffect.current = null;
+      }
+    };
+  }, [theme]);
 
   useEffect(() => {
     if (screen === 'session' && !captchaData) {
@@ -305,10 +343,25 @@ export default function Login() {
         <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
       </Head>
 
-      <div className="root">
-        <div className="bg-base" /><div className="grid-lines" />
-        <div className="scanlines" /><div className="orb orb-a" /><div className="orb orb-b" />
+      <div 
+        ref={vantaRef} 
+        style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 0,
+          opacity: 0.35, // subtle — not overwhelming
+        }}
+      />
+      
+      <div style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 1,
+        background: 'radial-gradient(ellipse at center, transparent 30%, rgba(4,5,13,0.7) 100%)',
+        pointerEvents: 'none',
+      }} />
 
+      <div className="root" style={{ position: 'relative', zIndex: 2 }}>
         <div className="page-col">
           <div className="orbital-wrap">
             <div className="ring ring-outer"><div className="ring-ball ball-outer" /></div>

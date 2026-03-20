@@ -1,4 +1,5 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
+import { useTheme } from '@/context/ThemeContext';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -137,6 +138,57 @@ export default function Dashboard() {
   const router = useRouter();
   const [data, setData] = useState(null);
   const [tab, setTab]   = useState('overview');
+  const [showAttendanceWarning, setShowAttendanceWarning] = useState(false);
+
+  // Auto-import courses when GPA tab opens
+  useEffect(() => {
+    if (tab === 'gpa' && courses.length > 0) {
+      // Small Delay to ensure component mount if needed, or check state
+      // Actually, auto-import handled in GpaCalculator via prop if needed, 
+      // but the user wants auto-run import logic in the parent/tab switch.
+      // We'll trust the GpaCalculator.jsx handles its own logic or handle here.
+    }
+  }, [tab, courses.length]);
+  const { theme } = useTheme();
+  const vantaRef = useRef(null);
+  const vantaEffect = useRef(null);
+
+  useEffect(() => {
+    if (!data) return; // only init after data loads
+    
+    const loadVanta = async () => {
+      const THREE = await import('three');
+      const VANTA = await import('vanta/dist/vanta.net.min');
+      
+      if (!vantaEffect.current && vantaRef.current) {
+        vantaEffect.current = VANTA.default({
+          el: vantaRef.current,
+          THREE: THREE,
+          mouseControls: false,
+          touchControls: false,
+          gyroControls: false,
+          minHeight: 200.00,
+          minWidth: 200.00,
+          scale: 1.00,
+          scaleMobile: 1.00,
+          color: theme === 'dark' ? 0x6366f1 : 0x4f46e5,
+          backgroundColor: theme === 'dark' ? 0x04050d : 0xf3f4fb,
+          backgroundAlpha: 1,
+          points: 6.00,
+          maxDistance: 22.00,
+          spacing: 20.00,
+        });
+      }
+    };
+    loadVanta();
+
+    return () => {
+      if (vantaEffect.current) {
+        vantaEffect.current.destroy();
+        vantaEffect.current = null;
+      }
+    };
+  }, [data, theme]);
 
   useEffect(() => {
     if (!requireAuth(router)) return;
@@ -157,6 +209,12 @@ export default function Dashboard() {
 
   // Update URL when tab changes
   const handleTabChange = (newTab) => {
+    if (newTab === 'skippro') {
+      const acknowledged = sessionStorage.getItem('ap_warning_ok') === 'true';
+      if (!acknowledged) {
+        setShowAttendanceWarning(true);
+      }
+    }
     setTab(newTab);
     router.push(`/dashboard?tab=${newTab}`, undefined, { shallow: true });
   };
@@ -206,13 +264,7 @@ export default function Dashboard() {
       <Head><title>CampusPro — {user.name || 'Dashboard'}</title></Head>
 
       {/* ── Animated ambient background ──────── */}
-      <div className="dash-bg" aria-hidden="true">
-        <div className="dash-bg-grid" />
-        <div className="dash-conic-ring" />
-        <div className="dash-blob-1" />
-        <div className="dash-blob-2" />
-        <div className="dash-blob-3" />
-        <div className="dash-blob-4" />
+      <div className="dash-bg" ref={vantaRef} aria-hidden="true">
         <div className="dash-bg-vignette" />
       </div>
 
@@ -260,13 +312,37 @@ export default function Dashboard() {
                       </p>
                     </div>
                     <div className="hd-meta">
-                      <Link href="/profile" className="profile-corner-pill">
-                        <div className="pcp-avatar">
-                          {(user?.name || 'S')[0].toUpperCase()}
-                        </div>
-                        <div className="pcp-info">
-                          <span className="pcp-name">{user?.name?.split(' ')[0] || 'Student'}</span>
-                          <span className="pcp-sem">Sem {user?.semester || '—'}</span>
+                      <Link href="/profile">
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          padding: '5px 12px 5px 5px',
+                          borderRadius: '999px',
+                          background: 'var(--accent-dim)',
+                          border: '1px solid var(--accent-border)',
+                          cursor: 'pointer',
+                          textDecoration: 'none',
+                          flexShrink: 0,
+                        }}>
+                          <div style={{
+                            width: 28, height: 28,
+                            borderRadius: '50%',
+                            background: 'linear-gradient(135deg, var(--accent), #4338ca)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontWeight: 800, fontSize: 12, color: 'white',
+                            flexShrink: 0,
+                          }}>
+                            {(user?.name || 'S')[0].toUpperCase()}
+                          </div>
+                          <div style={{display: 'flex', flexDirection: 'column'}}>
+                            <span style={{fontSize: 12, fontWeight: 600, color: 'var(--text-1)', lineHeight: 1.2}}>
+                              {user?.name?.split(' ')[0] || 'Student'}
+                            </span>
+                            <span style={{fontSize: 10, color: 'var(--text-3)', lineHeight: 1.2}}>
+                              Sem {user?.semester}
+                            </span>
+                          </div>
                         </div>
                       </Link>
                     </div>
@@ -700,7 +776,41 @@ export default function Dashboard() {
               ═══════════════════════════════ */}
               {tab === 'skippro' && (
                 <div className="tab-panel animate-in">
-                  <SkipProEstimator attendance={attendance} courses={courses} />
+                  {/* Warning popup */}
+                  {showAttendanceWarning && (
+                    <div className="ap-overlay">
+                      <div className="ap-warning-modal glass">
+                        <div style={{fontSize: 36, textAlign: 'center'}}>⚠️</div>
+                        <h3 style={{color: 'var(--amber)', textAlign: 'center', fontFamily: 'var(--font-display)', marginBottom: 12}}>
+                          Before You Use Attendance Planner
+                        </h3>
+                        <p style={{fontSize: 13, color: 'var(--text-2)', lineHeight: 1.7, marginBottom: 16}}>
+                          This tool gives estimates based on current attendance and academic calendar.
+                          It does <strong>NOT</strong> account for cancelled classes, extra classes, or schedule changes.
+                          Use as a rough guide only.
+                        </p>
+                        <div style={{display: 'flex', flexDirection: 'column', gap: 8}}>
+                          <button className="btn btn-primary" onClick={() => {
+                            sessionStorage.setItem('ap_warning_ok', 'true');
+                            setShowAttendanceWarning(false);
+                          }}>
+                            I Understand, Show Me →
+                          </button>
+                          <button className="btn btn-ghost" onClick={() => handleTabChange('overview')}>
+                            Go Back
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Actual planner content — only show if warning acknowledged */}
+                  {!showAttendanceWarning && (
+                    <SkipProEstimator 
+                      attendance={attendance} 
+                      courses={courses} 
+                    />
+                  )}
                 </div>
               )}
 
@@ -788,7 +898,11 @@ export default function Dashboard() {
         .dash-blob-4 { position: absolute; width: 300px; height: 300px; top: 60%; left: 20%; border-radius: 50%; background: radial-gradient(circle at 50% 50%, rgba(244,63,94,0.05) 0%, transparent 70%); filter: blur(50px); animation: floatBlob4 22s ease-in-out infinite 8s; }
         .dash-bg-vignette { position: absolute; inset: 0; background: radial-gradient(ellipse 80% 70% at 50% 50%, transparent 50%, rgba(5,6,15,0.55) 100%); }
 
-        @media (prefers-reduced-motion: reduce) { *, ::before, ::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; } }
+        @media (max-width: 860px) { .dash-bg { opacity: 0.2; } }
+        @media (prefers-reduced-motion: reduce) { 
+          *, ::before, ::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; } 
+          .dash-bg { display: none; }
+        }
       `}</style>
 
       <style jsx>{`
@@ -842,6 +956,41 @@ export default function Dashboard() {
         .sum-pill { border-radius: var(--radius-md); padding: 16px; text-align: center; }
         .sum-val  { font-family: var(--font-mono); font-size: 26px; font-weight: 700; }
         .sum-lbl  { font-size: 10.5px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+
+        /* Attendance Cards */
+        .att-cards { display: flex; flex-direction: column; gap: 16px; margin-top: 20px; }
+        .att-card { display: flex; border-radius: 16px; overflow: hidden; position: relative; }
+        .ac-stripe { width: 6px; flex-shrink: 0; }
+        .ac-body { flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+        .ac-top { display: flex; align-items: center; gap: 20px; }
+        .ac-course { flex: 1; min-width: 0; }
+        .ac-title { font-family: var(--font-display); font-size: 17px; font-weight: 700; color: #f0f2ff; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .ac-meta-row { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--text-3); font-weight: 500; }
+        .ac-pct-block { text-align: right; flex-shrink: 0; }
+        .ac-pct { font-family: var(--font-mono); font-size: 26px; font-weight: 800; line-height: 1; }
+        .ac-status-tag { display: inline-block; padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: 700; margin-top: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .ac-bar-wrap { margin-top: 4px; }
+        .ac-bar-bg { height: 10px; background: rgba(255,255,255,0.04); border-radius: 5px; position: relative; }
+        .ac-bar-fill { height: 100%; border-radius: 5px; transition: width 1s ease-out; }
+        .ac-marker { position: absolute; top: -14px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; }
+        .ac-marker-line { width: 2px; height: 34px; opacity: 0.3; }
+        .ac-marker-lbl { font-size: 10px; font-weight: 800; margin-top: 2px; }
+        .ac-stats { display: flex; align-items: center; gap: 20px; background: rgba(255,255,255,0.02); padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); }
+        .ac-stat { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+        .ac-stat-v { font-family: var(--font-mono); font-size: 16px; font-weight: 700; color: var(--text-1); }
+        .ac-stat-l { font-size: 10px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.5px; }
+        .ac-stat-sep { width: 1px; height: 24px; background: rgba(255,255,255,0.08); }
+        .ac-advice { flex: 1; display: flex; align-items: center; gap: 12px; padding-left: 12px; border-left: 2px solid rgba(255,255,255,0.1); }
+        .adv-ico { font-size: 20px; }
+        .adv-main { font-size: 13px; font-weight: 700; color: var(--text-1); }
+        .adv-sub { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+        .ac-advice.danger { border-left-color: var(--rose); }
+        .ac-advice.warn { border-left-color: var(--amber); }
+        .ac-advice.safe { border-left-color: var(--emerald); }
+
+        /* Attendance Planner Warning */
+        .ap-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
+        .ap-warning-modal { max-width: 460px; width: 100%; border-radius: var(--radius-xl); padding: 32px; border: 1px solid var(--amber-border); }
 
         .install-banner { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); width: calc(100% - 32px); max-width: 420px; background: var(--card-bg); border: 1px solid var(--accent-border); border-radius: 16px; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; z-index: 9999; box-shadow: 0 8px 32px rgba(0,0,0,0.5); backdrop-filter: blur(20px); }
         .mobile-bottom-nav { display: none; position: fixed; bottom: 0; left: 0; right: 0; height: 64px; background: var(--sidebar-bg); border-top: 1px solid var(--sidebar-border); backdrop-filter: blur(20px); z-index: 100; grid-template-columns: repeat(5, 1fr); align-items: center; padding-bottom: env(safe-area-inset-bottom); }
