@@ -99,9 +99,9 @@
   /* ── Cards: 3-tier elevation ── */
   /* Base card — sits on --bg-base */
   --card-bg:            rgba(13,15,29,0.85);
-  --card-border:        rgba(255,255,255,0.08);
-  --card-hover-border:  rgba(99,102,241,0.28);
-  --card-shadow:        0 1px 0 rgba(255,255,255,0.035), 0 2px 12px rgba(0,0,0,0.45);
+  --card-border:        rgba(255,255,255,0.11);
+  --card-hover-border:  rgba(99,102,241,0.32);
+  --card-shadow:        inset 0 1px 0 rgba(255,255,255,0.06), 0 1px 0 rgba(255,255,255,0.035), 0 2px 12px rgba(0,0,0,0.45);
 
   /* Raised card — sits on a card */
   --card-raised-bg:     rgba(19,21,40,0.90);
@@ -203,9 +203,9 @@
   --nav-text-default:   rgba(12,13,30,0.42);
 
   --card-bg:            rgba(255,255,255,0.95);
-  --card-border:        rgba(0,0,0,0.08);
-  --card-hover-border:  rgba(79,70,229,0.22);
-  --card-shadow:        0 1px 0 rgba(255,255,255,0.7), 0 2px 8px rgba(0,0,0,0.07);
+  --card-border:        rgba(0,0,0,0.11);
+  --card-hover-border:  rgba(79,70,229,0.28);
+  --card-shadow:        inset 0 1px 0 rgba(255,255,255,0.7), 0 1px 0 rgba(255,255,255,0.7), 0 2px 8px rgba(0,0,0,0.07);
 
   --card-raised-bg:     rgba(248,249,255,0.98);
   --card-raised-border: rgba(0,0,0,0.10);
@@ -302,12 +302,13 @@ a { color: inherit; text-decoration: none; }
    GRADIENT TEXT
    ════════════════════════════════════════════════════════ */
 .grad-text {
-  background: linear-gradient(135deg, var(--accent-light) 0%, var(--cyan) 55%, var(--accent-light) 100%);
+  background: linear-gradient(135deg, var(--accent-light) 0%, var(--cyan) 35%, #c084fc 65%, var(--accent-light) 100%);
   background-size: 200% auto;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
   animation: shimmer 4s linear infinite;
+  font-weight: 800;
 }
 .grad-text-warm {
   background: linear-gradient(135deg, #f59e0b 0%, #f43f5e 50%, #f59e0b 100%);
@@ -610,7 +611,7 @@ a { color: inherit; text-decoration: none; }
 .dash-blob-1 {
   position: absolute; width: 700px; height: 700px;
   top: -200px; left: -180px; border-radius: 50%;
-  background: radial-gradient(circle at 40% 40%, rgba(99,102,241,0.10) 0%, rgba(99,102,241,0.04) 45%, transparent 70%);
+  background: radial-gradient(circle at 40% 40%, rgba(99,102,241,0.12) 0%, rgba(99,102,241,0.06) 45%, transparent 70%);
   filter: blur(60px);
   animation: floatBlob1 20s ease-in-out infinite;
   will-change: transform;
@@ -618,7 +619,7 @@ a { color: inherit; text-decoration: none; }
 .dash-blob-2 {
   position: absolute; width: 600px; height: 600px;
   bottom: -150px; right: -150px; border-radius: 50%;
-  background: radial-gradient(circle at 60% 60%, rgba(34,211,238,0.07) 0%, rgba(34,211,238,0.03) 45%, transparent 70%);
+  background: radial-gradient(circle at 60% 60%, rgba(34,211,238,0.10) 0%, rgba(34,211,238,0.05) 45%, transparent 70%);
   filter: blur(55px);
   animation: floatBlob2 24s ease-in-out infinite;
   will-change: transform;
@@ -626,16 +627,16 @@ a { color: inherit; text-decoration: none; }
 .dash-blob-3 {
   position: absolute; width: 420px; height: 420px;
   top: 38%; left: 52%; border-radius: 50%;
-  background: radial-gradient(circle at 50% 50%, rgba(167,139,250,0.07) 0%, rgba(167,139,250,0.03) 50%, transparent 70%);
+  background: radial-gradient(circle at 50% 50%, rgba(167,139,250,0.10) 0%, rgba(167,139,250,0.05) 50%, transparent 70%);
   filter: blur(50px);
   animation: floatBlob3 16s ease-in-out infinite 4s;
   will-change: transform;
 }
 .dash-blob-4 {
-  position: absolute; width: 300px; height: 300px;
-  top: 60%; left: 20%; border-radius: 50%;
-  background: radial-gradient(circle at 50% 50%, rgba(244,63,94,0.05) 0%, transparent 70%);
-  filter: blur(50px);
+  position: absolute; width: 450px; height: 450px;
+  bottom: 0%; right: 10%; border-radius: 50%;
+  background: radial-gradient(circle at 50% 50%, rgba(244,63,94,0.08) 0%, transparent 70%);
+  filter: blur(60px);
   animation: floatBlob4 22s ease-in-out infinite 8s;
   will-change: transform;
 }
@@ -703,10 +704,11 @@ body, aside, nav, main, header, footer,
 .btn, .tag, .form-input,
 [class*='card'], [class*='sidebar'], [class*='nav'] {
   transition:
-    background-color 0.22s ease,
-    border-color 0.22s ease,
+    background-color 0.20s ease,
+    border-color 0.20s ease,
     color 0.14s ease,
-    box-shadow 0.22s ease;
+    box-shadow 0.20s ease,
+    transform 0.20s ease;
 }
 /* Never transition SVG paths or canvas — causes flicker */
 canvas, svg *, .no-transition { transition: none !important; }

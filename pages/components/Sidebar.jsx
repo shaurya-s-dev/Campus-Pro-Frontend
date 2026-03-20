@@ -39,9 +39,9 @@ const NAV_ITEMS = [
   { id: 'timetable',  label: 'Timetable',   icon: 'clock',      path: '/dashboard?tab=timetable',    group: 'main' },
   { id: 'courses',    label: 'Courses',     icon: 'book',       path: '/dashboard?tab=courses',      group: 'main' },
   
-  { id: 'calculator', label: 'GPA Calc',    icon: 'calculator', path: '/calculator',   isLink: true, group: 'tools' },
-  { id: 'skippro',    label: 'Skip Pro',    icon: 'zap',        path: '/skip-pro',     isLink: true, group: 'tools' },
-  { id: 'calendar',   label: 'Calendar',    icon: 'calendar',   path: '/calendar',     isLink: true, group: 'tools' },
+  { id: 'gpa',        label: 'GPA Calc',    icon: 'calculator', group: 'tools' },
+  { id: 'skippro',    label: 'Attendance Planner', icon: 'zap',        group: 'tools' },
+  { id: 'calendar',   label: 'Calendar',    icon: 'calendar',   group: 'tools' },
 
   { id: 'help',       label: 'Help Center', icon: 'help',       path: '/help',         isLink: true, group: 'support' },
   { id: 'report',     label: 'Report Issue',icon: 'flag',       path: '/report-issue', isLink: true, group: 'support' },
@@ -107,21 +107,19 @@ export default function Sidebar({ activeTab, onTabChange, user, below75 }) {
       </div>
 
       {/* ── User card ──────────────────────────── */}
+      {/* ── User info ──────────────────────────── */}
       {!collapsed ? (
-        <Link href="/profile" className="user-card">
+        <div className="user-details">
           <div className="avatar">{initial}</div>
           <div className="user-text">
             <div className="user-name">{user?.name || 'Student'}</div>
             <div className="user-reg">{user?.regNumber || '—'}</div>
           </div>
-          {below75 > 0 && (
-            <span className="alert-dot" title={`${below75} below 75%`}>{below75}</span>
-          )}
-        </Link>
+        </div>
       ) : (
-        <Link href="/profile" className="avatar-mini" title={user?.name}>
+        <div className="avatar-mini-display">
           {initial}
-        </Link>
+        </div>
       )}
 
       {/* ── Stats ──────────────────────────────── */}
@@ -191,27 +189,18 @@ export default function Sidebar({ activeTab, onTabChange, user, below75 }) {
         {collapsed && <div className="nav-divider" />}
 
         {NAV_ITEMS.filter(i => i.group === 'tools').map(item => {
-          const active = isPathActive(item.path);
+          const active = isActive(item.id);
           return (
-            <Link
+            <button
               key={item.id}
-              href={item.path}
               className={`nav-item${active ? ' nav-active' : ''}`}
+              onClick={() => onTabChange?.(item.id)}
               title={collapsed ? item.label : undefined}
             >
               {active && <span className="active-bar" />}
               <span className="nav-icon">{icons[item.icon]}</span>
               {!collapsed && <span className="nav-text">{item.label}</span>}
-              {!collapsed && (
-                <span className="nav-external">
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-                    <polyline points="15 3 21 3 21 9"/>
-                    <line x1="10" y1="14" x2="21" y2="3"/>
-                  </svg>
-                </span>
-              )}
-            </Link>
+            </button>
           );
         })}
       </nav>
@@ -377,48 +366,32 @@ export default function Sidebar({ activeTab, onTabChange, user, below75 }) {
         .collapse-btn:hover { background: var(--bg-hover); color: var(--text-1); border-color: var(--border-strong); transform: scale(1.05); }
 
         /* ── User card ──────────────────────────── */
-        .user-card {
+        /* ── User info ──────────────────────────── */
+        .user-details {
           display: flex;
           align-items: center;
-          gap: 9px;
-          padding: 9px 9px;
-          border-radius: 11px;
-          background: var(--accent-dim);
-          border: 1px solid var(--accent-border);
-          transition: all 0.18s;
-          cursor: pointer;
-          text-decoration: none;
-          overflow: hidden;
-          position: relative;
-          margin-bottom: 4px;
+          gap: 12px;
+          padding: 8px 10px 12px;
+          border-bottom: 1px solid var(--border);
+          margin-bottom: 8px;
         }
-        .user-card::before {
-          content: '';
-          position: absolute;
-          inset: 0;
-          background: linear-gradient(135deg, rgba(99,102,241,0.08), transparent);
-          opacity: 0;
-          transition: opacity 0.18s;
-        }
-        .user-card:hover { border-color: var(--accent-border); box-shadow: var(--shadow-sm); }
-        .user-card:hover::before { opacity: 1; }
 
         .avatar {
-          width: 32px;
-          height: 32px;
-          border-radius: 9px;
+          width: 34px;
+          height: 34px;
+          border-radius: 10px;
           background: linear-gradient(135deg, var(--accent), #4338ca);
           display: flex;
           align-items: center;
           justify-content: center;
           font-family: var(--font-display);
           font-weight: 800;
-          font-size: 13px;
+          font-size: 14px;
           color: white;
           flex-shrink: 0;
-          box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+          box-shadow: 0 2px 6px rgba(0,0,0,0.3);
         }
-        .avatar-mini {
+        .avatar-mini-display {
           display: flex;
           align-items: center;
           justify-content: center;
@@ -430,13 +403,9 @@ export default function Sidebar({ activeTab, onTabChange, user, below75 }) {
           font-weight: 800;
           font-size: 14px;
           color: white;
-          margin: 0 auto 6px;
-          cursor: pointer;
-          text-decoration: none;
-          box-shadow: 0 2px 6px rgba(0,0,0,0.35);
-          transition: transform 0.14s, box-shadow 0.14s;
+          margin: 0 auto 10px;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.3);
         }
-        .avatar-mini:hover { transform: scale(1.04); box-shadow: 0 2px 8px rgba(0,0,0,0.4); }
 
         .user-text { flex: 1; min-width: 0; }
         .user-name { font-size: 12px; font-weight: 600; color: var(--text-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -479,10 +448,12 @@ export default function Sidebar({ activeTab, onTabChange, user, below75 }) {
         .nav-wrap { display: flex; flex-direction: column; gap: 1px; flex: 1; margin-top: 4px; }
         .nav-label {
           font-size: 9px;
-          font-weight: 700;
-          letter-spacing: 1.4px;
-          color: var(--text-5);
-          padding: 5px 10px 3px;
+          font-weight: 800;
+          letter-spacing: 1.8px;
+          color: var(--text-3);
+          padding: 12px 10px 6px;
+          text-transform: uppercase;
+          opacity: 0.8;
         }
         .nav-divider { height: 1px; background: var(--border); margin: 6px 4px; }
 
@@ -510,9 +481,15 @@ export default function Sidebar({ activeTab, onTabChange, user, below75 }) {
         .nav-item:hover { 
           background: var(--nav-item-hover); 
           color: var(--text-2); 
-          box-shadow: inset -2px 0 8px rgba(99, 102, 241, 0.15);
+          box-shadow: inset -10px 0 20px rgba(99, 102, 241, 0.03);
         }
-        .nav-item:hover .nav-icon { transform: scale(1.08); }
+        .nav-item::after {
+          content: ''; position: absolute; inset: 0;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.03), transparent);
+          transform: translateX(-100%); transition: transform 0.5s ease;
+        }
+        .nav-item:hover::after { transform: translateX(100%); }
+        .nav-item:hover .nav-icon { transform: scale(1.1); }
         .nav-active {
           background: var(--nav-item-active) !important;
           color: var(--nav-text-active) !important;
@@ -523,11 +500,11 @@ export default function Sidebar({ activeTab, onTabChange, user, below75 }) {
 
         .active-bar {
           position: absolute;
-          left: 0; top: 22%; bottom: 22%;
+          left: 0; top: 20%; bottom: 20%;
           width: 3px;
-          border-radius: 0 3px 3px 0;
+          border-radius: 0 4px 4px 0;
           background: linear-gradient(to bottom, var(--accent-light), var(--accent));
-          box-shadow: 2px 0 8px var(--accent-light);
+          box-shadow: 0 0 10px var(--accent-light), 0 0 5px var(--accent);
         }
 
         .nav-icon {

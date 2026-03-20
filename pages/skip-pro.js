@@ -123,7 +123,7 @@ export default function SkipPro() {
 
   return (
     <>
-      <Head><title>Skip Pro — CampusPro</title></Head>
+      <Head><title>Attendance Planner — CampusPro</title></Head>
 
       <div className="dash-bg" aria-hidden="true">
         <div className="dash-bg-grid" />
@@ -140,8 +140,8 @@ export default function SkipPro() {
         <main className="main-content">
           <header className="header animate-up">
             <div className="header-left">
-              <h1 className="title">Skip Pro <span className="title-tag">Estimator</span></h1>
-              <p className="subtitle">Attendance optimization based on remaining academic days</p>
+              <h1 className="title">Attendance Planner</h1>
+              <p className="subtitle">Comprehensive attendance optimization and projection</p>
             </div>
             
             <div className="summary-strip">
@@ -226,7 +226,7 @@ export default function SkipPro() {
               <h2 className="popup-title">Heads Up — This is an Estimate</h2>
             </div>
             <div className="popup-body">
-              <p>Skip Pro calculates based on:</p>
+              <p>Attendance Planner calculates based on:</p>
               <ul>
                 <li>Your current attendance data from Academia</li>
                 <li>Remaining academic calendar days until April 30</li>

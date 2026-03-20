@@ -1,10 +1,14 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
+import Link from 'next/link';
 import Sidebar from '@/components/Sidebar';
 import TimetableView from '../components/TimetableView';
 import { DataStore, requireAuth, sanitizeObject } from '@/lib/security';
 import MarksSection from '../components/MarksSection';
+import GpaCalculator from './components/GpaCalculator';
+import SkipProEstimator from './components/SkipProEstimator';
+import CalendarView from './components/CalendarView';
 
 /* ── SVG Icon ─────────────────────────────────────── */
 const Ico = ({ d, size = 15, sw = 1.8 }) => (
@@ -32,13 +36,25 @@ function CircleProgress({ pct, color = 'var(--accent)', size = 56 }) {
   const circ = 2 * Math.PI * r;
   const dash = circ * Math.min(pct / 100, 1);
   return (
-    <svg width={size} height={size} style={{ transform: 'rotate(-90deg)', flexShrink: 0 }} className="no-transition">
-      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(255,255,255,.05)" strokeWidth={4.5} />
-      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={4.5}
-        strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
-        style={{ transition: 'stroke-dasharray 1.2s cubic-bezier(.4,0,.2,1)', filter: `drop-shadow(0 0 6px ${color}66)` }}
-      />
-    </svg>
+    <div className="cp-wrap" style={{ width: size, height: size }}>
+      <svg width={size} height={size} style={{ transform: 'rotate(-90deg)', flexShrink: 0 }} className="no-transition">
+        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(255,255,255,.05)" strokeWidth={6} />
+        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={6}
+          strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
+          style={{ 
+            transition: 'stroke-dasharray 1.2s cubic-bezier(.4,0,.2,1)', 
+            filter: `drop-shadow(0 0 8px ${color}88)` 
+          }}
+        />
+      </svg>
+      <div className="cp-glow" style={{ background: color }} />
+      <style jsx>{`
+        .cp-wrap { position: relative; display: flex; align-items: center; justify-content: center; }
+        .cp-glow {
+          position: absolute; inset: 4px; border-radius: 50%; opacity: 0.08; filter: blur(12px); pointer-events: none;
+        }
+      `}</style>
+    </div>
   );
 }
 
@@ -75,6 +91,7 @@ function KPICard({ label, value, sub, color, icon, delay = 0 }) {
   const animatedValue = useCountUp(value);
   return (
     <div className="kpi glass glass-hover animate-up" style={{ animationDelay: `${delay}ms` }}>
+      <div className="kpi-accent" style={{ background: `linear-gradient(90deg, ${color}, transparent)` }} />
       <div className="kpi-header">
         <div className="kpi-icon-wrap" style={{ color, background: `${color}14`, border: `1px solid ${color}22` }}>
           <Ico d={icon} size={15} />
@@ -83,6 +100,13 @@ function KPICard({ label, value, sub, color, icon, delay = 0 }) {
       </div>
       <div className="kpi-value" style={{ color }}>{animatedValue}</div>
       {sub && <div className="kpi-sub">{sub}</div>}
+      
+      {/* Mini sparkline visualization hint */}
+      <div className="kpi-mini-viz" style={{ color }}>
+        <svg width="40" height="20" viewBox="0 0 40 20" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <path d="M2 15 L10 12 L18 16 L26 8 L34 10 L38 2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.3 }} />
+        </svg>
+      </div>
 
       <style jsx>{`
         .kpi {
@@ -91,11 +115,10 @@ function KPICard({ label, value, sub, color, icon, delay = 0 }) {
           position: relative;
           overflow: hidden;
           cursor: default;
-          transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s;
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
-        .kpi:hover {
-          transform: translateY(-3px);
-        }
+        .kpi-accent { position: absolute; top: 0; left: 0; right: 0; height: 2px; opacity: 0.4; }
+        .kpi:hover { transform: translateY(-5px); }
         .kpi-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
         .kpi-icon-wrap {
           width: 30px; height: 30px; border-radius: 8px;
@@ -103,8 +126,12 @@ function KPICard({ label, value, sub, color, icon, delay = 0 }) {
         }
         .kpi-label { font-size: 11.5px; color: var(--text-2); font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; }
         .kpi-value { font-family: var(--font-mono); font-size: 32px; font-weight: 800; letter-spacing: -1.2px; line-height: 1; }
-        .kpi-sub   { font-size: 11.5px; color: var(--text-2); margin-top: 6px; }
+        .kpi-sub   { font-size: 11.5px; color: var(--text-3); margin-top: 6px; }
+        .kpi-mini-viz { position: absolute; bottom: 12px; right: 12px; opacity: 0.5; }
 
+        @media (prefers-reduced-motion: reduce) {
+          .kpi { transition: none; }
+        }
       `}</style>
     </div>
   );
@@ -176,6 +203,7 @@ export default function Dashboard() {
       {/* ── Animated ambient background ──────── */}
       <div className="dash-bg" aria-hidden="true">
         <div className="dash-bg-grid" />
+        <div className="dash-conic-ring" />
         <div className="dash-blob-1" />
         <div className="dash-blob-2" />
         <div className="dash-blob-3" />
@@ -215,7 +243,15 @@ export default function Dashboard() {
                       </p>
                     </div>
                     <div className="hd-meta">
-                      <span className="tag tag-accent">Sem {user.semester}</span>
+                      <Link href="/profile" className="profile-corner-btn">
+                        <div className="profile-avatar-small">
+                          {(user.name || 'S')[0].toUpperCase()}
+                        </div>
+                        <div className="profile-corner-info">
+                          <span className="profile-corner-name">{user.name?.split(' ')[0]}</span>
+                          <span className="profile-corner-sem">Sem {user.semester}</span>
+                        </div>
+                      </Link>
                     </div>
                   </div>
 
@@ -605,6 +641,33 @@ export default function Dashboard() {
                   </div>
                 </div>
               )}
+
+              {/* ═══════════════════════════════
+                  GPA CALCULATOR TAB
+              ═══════════════════════════════ */}
+              {tab === 'gpa' && (
+                <div className="tab-panel animate-in">
+                  <GpaCalculator courses={courses} />
+                </div>
+              )}
+
+              {/* ═══════════════════════════════
+                  ATTENDANCE PLANNER TAB
+              ═══════════════════════════════ */}
+              {tab === 'skippro' && (
+                <div className="tab-panel animate-in">
+                  <SkipProEstimator />
+                </div>
+              )}
+
+              {/* ═══════════════════════════════
+                  CALENDAR TAB
+              ═══════════════════════════════ */}
+              {tab === 'calendar' && (
+                <div className="tab-panel animate-in">
+                  <CalendarView />
+                </div>
+              )}
             </>
           )}
         </main>
@@ -767,6 +830,7 @@ export default function Dashboard() {
           min-width: 0;
           overflow-y: auto;
           overflow-x: hidden;
+          transition: padding 0.3s ease;
         }
         .loading-center {
           display: flex;
@@ -804,6 +868,55 @@ export default function Dashboard() {
         }
         .page-sub { font-size: 12.5px; color: var(--text-3); margin-top: 4px; }
         .hd-meta { display: flex; align-items: center; gap: 8px; }
+
+        /* ── Profile corner button ────────────── */
+        .profile-corner-btn {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 6px 14px 6px 6px;
+          background: var(--bg-elevated);
+          border: 1px solid var(--border);
+          border-radius: 100px;
+          text-decoration: none;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .profile-corner-btn:hover {
+          background: var(--bg-hover);
+          border-color: var(--accent-border);
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        .profile-avatar-small {
+          width: 32px;
+          height: 32px;
+          background: var(--accent);
+          color: white;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-family: var(--font-display);
+          font-size: 14px;
+          font-weight: 700;
+        }
+        .profile-corner-info {
+          display: flex;
+          flex-direction: column;
+        }
+        .profile-corner-name {
+          font-size: 13px;
+          font-weight: 700;
+          color: var(--text-1);
+          line-height: 1.2;
+        }
+        .profile-corner-sem {
+          font-size: 10px;
+          color: var(--accent-light);
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
 
         /* ── KPI grid ─────────────────────────── */
         .kpi-grid {
@@ -853,7 +966,11 @@ export default function Dashboard() {
         .alert-cta:hover { background: rgba(244,63,94,0.12); }
 
         /* ── Section header ───────────────────── */
-        .section-hd { display: flex; align-items: center; justify-content: space-between; }
+        .section-hd { display: flex; align-items: center; justify-content: space-between; position: relative; padding-left: 12px; }
+        .section-hd::before {
+          content: ''; position: absolute; left: 0; top: 4px; bottom: 4px; width: 3px;
+          border-radius: 2px; background: var(--accent);
+        }
         .section-title { font-family: var(--font-display); font-size: 15px; font-weight: 700; color: #dde2f8; letter-spacing: 0.8px; }
         .link-btn { background: none; border: none; color: var(--accent-light); font-size: 12px; cursor: pointer; font-family: var(--font-body); }
         .link-btn:hover { text-decoration: underline; }
@@ -941,8 +1058,8 @@ export default function Dashboard() {
 
         /* ── Rich Attendance Cards ───────────── */
         .att-cards { display: flex; flex-direction: column; gap: 10px; }
-        .att-card { display: flex; border-radius: var(--radius-lg); overflow: hidden; transition: transform 0.18s, box-shadow 0.18s; }
-        .att-card:hover { transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+        .att-card { display: flex; border-radius: var(--radius-lg); overflow: hidden; transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .att-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-lg); }
         .ac-stripe { width: 3px; flex-shrink: 0; }
         .ac-body { flex: 1; padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
         .ac-top { display: flex; align-items: center; gap: 16px; }
@@ -953,8 +1070,8 @@ export default function Dashboard() {
         .ac-dot  { color: var(--text-5); font-size: 10px; }
         .ac-faculty { font-size: 11px; color: var(--text-3); display: flex; align-items: center; }
         .ac-pct-block { text-align: right; flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
-        .ac-pct { font-family: var(--font-mono); font-size: 26px; font-weight: 700; letter-spacing: -1px; line-height: 1; }
-        .ac-status-tag { font-size: 9.5px; font-weight: 700; padding: 2px 9px; border-radius: 20px; letter-spacing: 0.3px; white-space: nowrap; }
+        .ac-pct { font-family: var(--font-mono); font-size: 28px; font-weight: 800; letter-spacing: -1.2px; line-height: 1; }
+        .ac-status-tag { font-size: 9.5px; font-weight: 700; padding: 3px 12px; border-radius: 100px; letter-spacing: 0.5px; white-space: nowrap; box-shadow: inset 0 1px 0 rgba(255,255,255,0.05); }
         .ac-bar-wrap { position: relative; padding-bottom: 16px; }
         .ac-bar-bg { position: relative; height: 5px; background: var(--border); border-radius: 3px; overflow: visible; }
         .ac-bar-fill { height: 100%; border-radius: 3px; animation: progressBar 1.2s cubic-bezier(.4,0,.2,1) both; position: relative; z-index: 1; }

@@ -112,29 +112,34 @@ function TestBarChart({ tests, color }) {
 
 /* ── Overview summary strip ─────────────────────── */
 function MarksSummaryStrip({ marks, courses = [] }) {
-  // Filter OUT subjects that have 0 credits
-  const validMarks = marks.filter(m => {
+  // Filter OUT subjects that have 0 credits for AVERAGE calculation
+  const validForAverage = marks.filter(m => {
     const course = courses.find(c => c.code === m.courseCode);
     return !course || (parseFloat(course.credit) > 0);
   });
   
-  const total = validMarks.length;
-  if (!total) return null;
+  const hasMarks = marks.length > 0;
+  if (!hasMarks) return null;
 
-  const grades = validMarks.map(m => {
-    const sc  = parseFloat(m.overall?.scored) || 0;
-    const tot = parseFloat(m.overall?.total)  || 1;
-    return getGrade((sc / tot) * 100);
-  });
+  // Gauge and Average Grade uses ONLY courses with credits
+  const scoredForAvg = validForAverage.reduce((s, m) => s + (parseFloat(m.overall?.scored) || 0), 0);
+  const maxForAvg    = validForAverage.reduce((s, m) => s + (parseFloat(m.overall?.total) || 1), 0);
+  const avgPct       = maxForAvg > 0 ? (scoredForAvg / maxForAvg) * 100 : 0;
+  const avgGrade     = getGrade(avgPct);
+
+  // Total Marks display uses EVERYTHING (even 0-credit ones)
+  const totalScored = marks.reduce((s, m) => s + (parseFloat(m.overall?.scored) || 0), 0);
+  const totalMax    = marks.reduce((s, m) => s + (parseFloat(m.overall?.total) || 0), 0);
 
   const gradeCounts = {};
-  grades.forEach(g => { gradeCounts[g.grade] = (gradeCounts[g.grade] || 0) + 1; });
+  validForAverage.forEach(m => {
+    const sc  = parseFloat(m.overall?.scored) || 0;
+    const tot = parseFloat(m.overall?.total)  || 1;
+    const g = getGrade((sc / tot) * 100);
+    gradeCounts[g.grade] = (gradeCounts[g.grade] || 0) + 1;
+  });
 
-  const totalScored = validMarks.reduce((s, m) => s + (parseFloat(m.overall?.scored) || 0), 0);
-  const totalMax    = validMarks.reduce((s, m) => s + (parseFloat(m.overall?.total) || 1), 0);
-  const avgPct      = (totalScored / totalMax) * 100;
-
-  const topSubject = [...validMarks].sort((a, b) => {
+  const topSubject = [...validForAverage].sort((a, b) => {
     const pa = (parseFloat(a.overall?.scored)||0) / (parseFloat(a.overall?.total)||1);
     const pb = (parseFloat(b.overall?.scored)||0) / (parseFloat(b.overall?.total)||1);
     return pb - pa;
@@ -143,8 +148,6 @@ function MarksSummaryStrip({ marks, courses = [] }) {
   const topPct = topSubject
     ? ((parseFloat(topSubject.overall?.scored)||0) / (parseFloat(topSubject.overall?.total)||1) * 100).toFixed(1)
     : 0;
-
-  const avgGrade = getGrade(avgPct);
 
   return (
     <div className="summary-strip">
@@ -163,9 +166,16 @@ function MarksSummaryStrip({ marks, courses = [] }) {
             Grade {avgGrade.grade} · {avgGrade.label}
           </div>
           <div className="ss-total-marks">
-            Total Scored: <strong style={{ color: '#fff' }}>{totalScored.toFixed(2)}</strong> / {totalMax.toFixed(0)}
+            Total Scored: <strong style={{ color: '#fff' }}>{totalScored.toFixed(1)} / {totalMax.toFixed(0)}</strong>
           </div>
-          <div className="ss-sub-text">{total} graded subjects · <span style={{ color: 'var(--amber)' }}>{marks.length - validMarks.length} courses (0 credits) skipped</span></div>
+          <div className="ss-sub-text">
+            {marks.length} Total subjects · 
+            {marks.length > validForAverage.length && (
+              <span style={{ color: 'var(--amber-light)', marginLeft: 6 }}>
+                {marks.length - validForAverage.length} zero-credit courses excluded from average
+              </span>
+            )}
+          </div>
           {topSubject && (
             <div className="ss-top-sub">
               🏆 Current Best: <span style={{ color: avgGrade.color }}>{topSubject.courseName}</span>
@@ -186,7 +196,7 @@ function MarksSummaryStrip({ marks, courses = [] }) {
             <div key={g} className="ssd-row">
               <span className="ssd-grade" style={{ color: gi.color }}>{g}</span>
               <div className="ssd-bar-track">
-                <div className="ssd-bar-fill" style={{ width: `${(cnt/total)*100}%`, background: gi.color }} />
+                <div className="ssd-bar-fill" style={{ width: `${(cnt/validForAverage.length)*100}%`, background: gi.color }} />
               </div>
               <span className="ssd-cnt">{cnt}</span>
             </div>

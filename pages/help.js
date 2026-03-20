@@ -18,7 +18,7 @@ const FAQ = [
     items: [
       { q: 'How is attendance calculated?', a: 'Data is directly fetched from SRM Academia. It is the exact same data shown on the official portal, just presented in a more readable format.' },
       { q: 'What does "Margin" mean on attendance cards?', a: 'Margin is the number of classes you can miss while still maintaining at least a 75% attendance record. A negative margin means you have a deficit.' },
-      { q: 'How accurate is Skip Pro?', a: 'It is an estimate based on your current attendance and the remaining days in the academic calendar. Please use it as a rough guide only.' },
+      { q: 'How accurate is Attendance Planner?', a: 'It is an estimate based on your current attendance and the remaining days in the academic calendar. Please use it as a rough guide only.' },
       { q: 'How does the GPA calculator work?', a: 'It uses SRM\'s official grading scale (O=10, A+=9, A=8, B+=7, B=6, C=5, P=4, F=0) to calculate your weighted average.' }
     ]
   },

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { TokenStore, DataStore } from '@/lib/security';
@@ -48,39 +48,61 @@ function getRedirectUrl(data) {
 }
 
 /* ── Session limit screen ────────────────────────────────────────────────── */
-function SessionLimitScreen({ onBack }) {
+function SessionLimitScreen({ onBack, onRetry, countdown }) {
   return (
-    <div className="info-screen">
-      <div className="info-icon">🔒</div>
-      <div className="info-title">Too Many Active Sessions</div>
-      <div className="info-desc">
-        SRM Academia limits you to <strong>2 active sessions</strong> at once.
-        You need to terminate your old sessions before logging in here.
+    <div className="session-limit-card">
+      <div className="sl-icon">⏳</div>
+      <h3>Session Being Cleared</h3>
+      <p>
+        We're automatically clearing your old session. 
+        Please <strong>wait 30 seconds</strong> and click the button below to try again.
+      </p>
+      
+      {/* Auto-retry countdown */}
+      <div className="sl-countdown">
+        Retrying in <strong>{countdown}s</strong>...
       </div>
-      <a href="https://academia.srmist.edu.in" target="_blank" rel="noreferrer" className="info-btn-amber">
-        Go to Academia
-      </a>
-      <div className="info-steps">
-        <div className="step"><span className="step-n">1</span>Open Academia</div>
-        <div className="step"><span className="step-n">2</span>Go to account settings</div>
-        <div className="step"><span className="step-n">3</span>Terminate old sessions</div>
-        <div className="step"><span className="step-n">4</span>Come back and login again</div>
+      
+      <button 
+        className="sl-retry-btn"
+        onClick={onRetry}
+        disabled={countdown > 0}
+      >
+        {countdown > 0 ? `Wait ${countdown}s` : 'Try Login Again →'}
+      </button>
+      
+      <div className="sl-manual">
+        Still not working? 
+        <a href="https://academia.srmist.edu.in" target="_blank" rel="noreferrer">
+          Manually clear sessions on Academia
+        </a>
       </div>
-      <button className="info-btn-back" onClick={onBack}>Back to Login</button>
+
+      <button className="info-btn-back" onClick={onBack} style={{ marginTop: 24 }}>Back to Login</button>
+
       <style jsx>{`
-        .info-screen{display:flex;flex-direction:column;align-items:center;text-align:center;padding:4px 0}
-        .info-icon{font-size:38px;margin-bottom:12px}
-        .info-title{font-family:'Space Grotesk',sans-serif;font-size:19px;font-weight:700;color:#fde68a;margin-bottom:10px}
-        .info-desc{font-size:13px;color:rgba(210,230,255,0.5);line-height:1.7;margin-bottom:20px}
-        .info-desc strong{color:rgba(210,230,255,0.82)}
-        .info-btn-amber{display:flex;align-items:center;gap:8px;width:100%;padding:12px 16px;border-radius:10px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;text-decoration:none;justify-content:center;box-shadow:0 8px 24px rgba(245,158,11,0.25);transition:all 0.2s;margin-bottom:9px}
-        .info-btn-amber:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(245,158,11,0.4)}
-        .info-btn-back{width:100%;padding:10px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);color:rgba(210,230,255,0.4);font-family:'Space Grotesk',sans-serif;font-size:13px;cursor:pointer;transition:all 0.2s;margin-bottom:20px}
-        .info-btn-back:hover{background:rgba(255,255,255,0.07);color:rgba(210,230,255,0.7)}
-        .info-steps{display:flex;flex-direction:column;gap:7px;width:100%;background:rgba(0,245,255,0.03);border:1px solid rgba(0,245,255,0.08);border-radius:10px;padding:14px;text-align:left}
-        .step{display:flex;align-items:center;gap:10px;font-size:12px;color:rgba(210,230,255,0.42)}
-        .step em{color:rgba(0,245,255,0.65);font-style:normal;font-weight:600}
-        .step-n{width:20px;height:20px;border-radius:50%;background:rgba(0,245,255,0.1);border:1px solid rgba(0,245,255,0.2);color:#00f5ff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+        .session-limit-card { text-align: center; padding: 10px 0; }
+        .sl-icon { font-size: 42px; margin-bottom: 15px; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.7;transform:scale(0.95)} }
+        h3 { font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 700; color: #fde68a; margin-bottom: 12px; }
+        p { font-size: 14px; color: rgba(210,230,255,0.6); line-height: 1.6; margin-bottom: 20px; }
+        p strong { color: #fde68a; }
+        .sl-countdown { font-size: 13px; color: rgba(0,245,255,0.7); margin-bottom: 20px; font-family: 'Space Grotesk', sans-serif; }
+        .sl-countdown strong { color: #00f5ff; }
+        .sl-retry-btn {
+          width: 100%; padding: 13px; border-radius: 12px;
+          background: ${countdown > 0 ? 'rgba(255,255,255,0.05)' : 'linear-gradient(135deg, #f59e0b, #d97706)'};
+          color: ${countdown > 0 ? 'rgba(210,230,255,0.3)' : '#fff'};
+          border: ${countdown > 0 ? '1px solid rgba(255,255,255,0.1)' : 'none'};
+          font-family: 'Space Grotesk', sans-serif; font-size: 14px; font-weight: 700;
+          cursor: ${countdown > 0 ? 'not-allowed' : 'pointer'};
+          transition: all 0.2s;
+          margin-bottom: 20px;
+        }
+        .sl-retry-btn:not(:disabled):hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(245,158,11,0.3); }
+        .sl-manual { font-size: 12px; color: rgba(210,230,255,0.4); }
+        .sl-manual a { color: #f59e0b; text-decoration: underline; margin-left: 4px; }
+        .info-btn-back { width: 100%; padding: 10px; border-radius: 10px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); color: rgba(210,230,255,0.4); font-family: 'Space Grotesk', sans-serif; font-size: 13px; cursor: pointer; transition: all 0.2s; }
       `}</style>
     </div>
   );
@@ -131,11 +153,50 @@ export default function Login() {
   const [loading, setLoading]   = useState(false);
   const [screen, setScreen]     = useState(null); // null | 'session' | 'daily'
   const [sessionRedirectUrl, setSessionRedirectUrl] = useState(null);
+  
+  const [savedCredentials, setSavedCredentials] = useState(null);
+  const [countdown, setCountdown] = useState(30);
+
+  useEffect(() => {
+    if (screen === 'session') {
+      setCountdown(30);
+      const timer = setInterval(() => {
+        setCountdown(prev => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            // Auto retry login
+            handleLogin();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [screen]);
+
+  // Clear credentials on unmount
+  useEffect(() => {
+    return () => setSavedCredentials(null);
+  }, []);
 
   const handleLogin = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     setError('');
+    setStatus('Initiating login…');
     setLoading(true);
+
+    // Prioritize saved credentials for auto-retry
+    const finalAccount = savedCredentials?.account || account;
+    const finalPassword = savedCredentials?.password || password;
+
+    if (!finalAccount || !finalPassword) {
+      setError('Please enter your credentials.');
+      setLoading(false);
+      return;
+    }
+
+    setSavedCredentials({ account: finalAccount, password: finalPassword });
 
     try {
       setStatus('Signing in...');
@@ -237,7 +298,13 @@ export default function Login() {
             <div className="corner tl"/><div className="corner tr"/>
             <div className="corner bl"/><div className="corner br"/>
 
-            {screen === 'session' && <SessionLimitScreen redirectUrl={sessionRedirectUrl} onBack={goBack} />}
+            {screen === 'session' && (
+              <SessionLimitScreen 
+                onRetry={() => handleLogin()} 
+                countdown={countdown}
+                onBack={goBack} 
+              />
+            )}
             {screen === 'daily'   && <DailyLimitScreen onBack={goBack} />}
 
             {screen === null && (
