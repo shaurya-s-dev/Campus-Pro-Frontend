@@ -75,22 +75,11 @@ export default function Sidebar({ activeTab, onTabChange, user, below75 }) {
 
       {/* ── Brand ──────────────────────────────── */}
       <div className="brand">
-        <div className="brand-logo">
-          <svg width="20" height="20" viewBox="0 0 40 40" fill="none">
-            <circle cx="20" cy="8" r="3.5" fill="white" opacity="0.9"/>
-            <circle cx="8" cy="28" r="3.5" fill="white" opacity="0.9"/>
-            <circle cx="32" cy="28" r="3.5" fill="white" opacity="0.9"/>
-            <circle cx="20" cy="20" r="4.5" fill="white"/>
-            <line x1="20" y1="8" x2="20" y2="20" stroke="white" strokeWidth="1.5" opacity="0.6"/>
-            <line x1="8" y1="28" x2="20" y2="20" stroke="white" strokeWidth="1.5" opacity="0.6"/>
-            <line x1="32" y1="28" x2="20" y2="20" stroke="white" strokeWidth="1.5" opacity="0.6"/>
-          </svg>
-        </div>
-        {!collapsed && (
-          <span className="brand-wordmark">
-            Campus<strong>Pro</strong>
-          </span>
-        )}
+        <img
+          src="/logos/campuspro-wordmark.svg"
+          alt="CampusPro"
+          style={{ width: collapsed ? 32 : 148, height: 'auto', transition: 'width 0.28s ease', flexShrink: 0 }}
+        />
         <button
           className="collapse-btn"
           onClick={() => setCollapsed(p => !p)}
