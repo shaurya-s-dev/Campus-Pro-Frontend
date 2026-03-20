@@ -469,6 +469,7 @@ export default function Calculator() {
         <div className="dash-blob-1" />
         <div className="dash-blob-2" />
         <div className="dash-blob-3" />
+        <div className="dash-blob-4" />
         <div className="dash-bg-vignette" />
       </div>
 
@@ -627,13 +628,21 @@ export default function Calculator() {
         @keyframes floatBlob  { 0%,100%{transform:translate(0,0) scale(1)} 33%{transform:translate(40px,-28px) scale(1.06)} 66%{transform:translate(-24px,18px) scale(0.96)} }
         @keyframes floatBlob2 { 0%,100%{transform:translate(0,0) scale(1)} 40%{transform:translate(-35px,22px) scale(1.04)} 70%{transform:translate(28px,-15px) scale(0.98)} }
         @keyframes floatBlob3 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(20px,30px) scale(1.07)} }
+        @keyframes floatBlob4 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-30px, -40px) scale(1.08); } }
         @keyframes gridDrift  { from{transform:translateY(0)} to{transform:translateY(48px)} }
+        @keyframes gridFade   { 0%,100% { opacity: 0.6; } 50% { opacity: 1; } }
+        @keyframes slowSpin   { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } }
+        
         .dash-bg { position:fixed; inset:0; z-index:0; pointer-events:none; overflow:hidden; }
-        .dash-bg-grid { position:absolute; inset:-100px; background-image:radial-gradient(circle, rgba(255,255,255,0.08) 1px, transparent 1px); background-size:28px 28px; animation:gridDrift 14s linear infinite; }
+        .dash-bg::before { content:''; position:absolute; width:900px; height:900px; top:50%; left:50%; transform:translate(-50%,-50%); border-radius:50%; background:conic-gradient(from 0deg,transparent 0%,rgba(99,102,241,0.03) 25%,transparent 50%,rgba(34,211,238,0.03) 75%,transparent 100%); animation:slowSpin 40s linear infinite; pointer-events:none; }
+        .dash-bg-grid { position:absolute; inset:-100px; background-image:radial-gradient(circle, rgba(255,255,255,0.08) 1px, transparent 1px); background-size:28px 28px; animation:gridDrift 14s linear infinite, gridFade 8s ease-in-out infinite; }
         .dash-blob-1 { position:absolute; width:700px; height:700px; top:-200px; left:-180px; border-radius:50%; background:radial-gradient(circle at 40% 40%, rgba(99,102,241,0.17) 0%, rgba(99,102,241,0.06) 45%, transparent 70%); filter:blur(60px); animation:floatBlob 20s ease-in-out infinite; will-change:transform; }
         .dash-blob-2 { position:absolute; width:600px; height:600px; bottom:-150px; right:-150px; border-radius:50%; background:radial-gradient(circle at 60% 60%, rgba(34,211,238,0.13) 0%, rgba(34,211,238,0.05) 45%, transparent 70%); filter:blur(55px); animation:floatBlob2 24s ease-in-out infinite; will-change:transform; }
         .dash-blob-3 { position:absolute; width:420px; height:420px; top:38%; left:52%; border-radius:50%; background:radial-gradient(circle at 50% 50%, rgba(167,139,250,0.11) 0%, rgba(167,139,250,0.04) 50%, transparent 70%); filter:blur(50px); animation:floatBlob3 16s ease-in-out infinite 4s; will-change:transform; }
+        .dash-blob-4 { position:absolute; width:300px; height:300px; top:60%; left:20%; border-radius:50%; background:radial-gradient(circle at 50% 50%, rgba(244,63,94,0.05) 0%, transparent 70%); filter:blur(50px); animation:floatBlob4 22s ease-in-out infinite 8s; will-change:transform; }
         .dash-bg-vignette { position:absolute; inset:0; background:radial-gradient(ellipse 80% 70% at 50% 50%, transparent 50%, rgba(5,6,15,0.5) 100%); }
+        
+        @media (prefers-reduced-motion: reduce) { *, ::before, ::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; } }
 
       `}</style>
 

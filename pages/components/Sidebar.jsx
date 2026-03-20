@@ -88,7 +88,13 @@ export default function Sidebar({ activeTab, onTabChange, user, below75 }) {
           aria-expanded={!collapsed}
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
-          {collapsed ? icons.chevR : icons.chevL}
+          <div className="toggle-icon-wrap" style={{ 
+            transform: collapsed ? 'rotate(180deg)' : 'rotate(0deg)',
+            transition: 'transform 0.28s cubic-bezier(0.4, 0, 0.2, 1)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center'
+          }}>
+            {icons.chevL}
+          </div>
         </button>
       </div>
 
@@ -262,11 +268,29 @@ export default function Sidebar({ activeTab, onTabChange, user, below75 }) {
           overflow-y: auto;
           overflow-x: hidden;
           flex-shrink: 0;
-          transition: width 0.3s cubic-bezier(.4,0,.2,1);
+          transition: width 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+          overflow: hidden;
+          white-space: nowrap;
           z-index: 30;
         }
         .sidebar::-webkit-scrollbar { width: 0; }
         .sidebar.c { width: 60px; }
+
+        /* Text labels fade out when collapsing */
+        .nav-text, .brand-wordmark, .user-text, .stats-row, .theme-label {
+          transition: opacity 0.18s ease, transform 0.18s ease;
+        }
+
+        /* When collapsed, labels fade out before width shrinks */
+        .sidebar.c .nav-text,
+        .sidebar.c .brand-wordmark,
+        .sidebar.c .user-text,
+        .sidebar.c .stats-row,
+        .sidebar.c .theme-label {
+          opacity: 0;
+          pointer-events: none;
+          transform: translateX(-8px);
+        }
 
         /* ── Brand ──────────────────────────────── */
         .brand {
@@ -276,6 +300,7 @@ export default function Sidebar({ activeTab, onTabChange, user, below75 }) {
           padding: 5px 6px 13px;
           border-bottom: 1px solid var(--border);
           margin-bottom: 6px;
+          position: relative;
         }
         .brand-logo {
           width: 30px;
@@ -304,22 +329,25 @@ export default function Sidebar({ activeTab, onTabChange, user, below75 }) {
           background-clip: text;
         }
         .collapse-btn {
+          position: absolute;
+          right: 4px;
+          top: 8px;
           display: flex;
           align-items: center;
           justify-content: center;
-          width: 20px;
-          height: 20px;
-          border-radius: 5px;
-          background: none;
+          width: 24px;
+          height: 24px;
+          border-radius: 6px;
+          background: var(--bg-elevated);
           border: 1px solid var(--border);
-          color: var(--text-4);
+          color: var(--text-3);
           cursor: pointer;
-          transition: all 0.14s;
+          transition: all 0.2s;
           flex-shrink: 0;
           padding: 0;
-          margin-left: auto;
+          z-index: 5;
         }
-        .collapse-btn:hover { background: var(--bg-hover); color: var(--text-2); border-color: var(--border-strong); }
+        .collapse-btn:hover { background: var(--bg-hover); color: var(--text-1); border-color: var(--border-strong); transform: scale(1.05); }
 
         /* ── User card ──────────────────────────── */
         .user-card {
@@ -452,7 +480,11 @@ export default function Sidebar({ activeTab, onTabChange, user, below75 }) {
           text-decoration: none !important;
           overflow: hidden;
         }
-        .nav-item:hover { background: var(--nav-item-hover); color: var(--text-2); }
+        .nav-item:hover { 
+          background: var(--nav-item-hover); 
+          color: var(--text-2); 
+          box-shadow: inset -2px 0 8px rgba(99, 102, 241, 0.15);
+        }
         .nav-item:hover .nav-icon { transform: scale(1.08); }
         .nav-active {
           background: var(--nav-item-active) !important;
@@ -468,7 +500,7 @@ export default function Sidebar({ activeTab, onTabChange, user, below75 }) {
           width: 3px;
           border-radius: 0 3px 3px 0;
           background: linear-gradient(to bottom, var(--accent-light), var(--accent));
-          box-shadow: 0 0 8px var(--accent-light);
+          box-shadow: 2px 0 8px var(--accent-light);
         }
 
         .nav-icon {
@@ -620,7 +652,7 @@ export default function Sidebar({ activeTab, onTabChange, user, below75 }) {
           top: 0; left: 0; bottom: 0;
           z-index: 50;
           transform: translateX(-100%);
-          transition: transform 0.26s cubic-bezier(.4,0,.2,1);
+          transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .sb-mob.open { transform: translateX(0); }
         @media (max-width: 860px) {

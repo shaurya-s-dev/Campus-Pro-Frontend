@@ -179,6 +179,7 @@ export default function Dashboard() {
         <div className="dash-blob-1" />
         <div className="dash-blob-2" />
         <div className="dash-blob-3" />
+        <div className="dash-blob-4" />
         <div className="dash-bg-vignette" />
       </div>
 
@@ -627,9 +628,21 @@ export default function Dashboard() {
           0%,100% { transform: translate(0,0) scale(1); }
           50%     { transform: translate(20px,30px) scale(1.07); }
         }
+        @keyframes floatBlob4 {
+          0%,100% { transform: translate(0,0) scale(1); }
+          50%     { transform: translate(-30px,-40px) scale(1.08); }
+        }
         @keyframes gridDrift {
           from { transform: translateY(0); }
           to   { transform: translateY(48px); }
+        }
+        @keyframes gridFade {
+          0%,100% { opacity: 0.6; }
+          50%     { opacity: 1; }
+        }
+        @keyframes slowSpin {
+          from { transform: translate(-50%, -50%) rotate(0deg); }
+          to   { transform: translate(-50%, -50%) rotate(360deg); }
         }
 
         .dash-bg {
@@ -640,6 +653,25 @@ export default function Dashboard() {
           overflow: hidden;
         }
 
+        .dash-bg::before {
+          content: '';
+          position: absolute;
+          width: 900px; height: 900px;
+          top: 50%; left: 50%;
+          transform: translate(-50%, -50%);
+          border-radius: 50%;
+          background: conic-gradient(
+            from 0deg,
+            transparent 0%,
+            rgba(99,102,241,0.03) 25%,
+            transparent 50%,
+            rgba(34,211,238,0.03) 75%,
+            transparent 100%
+          );
+          animation: slowSpin 40s linear infinite;
+          pointer-events: none;
+        }
+
         /* Dot grid */
         .dash-bg-grid {
           position: absolute;
@@ -647,7 +679,7 @@ export default function Dashboard() {
           background-image:
             radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px);
           background-size: 28px 28px;
-          animation: gridDrift 14s linear infinite;
+          animation: gridDrift 14s linear infinite, gridFade 8s ease-in-out infinite;
         }
 
         /* Blob 1 — indigo, top-left */
@@ -692,6 +724,20 @@ export default function Dashboard() {
             transparent 70%);
           filter: blur(50px);
           animation: floatBlob3 16s ease-in-out infinite 4s;
+          will-change: transform;
+        }
+
+        /* Blob 4 — rose, left-bottom */
+        .dash-blob-4 {
+          position: absolute;
+          width: 300px; height: 300px;
+          top: 60%; left: 20%;
+          border-radius: 50%;
+          background: radial-gradient(circle at 50% 50%,
+            rgba(244,63,94,0.05) 0%,
+            transparent 70%);
+          filter: blur(50px);
+          animation: floatBlob4 22s ease-in-out infinite 8s;
           will-change: transform;
         }
 

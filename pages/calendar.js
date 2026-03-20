@@ -29,9 +29,9 @@ const CALENDAR_DATA = {
     dayOrders: {
       2:'D1', 3:'D2', 5:'D3', 6:'D4', 7:'D5',
       8:'D1', 9:'D2',10:'D3',12:'D4',13:'D5',
-      17:'D1',18:'D2',19:'D3',20:'D4',21:'D5',
-      22:'D1',23:'D2',24:'D3',27:'D4',28:'D5',
-      29:'D1',30:'D2',31:'D3',
+      17:'D1',19:'D2',20:'D3',21:'D4',22:'D5',
+      23:'D1',24:'D2',
+      27:'D3',28:'D4',29:'D5',30:'D1',31:'D2',
     },
   },
   'February 2026': {
@@ -42,27 +42,28 @@ const CALENDAR_DATA = {
       { date: 26, type: 'exam',    label: 'CAT-2 Prep Week'          },
     ],
     dayOrders: {
-      2:'D4', 3:'D5', 4:'D1', 5:'D2', 6:'D3', 7:'D4',
-      9:'D5',10:'D1',11:'D2',12:'D3',13:'D4',
-      16:'D5',17:'D1',18:'D2',20:'D3',21:'D4',
-      23:'D5',24:'D1',25:'D2',26:'D3',27:'D4',28:'D5',
+      2:'D3', 3:'D4', 4:'D5', 5:'D1', 6:'D2',
+      7:'D3', 9:'D4',10:'D5',11:'D1',12:'D2',
+      13:'D3',14:'D4',16:'D5',17:'D1',18:'D2',
+      19:'D3',20:'D4',21:'D5',23:'D1',24:'D2',
+      25:'D3',26:'D4',27:'D5',28:'D1',
     },
   },
   'March 2026': {
     events: [
-      { date: 2,  type: 'exam',    label: 'CAT-2 Begins'       },
-      { date: 18, type: 'holiday', label: 'Holi'                },
-      { date: 19, type: 'holiday', label: "Telugu New Year's Day"},
-      { date: 25, type: 'exam',    label: 'CAT-2 Ends'         },
+      { date: 2,  type: 'exam',    label: 'CAT-2 Begins' },
+      { date: 18, type: 'holiday', label: 'Holi' },
+      { date: 19, type: 'holiday', label: "Telugu New Year's Day" },
+      { date: 25, type: 'exam',    label: 'CAT-2 Ends' },
     ],
     dayOrders: {
-      2:'D1', 3:'D2', 4:'D3', 5:'D4', 6:'D5', 7:'D1',
-      9:'D2',10:'D3',11:'D4',12:'D5',13:'D1',
-      16:'D2',17:'D3',
-      // 18=Holi, 19=Telugu New Year — both holidays, no class
-      20:'D5',
-      23:'D1',24:'D2',26:'D3',27:'D4',28:'D5',
-      30:'D1',31:'D2',
+      2:'D2', 3:'D3', 4:'D4', 5:'D5', 6:'D1',
+      7:'D2', 9:'D3',10:'D4',11:'D5',12:'D1',
+      13:'D2',16:'D3',17:'D4',
+      20:'D2',
+      21:'D3',23:'D4',24:'D5',
+      25:'D1',
+      26:'D2',27:'D3',28:'D4',30:'D5',31:'D1',
     },
   },
   'April 2026': {
@@ -74,9 +75,13 @@ const CALENDAR_DATA = {
       { date: 30, type: 'exam',    label: 'Last Day of Instruction' },
     ],
     dayOrders: {
-      2:'D3', 4:'D4', 6:'D5', 7:'D1', 8:'D2', 9:'D3',10:'D4',
-      13:'D5',15:'D1',16:'D2',17:'D3',20:'D4',
-      22:'D5',23:'D1',24:'D2',27:'D3',28:'D4',29:'D5',30:'D1',
+      2:'D2',
+      4:'D3', 6:'D4', 7:'D5', 8:'D1', 9:'D2',
+      10:'D3',13:'D4',
+      15:'D5',16:'D1',17:'D2',20:'D3',
+      21:'D4',
+      22:'D5',23:'D1',24:'D2',27:'D3',28:'D4',
+      29:'D5',30:'D1',
     },
   },
   'May 2026': {
@@ -224,12 +229,12 @@ export default function CalendarPage() {
     <>
       <Head><title>Academic Calendar — CampusPro</title></Head>
 
-      {/* Blob background */}
       <div className="dash-bg" aria-hidden="true">
         <div className="dash-bg-grid" />
         <div className="dash-blob-1" />
         <div className="dash-blob-2" />
         <div className="dash-blob-3" />
+        <div className="dash-blob-4" />
         <div className="dash-bg-vignette" />
       </div>
 
@@ -451,10 +456,7 @@ export default function CalendarPage() {
                               <span className="day-num">{d}</span>
                             )}
                             {order && !isHol && (
-                              <span className="order-tag" style={{
-                                color:      isExam ? '#f59e0b' : 'var(--accent-light)',
-                                background: isExam ? 'rgba(245,158,11,0.10)' : 'var(--accent-dim)',
-                              }}>
+                              <span className={`order-tag ${isExam ? 'ot-exam' : 'ot-reg'}`}>
                                 {order}
                               </span>
                             )}
@@ -580,20 +582,27 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      {/* ── GLOBAL: blob keyframes ── */}
       <style jsx global>{`
         body { background: #05060f; overflow-x: hidden; }
         @keyframes floatBlob1  { 0%,100%{transform:translate(0,0) scale(1)} 33%{transform:translate(40px,-28px) scale(1.06)} 66%{transform:translate(-24px,18px) scale(0.96)} }
         @keyframes floatBlob2  { 0%,100%{transform:translate(0,0) scale(1)} 40%{transform:translate(-35px,22px) scale(1.04)} 70%{transform:translate(28px,-15px) scale(0.98)} }
         @keyframes floatBlob3  { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(20px,30px) scale(1.07)} }
+        @keyframes floatBlob4 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-30px, -40px) scale(1.08); } }
         @keyframes gridDrift   { from{transform:translateY(0)} to{transform:translateY(48px)} }
+        @keyframes gridFade    { 0%,100% { opacity: 0.6; } 50% { opacity: 1; } }
+        @keyframes slowSpin { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } }
         @keyframes fadeUp      { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+        
         .dash-bg { position:fixed; inset:0; z-index:0; pointer-events:none; overflow:hidden; }
-        .dash-bg-grid { position:absolute; inset:-100px; background-image:radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px); background-size:28px 28px; animation:gridDrift 14s linear infinite; }
+        .dash-bg::before { content:''; position:absolute; width:900px; height:900px; top:50%; left:50%; transform:translate(-50%,-50%); border-radius:50%; background:conic-gradient(from 0deg,transparent 0%,rgba(99,102,241,0.03) 25%,transparent 50%,rgba(34,211,238,0.03) 75%,transparent 100%); animation:slowSpin 40s linear infinite; pointer-events:none; }
+        .dash-bg-grid { position:absolute; inset:-100px; background-image:radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px); background-size:28px 28px; animation:gridDrift 14s linear infinite, gridFade 8s ease-in-out infinite; }
         .dash-blob-1 { position:absolute; width:700px; height:700px; top:-200px; left:-180px; border-radius:50%; background:radial-gradient(circle at 40% 40%, rgba(99,102,241,0.10) 0%, rgba(99,102,241,0.04) 45%, transparent 70%); filter:blur(60px); animation:floatBlob1 20s ease-in-out infinite; will-change:transform; }
         .dash-blob-2 { position:absolute; width:600px; height:600px; bottom:-150px; right:-150px; border-radius:50%; background:radial-gradient(circle at 60% 60%, rgba(34,211,238,0.07) 0%, rgba(34,211,238,0.03) 45%, transparent 70%); filter:blur(55px); animation:floatBlob2 24s ease-in-out infinite; will-change:transform; }
         .dash-blob-3 { position:absolute; width:420px; height:420px; top:38%; left:52%; border-radius:50%; background:radial-gradient(circle at 50% 50%, rgba(167,139,250,0.07) 0%, rgba(167,139,250,0.03) 50%, transparent 70%); filter:blur(50px); animation:floatBlob3 16s ease-in-out infinite 4s; will-change:transform; }
+        .dash-blob-4 { position:absolute; width:300px; height:300px; top:60%; left:20%; border-radius:50%; background:radial-gradient(circle at 50% 50%, rgba(244,63,94,0.05) 0%, transparent 70%); filter:blur(50px); animation:floatBlob4 22s ease-in-out infinite 8s; will-change:transform; }
         .dash-bg-vignette { position:absolute; inset:0; background:radial-gradient(ellipse 80% 70% at 50% 50%, transparent 50%, rgba(4,5,13,0.5) 100%); }
+        
+        @media (prefers-reduced-motion: reduce) { *, ::before, ::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; } }
       `}</style>
 
       <style jsx>{`
@@ -902,9 +911,13 @@ export default function CalendarPage() {
           color: #fff; line-height: 1; flex-shrink: 0;
         }
         .order-tag {
-          font-family: var(--font-mono); font-size: 8px; font-weight: 700;
-          padding: 1px 4px; border-radius: 3px; line-height: 1.4; white-space: nowrap;
+          font-family: var(--font-mono); font-size: 8.5px; font-weight: 800;
+          padding: 1.5px 5.5px; border-radius: 5px; line-height: 1.2; white-space: nowrap;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+          border: 1px solid transparent;
         }
+        .ot-reg  { background: var(--accent-dim); color: var(--accent-light); border-color: var(--accent-border); }
+        .ot-exam { background: var(--amber-dim); color: var(--amber); border-color: var(--amber-border); }
 
         /* Event pills */
         .ev-pills { display: flex; flex-direction: column; gap: 2px; margin-top: auto; }
@@ -929,9 +942,10 @@ export default function CalendarPage() {
         .dp-month  { font-size: 13px; color: var(--text-2); font-weight: 500; }
         .dp-order  {
           font-family: var(--font-mono); font-size: 11px; font-weight: 700;
-          padding: 2px 10px; border-radius: 20px;
+          padding: 3px 12px; border-radius: 20px;
           background: var(--accent-dim); border: 1px solid var(--accent-border);
           color: var(--accent-light);
+          box-shadow: 0 0 12px var(--accent-glow);
         }
         .dp-close {
           width: 24px; height: 24px; border-radius: 6px;
