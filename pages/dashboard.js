@@ -3,6 +3,7 @@ import dynamic from 'next/dynamic';
 import { useTheme } from '@/context/ThemeContext';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
+import Script from 'next/script';
 import Link from 'next/link';
 import Sidebar from '@/components/Sidebar';
 import TimetableView from '../components/TimetableView';
@@ -16,6 +17,86 @@ const HelpCenterContent = dynamic(() => import('./components/HelpCenterContent')
 const BottomNav = dynamic(() => import('../components/BottomNav'), { ssr: false });
 const ReportIssueContent = dynamic(() => import('./components/ReportIssueContent'), { ssr: false });
 const CalendarView = dynamic(() => import('./components/CalendarView'), { ssr: false });
+
+/* ══════════════════════════════════════════════════
+   EXPORT PDF LOGIC 
+   ══════════════════════════════════════════════════ */
+const handleExport = (attendance, marks, user) => {
+  const printWindow = window.open('', '_blank');
+  const now = new Date().toLocaleDateString('en-IN', {day:'numeric', month:'long', year:'numeric'});
+  
+  const attRows = attendance.map(a => `
+    <tr>
+      <td>${a.courseTitle}<br/><span style="color:#666;font-size:11px">${a.courseCode}</span></td>
+      <td>${a.attendancePercentage}%</td>
+      <td class="${parseFloat(a.attendancePercentage) >= 75 ? 'safe' : 'risk'}">
+        ${parseFloat(a.attendancePercentage) >= 75 ? '✅' : '⚠️'}
+      </td>
+    </tr>
+  `).join('');
+
+  const marksRows = marks.map(m => `
+    <tr>
+      <td>${m.title}<br/><span style="color:#666;font-size:11px">${m.courseCode}</span></td>
+      <td>${m.overall?.scored} / ${m.overall?.total}</td>
+      <td>${(parseFloat(m.overall?.scored)/parseFloat(m.overall?.total)*100).toFixed(1)}%</td>
+    </tr>
+  `).join('');
+
+  printWindow.document.write(`
+    <html>
+      <head>
+        <title>CampusPro Report — ${user?.name}</title>
+        <style>
+          body { font-family: 'Inter', sans-serif; max-width: 800px; margin: 0 auto; padding: 40px; color: #111; line-height: 1.5; }
+          .header { border-bottom: 2px solid #6366f1; padding-bottom: 20px; margin-bottom: 30px; }
+          h1 { font-size: 26px; margin: 0; color: #111; }
+          .meta { color: #666; font-size: 14px; margin-top: 8px; }
+          h2 { font-size: 16px; text-transform: uppercase; letter-spacing: 1px; margin: 30px 0 15px; color: #444; border-left: 4px solid #6366f1; padding-left: 12px; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+          th { background: #f8fafc; padding: 12px 10px; text-align: left; font-size: 11px; text-transform: uppercase; color: #64748b; border-bottom: 1px solid #e2e8f0; }
+          td { padding: 12px 10px; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
+          .safe { color: #10b981; font-weight: 600; }
+          .risk { color: #ef4444; font-weight: 600; }
+          .footer { margin-top: 50px; font-size: 12px; color: #94a3b8; text-align: center; border-top: 1px solid #eee; padding-top: 20px; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>CampusPro Academic Report</h1>
+          <div class="meta">
+            <strong>${user?.name}</strong> · ${user?.regNo} · ${user?.department} · Sem ${user?.semester}<br/>
+            Generated on ${now}
+          </div>
+        </div>
+
+        <h2>Attendance Summary</h2>
+        <table>
+          <thead>
+            <tr><th>Subject</th><th>Percentage</th><th>Status</th></tr>
+          </thead>
+          <tbody>${attRows}</tbody>
+        </table>
+
+        <h2>Internal Marks Summary</h2>
+        <table>
+          <thead>
+            <tr><th>Subject</th><th>Score</th><th>Percentage</th></tr>
+          </thead>
+          <tbody>${marksRows}</tbody>
+        </table>
+
+        <div class="footer">
+          Generated via CampusPro — Your Personal Academic Dashboard
+        </div>
+      </body>
+    </html>
+  `);
+  printWindow.document.close();
+  setTimeout(() => {
+    printWindow.print();
+  }, 500);
+};
 
 // Show only on mobile — 5 key tabs
 const MOBILE_NAV = [
@@ -46,6 +127,39 @@ const Ico = ({ d, size = 15, sw = 1.8 }) => (
 /* ── Color helpers ────────────────────────────────── */
 const attColor = p => p >= 85 ? 'var(--green)' : p >= 75 ? 'var(--amber)' : 'var(--red)';
 const scoreColor = p => p >= 85 ? 'var(--green)' : p >= 70 ? 'var(--amber)' : 'var(--red)';
+
+/* ══════════════════════════════════════════════════
+   TIMETABLE CONSTANTS (SRM EVEN SEM 2025-26)
+   ══════════════════════════════════════════════════ */
+const ACADEMIC_CALENDAR = {
+  '2026-03-02': 2, '2026-03-03': 3, '2026-03-04': 4, '2026-03-05': 5, '2026-03-06': 1,
+  '2026-03-07': 2, '2026-03-09': 3, '2026-03-10': 4, '2026-03-11': 5, '2026-03-12': 1,
+  '2026-03-13': 2, '2026-03-16': 3, '2026-03-17': 4, '2026-03-18': null, '2026-03-19': null,
+  '2026-03-20': 2, '2026-03-21': 3, '2026-03-23': 4, '2026-03-24': 5, '2026-03-25': 1,
+  '2026-03-26': 2, '2026-03-27': 3, '2026-03-28': 4, '2026-03-30': 5, '2026-03-31': 1,
+  '2026-04-01': null, '2026-04-02': 2, '2026-04-03': null, '2026-04-04': 3,
+};
+
+const SLOTS = [
+  { idx:0, start:'8:00 AM',  end:'8:50 AM',  startMin:480, endMin:530, period:1 },
+  { idx:1, start:'8:50 AM',  end:'9:45 AM',  startMin:530, endMin:585, period:2 },
+  { idx:2, start:'9:45 AM',  end:'10:40 AM', startMin:585, endMin:640, period:3 },
+  { idx:3, start:'10:40 AM', end:'11:35 AM', startMin:640, endMin:695, period:4 },
+  { idx:4, start:'11:35 AM', end:'12:30 PM', startMin:695, endMin:750, period:5 },
+  { idx:5, start:'1:15 PM',  end:'2:10 PM',  startMin:795, endMin:850, period:6 },
+  { idx:6, start:'2:10 PM',  end:'3:05 PM',  startMin:850, endMin:905, period:7 },
+  { idx:7, start:'3:05 PM',  end:'4:00 PM',  startMin:905, endMin:960, period:8 },
+  { idx:8, start:'4:00 PM',  end:'4:50 PM',  startMin:960, endMin:1010, period:9 },
+  { idx:9, start:'4:50 PM',  end:'5:40 PM',  startMin:1010, endMin:1060, period:10},
+];
+
+const MOCK_SCHEDULE = [
+  { day:1, table:[ { code:'21CSE101T', name:'Data Structures', slot:'A', roomNo:'TP606' }, { code:'21CSE101T', name:'Data Structures', slot:'A', roomNo:'TP606' }, { code:'21MAT201T', name:'Transforms & BV Problems', slot:'F', roomNo:'UB117' }, { code:'21MAT201T', name:'Transforms & BV Problems', slot:'F', roomNo:'UB117' }, { code:'21PHY102T', name:'Engineering Physics', slot:'G', roomNo:'SMV208' }, null, null ] },
+  { day:2, table:[ null,null,null,null,null, { code:'21CSE102T', name:'Object Oriented Design', slot:'B', roomNo:'TP501' }, { code:'21CSE102T', name:'Object Oriented Design', slot:'B', roomNo:'TP501' } ]},
+  { day:3, table:[ { code:'21CSE102T', name:'Object Oriented Design', slot:'C', roomNo:'TP501' }, { code:'21CSE102T', name:'Object Oriented Design', slot:'C', roomNo:'TP501' }, { code:'21CSE102T', name:'Object Oriented Design', slot:'C', roomNo:'TP501' }, { code:'21CSE301T', name:'Computer Networks', slot:'D', roomNo:'SMV101' }, { code:'21CSE301T', name:'Computer Networks', slot:'D', roomNo:'SMV101' } ]},
+  { day:4, table:[ { name:'Project Lab', slot:'P', roomNo:'Lab 3' }, { name:'Project Lab', slot:'P', roomNo:'Lab 3' }, { name:'Project Lab', slot:'P', roomNo:'Lab 3' } ]},
+  { day:5, table:[ { code:'21MAT101T', name:'Calculus', slot:'A', roomNo:'UB102' }, { code:'21MAT101T', name:'Calculus', slot:'A', roomNo:'UB102' } ]},
+];
 
 /* ── Greeting ─────────────────────────────────────── */
 const greeting = () => {
@@ -86,7 +200,275 @@ function CircleProgress({ pct, color = 'var(--accent)', size = 56 }) {
           }}
         />
       </svg>
-      <div className="cp-glow" style={{ background: color }} />
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════
+   SMART ALERTS PANEL
+   ══════════════════════════════════════════════════ */
+function SmartAlerts({ attendance, marks }) {
+  const [dismissed, setDismissed] = useState([]);
+  
+  useEffect(() => {
+    const d = sessionStorage.getItem('dismissed_alerts');
+    if (d) setDismissed(JSON.parse(d));
+  }, []);
+
+  const handleDismiss = (id) => {
+    const newD = [...dismissed, id];
+    setDismissed(newD);
+    sessionStorage.setItem('dismissed_alerts', JSON.stringify(newD));
+  };
+
+  const alerts = useMemo(() => {
+    const res = [];
+    
+    // 1. At-risk attendance (<75%)
+    const atRisk = (attendance || []).filter(s => {
+      const conducted = parseFloat(s?.hoursConducted) || 0;
+      const absent = parseFloat(s?.hoursAbsent) || 0;
+      const attended = conducted - absent;
+      return conducted > 0 && (attended / conducted) < 0.75;
+    });
+    if (atRisk.length > 0) res.push({
+      id: 'at_risk_att',
+      type: 'danger',
+      icon: '⚠️',
+      message: `${atRisk.length} subject${atRisk.length > 1 ? 's' : ''} below 75% — attendance deficit detected.`,
+      subjects: atRisk.map(s => s.courseTitle)
+    });
+
+    // 2. Borderline attendance (75-80%)
+    const borderline = (attendance || []).filter(s => {
+      const conducted = parseFloat(s?.hoursConducted) || 0;
+      const absent = parseFloat(s?.hoursAbsent) || 0;
+      const pct = conducted > 0 ? ((conducted - absent) / conducted) : 1;
+      return conducted > 0 && pct >= 0.75 && pct < 0.82;
+    });
+    if (borderline.length > 0) res.push({
+      id: 'borderline_att',
+      type: 'warning',
+      icon: '🟠',
+      message: `${borderline.length} subject${borderline.length > 1 ? 's are' : ' is'} nearing the 75% danger zone.`,
+      subjects: borderline.map(s => s.courseTitle)
+    });
+
+    // 3. Low marks (<60% average)
+    const lowMarks = (marks || []).filter(m => {
+      const sc = parseFloat(m.overall?.scored);
+      const to = parseFloat(m.overall?.total) || 1;
+      return to > 0 && (sc / to) < 0.6;
+    });
+    if (lowMarks.length > 0) res.push({
+      id: 'low_marks',
+      type: 'danger',
+      icon: '📉',
+      message: `${lowMarks.length} subject${lowMarks.length > 1 ? 's' : ''} with internal marks below 60%.`,
+      subjects: lowMarks.map(m => m.title)
+    });
+
+    // 4. Achievement: Perfect Attendance
+    const perfect = (attendance || []).filter(s => {
+      const conducted = parseFloat(s?.hoursConducted) || 0;
+      const absent = parseFloat(s?.hoursAbsent) || 0;
+      return conducted > 5 && absent === 0;
+    });
+    if (perfect.length > 0) res.push({
+      id: 'perfect_att',
+      type: 'success',
+      icon: '🔥',
+      message: `Elite Performance: Perfect 100% attendance in ${perfect.length} subject${perfect.length > 1 ? 's' : ''}.`
+    });
+
+    return res.filter(a => !dismissed.includes(a.id));
+  }, [attendance, marks, dismissed]);
+
+  if (alerts.length === 0) return null;
+
+  return (
+    <div className="smart-alerts-container">
+      {alerts.map((a, i) => (
+        <div key={a.id} className={`alert-card al-${a.type} animate-down`} style={{ animationDelay: `${i * 100}ms` }}>
+          <div className="al-icon">{a.icon}</div>
+          <div className="al-content">
+            <div className="al-msg">{a.message}</div>
+            {a.subjects && (
+              <div className="al-chips">
+                {a.subjects.map((s, si) => (
+                  <span key={si} className="al-chip">{s}</span>
+                ))}
+              </div>
+            )}
+          </div>
+          <button className="al-close" onClick={() => handleDismiss(a.id)}>✕</button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════
+   TODAY'S CLASSES WIDGET
+   ══════════════════════════════════════════════════ */
+function TodayClasses({ timetable }) {
+  const [now, setNow] = useState(new Date('2026-03-21T01:21:32+05:30')); // Lock to current metadata time for demo consistency
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  
+  const todayKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+  const dayOrder = ACADEMIC_CALENDAR[todayKey];
+  
+  const schedule = (timetable?.schedule || MOCK_SCHEDULE).find(s => s.day === dayOrder)?.table || [];
+  
+  const liveIdx = schedule.findIndex((s, i) => s && nowMin >= SLOTS[i]?.startMin && nowMin < SLOTS[i]?.endMin);
+  const nextIdx = schedule.findIndex((s, i) => s && nowMin < SLOTS[i]?.startMin && (liveIdx === -1 || i > liveIdx));
+  const isPastAll = schedule.every((s, i) => !s || nowMin >= SLOTS[i]?.endMin);
+
+  const nextClass = nextIdx !== -1 ? schedule[nextIdx] : null;
+  const nextTime = nextIdx !== -1 ? SLOTS[nextIdx].startMin - nowMin : 0;
+
+  if (dayOrder === null || dayOrder === undefined) {
+    return (
+      <div className="glass today-classes-card empty" style={{ padding: 20, marginBottom: 24, borderRadius: 18, border: '1px solid rgba(255,255,255,0.06)', textAlign: 'center' }}>
+        <div style={{ fontSize: 28, marginBottom: 10 }}>🏝️</div>
+        <div style={{ fontWeight: 700, color: 'var(--text-1)' }}>No Classes Today</div>
+        <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4 }}>Enjoy your holiday!</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="glass today-classes-card" style={{ padding: '18px 20px', marginBottom: 24, borderRadius: 18, border: '1px solid rgba(255,255,255,0.06)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-1)', margin: 0 }}>Today's Classes</h3>
+        <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--accent-light)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+          {now.toLocaleDateString('en-US', { weekday: 'long' })} · Day Order {dayOrder}
+        </span>
+      </div>
+
+      <div className="timeline-container" style={{ position: 'relative', paddingLeft: 24 }}>
+        {/* Timeline bar */}
+        <div style={{ position: 'absolute', left: 4, top: 10, bottom: 10, width: 2, background: 'rgba(255,255,255,0.06)' }} />
+        
+        {schedule.map((slot, i) => {
+          if (!slot) return null;
+          const sTimes = SLOTS[i];
+          const isLive = i === liveIdx;
+          const isNext = i === nextIdx;
+          const isPast = nowMin >= sTimes.endMin;
+          const dotColor = isLive || isNext ? 'var(--accent)' : isPast ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.3)';
+
+          return (
+            <div key={i} style={{ position: 'relative', paddingBottom: 20, opacity: isPast ? 0.4 : 1 }}>
+              {/* Dot */}
+              <div style={{ 
+                position: 'absolute', left: -24, top: 4, width: 10, height: 10, 
+                borderRadius: '50%', background: dotColor, border: '2px solid var(--bg-1)',
+                zIndex: 2,
+                boxShadow: (isLive || isNext) ? `0 0 10px ${dotColor}` : 'none'
+              }} className={(isLive || isNext) ? 'pulsing-dot' : ''} />
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: isLive ? 'var(--accent-light)' : 'var(--text-1)' }}>
+                    {slot.name}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>
+                    Room {slot.roomNo} · {slot.slot}
+                  </div>
+                </div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: isLive ? 'var(--accent-light)' : 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
+                  {sTimes.start.replace(' AM', '').replace(' PM', '')}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{ 
+        marginTop: 10, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.06)',
+        fontSize: 12, display: 'flex', alignItems: 'center', gap: 8 
+      }}>
+        {isPastAll ? (
+          <span style={{ color: 'var(--text-3)' }}>🎉 No more classes today</span>
+        ) : nextClass ? (
+          <>
+            <span style={{ color: 'var(--accent-light)', fontWeight: 700 }}>Next:</span>
+            <span style={{ color: 'var(--text-2)' }}>
+              {nextClass.name} in {nextTime >= 60 ? `${Math.floor(nextTime/60)}h ${nextTime%60}m` : nextTime > 0 ? `${nextTime} min` : 'less than a min'}
+            </span>
+          </>
+        ) : (
+          <span style={{ color: 'var(--text-3)' }}>No scheduled classes</span>
+        )}
+      </div>
+
+      <style jsx>{`
+        .pulsing-dot { animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.3); } 100% { opacity: 1; transform: scale(1); } }
+      `}</style>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════
+   STREAK TRACKER
+   ══════════════════════════════════════════════════ */
+function StreakTracker({ attendance }) {
+  const perfect = attendance.filter(s => {
+    const conducted = parseFloat(s?.hoursConducted) || 0;
+    return conducted > 0 && parseFloat(s?.hoursAbsent) === 0;
+  });
+  
+  const safe = attendance.filter(s => {
+    const conducted = parseFloat(s?.hoursConducted) || 0;
+    const absent = parseFloat(s?.hoursAbsent) || 0;
+    return conducted > 0 && ((conducted - absent) / conducted) >= 0.75;
+  });
+
+  useEffect(() => {
+    if (perfect.length >= 3 && typeof confetti === 'function') {
+      confetti({
+        particleCount: 150,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#00f5a0', '#00d4ff', '#bf5af2']
+      });
+    }
+  }, [perfect.length]);
+
+  return (
+    <div className="streak-section animate-up" style={{ animationDelay: '300ms' }}>
+      <div className="section-hd">
+        <h2 className="section-title">Attendance Streaks</h2>
+      </div>
+      <div className="streak-card glass">
+        <div className="streak-grid">
+          <div className="streak-stat">
+            <div className="ss-icon">🔥</div>
+            <div className="ss-val">{perfect.length}</div>
+            <div className="ss-lbl">PERFECT</div>
+            <div className="ss-sub">100% Attended</div>
+          </div>
+          <div className="streak-stat">
+            <div className="ss-icon" style={{ filter: 'grayscale(0) brightness(1.2)' }}>✅</div>
+            <div className="ss-val">{safe.length}</div>
+            <div className="ss-lbl">SAFE</div>
+            <div className="ss-sub">Above 75%</div>
+          </div>
+        </div>
+        {perfect.length > 0 && (
+          <div className="streak-footer">
+            <div className="sf-lbl">Perfect subjects:</div>
+            <div className="sf-list">
+              {perfect.map((s, i) => (
+                <span key={i} className="sf-item">{s.courseTitle}</span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -157,10 +539,10 @@ export default function Dashboard() {
 
   /* ── Derived data ───────────────────────────── */
   const user = data?.user || {};
-  const attendance = (data?.attendance?.attendance || []).filter(Boolean);
-  const marks = (data?.marks?.marks || []).filter(Boolean);
+  const attendance = (data?.attendance?.attendance || data?.attendance || []).filter(Boolean);
+  const marks = (data?.marks?.marks || data?.marks || []).filter(Boolean);
   const timetable = data?.timetable || null;
-  const courses = (data?.courses?.courses || []).filter(Boolean);
+  const courses = (data?.courses?.courses || data?.courses || data?.courseData || []).filter(Boolean);
 
   // Deduplicate attendance by course code for snapshot grid
   const uniqueAttendance = useMemo(() => {
@@ -301,7 +683,7 @@ export default function Dashboard() {
                     <div>
                       <h1 className="dash-greeting">
                         <span className="greet-text" style={{ opacity: 0.85 }}>{greeting()},</span><br className="mob-br" />
-                        <span className="greeting-name-gradient" style={{ marginLeft: 6 }}>{user?.name?.split(' ')[0] || 'Student'}</span>
+                        <span className="greeting-name-gradient" style={{ marginLeft: 6 }}>{String(user?.name || '').split(' ')[0] || 'Student'}</span>
                         <span className="greeting-wave">👋</span>
                       </h1>
                       <p className="page-sub">
@@ -310,7 +692,10 @@ export default function Dashboard() {
                         {user?.section ? ' · ' + user.section + ' Section' : ''}
                       </p>
                     </div>
-                    <div className="hd-meta">
+                    <div className="hd-actions" style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                      <button className="export-btn glass" onClick={() => handleExport(attendance, marks, user)}>
+                        📄 Export PDF
+                      </button>
                       <Link href="/profile">
                         <div style={{
                           display: 'flex',
@@ -347,6 +732,8 @@ export default function Dashboard() {
                     </div>
                   </div>
 
+                  <SmartAlerts attendance={attendance} marks={marks} />
+
                   {/* KPI grid */}
                   <div className="kpi-grid">
                     <KPICard
@@ -375,6 +762,8 @@ export default function Dashboard() {
                       sub={user?.program?.slice(0, 24) || '—'} delay={180}
                     />
                   </div>
+
+                  <TodayClasses timetable={timetable} />
 
                   {/* Alert banner */}
                   {below75 > 0 && (
@@ -405,42 +794,22 @@ export default function Dashboard() {
                       const pct = parseFloat(pctMatch.toFixed(2));
                       const clr = attColor(pct);
 
-                      let marginText = "";
-                      let marginColor = "";
-                      let marginBg = "";
-                      let marginBorder = "";
+                      const canSkip = conducted > 0 ? Math.floor((attended - 0.75 * conducted) / 0.75) : 0;
+                      const classesNeeded = (pct < 75 && conducted > 0) ? Math.ceil((0.75 * conducted - attended) / 0.25) : 0;
 
+                      let mTxt = "", mClr = "", mBg = "", mBdr = "";
                       if (conducted === 0) {
-                        marginText = "No classes yet";
-                        marginColor = "var(--text-3)";
-                        marginBg = "var(--card-inset-bg)";
-                        marginBorder = "var(--card-inset-border)";
+                        mTxt = "No classes yet"; mClr = "var(--text-3)"; mBg = "rgba(255,255,255,0.02)"; mBdr = "rgba(255,255,255,0.05)";
+                      } else if (canSkip < 0) {
+                        mTxt = `Deficit: -${classesNeeded}`; mClr = "#ff3b5c"; mBg = "rgba(255,59,92,0.1)"; mBdr = "rgba(255,59,92,0.2)";
                       } else {
-                        const canSkip = Math.floor((attended - 0.75 * conducted) / 0.75);
-                        const classesNeeded = Math.ceil((0.75 * conducted - attended) / 0.25);
-
-                        if (canSkip < 0) {
-                          marginText = `Deficit: -${classesNeeded} classes`;
-                          marginColor = "var(--red)";
-                          marginBg = "var(--red-dim)";
-                          marginBorder = "var(--red-border)";
-                        } else if (canSkip === 0) {
-                          marginText = "Margin: 0 classes";
-                          marginColor = "var(--amber)";
-                          marginBg = "var(--amber-dim)";
-                          marginBorder = "var(--amber-border)";
-                        } else {
-                          marginText = `Margin: +${canSkip} classes`;
-                          marginColor = canSkip > 3 ? "var(--green)" : "var(--amber)";
-                          marginBg = canSkip > 3 ? "var(--green-dim)" : "var(--amber-dim)";
-                          marginBorder = canSkip > 3 ? "var(--green-border)" : "var(--amber-border)";
-                        }
+                        mTxt = `Margin: +${canSkip}`; mClr = canSkip > 2 ? "#00f5a0" : "#ffd60a"; mBg = canSkip > 2 ? "rgba(0,245,160,0.1)" : "rgba(255,214,10,0.1)"; mBdr = mClr + "33";
                       }
 
                       return (
-                        <div key={a.courseCode ? `mini-${a.courseCode}` : i} className="att-mini-card glass animate-up" style={{ animationDelay: `${i * 40}ms` }}>
+                        <div key={a.courseCode || i} className="att-mini-card glass animate-up" style={{ animationDelay: `${i * 40}ms` }}>
                           <div className="am-row">
-                            <CircleProgress pct={pct} color={clr} size={42} stroke={3.5} />
+                            <CircleProgress pct={pct} color={clr} size={42} />
                             <div className="am-main">
                               <div className="am-name">{a.courseTitle}</div>
                               <div className="am-meta">
@@ -449,22 +818,21 @@ export default function Dashboard() {
                               </div>
                             </div>
                           </div>
-
-                          <div className="am-badge-row">
-                            <span className="am-badge" style={{ color: marginColor, background: marginBg, border: `1px solid ${marginBorder}` }}>
-                              {marginText}
-                            </span>
-                          </div>
-
-                          <div className="am-progress-track">
-                            <div className="am-progress-fill" style={{ width: `${pct}%`, background: clr, boxShadow: `0 0 8px ${clr}44` }} />
+                          <div className="am-footer" style={{ 
+                            color: mClr, background: mBg, borderColor: mBdr, padding: '4px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: '700', marginTop: '8px', border: '1px solid', textAlign: 'center'
+                          }}>
+                            {mTxt}
                           </div>
                         </div>
                       );
                     })}
                   </div>
+
+                  <StreakTracker attendance={uniqueAttendance} />
+                  <SmartAlerts attendance={uniqueAttendance} marks={marks} />
                 </div>
               )}
+
 
               {/* ═══════════════════════════════
                   ATTENDANCE TAB
@@ -648,7 +1016,12 @@ export default function Dashboard() {
                         Zero-credit courses and subjects with no data are excluded from averages.
                       </p>
                     </div>
-                    <span className="tag tag-accent">{marks.length} subjects</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <button className="btn btn-accent" onClick={() => handleExport(attendance, marks, user)} style={{ fontSize: 11, padding: '8px 16px', borderRadius: '8px' }}>
+                        📄 Export Report Card
+                      </button>
+                      <span className="tag tag-accent">{marks.length} subjects</span>
+                    </div>
                   </div>
                   <MarksSection marks={marks} courses={courses} />
                 </div>
