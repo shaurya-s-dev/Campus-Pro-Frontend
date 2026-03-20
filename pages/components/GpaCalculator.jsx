@@ -483,7 +483,7 @@ export default function GpaCalculator({ courses = [] }) {
 
     const merged = Array.from(seen.values());
     const mergedCount = merged.filter(c => c._mergeCount > 0).length;
-    const excludedCount = courseData.length - importable.length;
+    const excludedCount = (courses || []).length - importable.length;
     
     const parts = [];
     if (mergedCount > 0) parts.push(`${mergedCount} theory+lab pair${mergedCount > 1 ? 's' : ''} merged`);

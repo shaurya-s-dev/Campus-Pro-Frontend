@@ -27,6 +27,7 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   // Skip API calls — always fresh
   if (event.request.url.includes('/api/')) return;
+  if (event.request.method !== 'GET') return;
   
   event.respondWith(
     fetch(event.request)

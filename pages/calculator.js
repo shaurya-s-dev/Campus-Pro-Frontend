@@ -463,13 +463,13 @@ export default function Calculator() {
   }, [subjects.length]);
 
   const handleImport = () => {
-    const courseData = (DataStore.get()?.courses?.courses || []).filter(Boolean);
-    if (!courseData || courseData.length === 0) return;
+    const courses = (DataStore.get()?.courses?.courses || []).filter(Boolean);
+    if (!courses || courses.length === 0) return;
     
     // Group duplicates — same title base = one entry, max credits
     const seen = new Map();
     
-    const importable = courseData.filter(c => {
+    const importable = courses.filter(c => {
       const cr = parseFloat(c?.credit || '0');
       return cr > 0 && (c?.title || c?.courseName);
     });
@@ -492,7 +492,7 @@ export default function Calculator() {
 
     const merged = Array.from(seen.values());
     const mergedCount = merged.filter(c => c._mergeCount > 0).length; // This line was from original, but _mergeCount is not set in the new logic. Keeping it for now, but it will always be 0.
-    const excludedCount = courseData.length - importable.length;
+    const excludedCount = courses.length - importable.length;
     
     const parts = [];
     if (mergedCount > 0) parts.push(`${mergedCount} theory+lab pair${mergedCount > 1 ? 's' : ''} merged`);

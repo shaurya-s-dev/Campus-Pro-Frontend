@@ -19,19 +19,19 @@ const CalendarView = dynamic(() => import('./components/CalendarView'), { ssr: f
 
 // Show only on mobile — 5 key tabs
 const MOBILE_NAV = [
-  { id: 'overview',    label: 'Home',       icon: 'grid' },
-  { id: 'attendance',  label: 'Attendance', icon: 'chart' },
-  { id: 'marks',       label: 'Marks',      icon: 'award' },
-  { id: 'timetable',   label: 'Timetable',  icon: 'clock' },
-  { id: 'courses',     label: 'Courses',    icon: 'book' },
-  { id: 'skippro',     label: 'Planner',    icon: 'target' },
+  { id: 'overview', label: 'Home', icon: 'grid' },
+  { id: 'attendance', label: 'Attendance', icon: 'chart' },
+  { id: 'marks', label: 'Marks', icon: 'award' },
+  { id: 'timetable', label: 'Timetable', icon: 'clock' },
+  { id: 'courses', label: 'Courses', icon: 'book' },
+  { id: 'skippro', label: 'Planner', icon: 'target' },
 ];
 
 const SUPPORT_NAV = [
-  { id: 'gpa',         label: 'GPA Calculator', icon: 'percent' },
-  { id: 'calendar',    label: 'Academic Calendar', icon: 'calendar' },
-  { id: 'profile',     label: 'My Profile', icon: 'user' },
-  { id: 'help',        label: 'Help Center', icon: 'help' },
+  { id: 'gpa', label: 'GPA Calculator', icon: 'percent' },
+  { id: 'calendar', label: 'Academic Calendar', icon: 'calendar' },
+  { id: 'profile', label: 'My Profile', icon: 'user' },
+  { id: 'help', label: 'Help Center', icon: 'help' },
   { id: 'reportissue', label: 'Report Issue', icon: 'flag' },
 ];
 
@@ -44,8 +44,8 @@ const Ico = ({ d, size = 15, sw = 1.8 }) => (
 );
 
 /* ── Color helpers ────────────────────────────────── */
-const attColor  = p => p >= 85 ? 'var(--emerald)' : p >= 75 ? 'var(--amber)' : 'var(--rose)';
-const scoreColor= p => p >= 80 ? 'var(--emerald)' : p >= 60 ? 'var(--amber)' : 'var(--rose)';
+const attColor = p => p >= 85 ? 'var(--emerald)' : p >= 75 ? 'var(--amber)' : 'var(--rose)';
+const scoreColor = p => p >= 80 ? 'var(--emerald)' : p >= 60 ? 'var(--amber)' : 'var(--rose)';
 
 /* ── Greeting ─────────────────────────────────────── */
 const greeting = () => {
@@ -71,18 +71,18 @@ function Skeleton({ type = 'card', count = 1 }) {
 }
 
 function CircleProgress({ pct, color = 'var(--accent)', size = 56 }) {
-  const r    = size / 2 - 5;
+  const r = size / 2 - 5;
   const circ = 2 * Math.PI * r;
   const dash = circ * Math.min(pct / 100, 1);
   return (
     <div className="cp-wrap" style={{ width: size, height: size }}>
       <svg width={size} height={size} style={{ transform: 'rotate(-90deg)', flexShrink: 0 }} className="no-transition">
-        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(255,255,255,.05)" strokeWidth={6} />
-        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={6}
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,.05)" strokeWidth={6} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={6}
           strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
-          style={{ 
-            transition: 'stroke-dasharray 1.2s cubic-bezier(.4,0,.2,1)', 
-            filter: `drop-shadow(0 0 8px ${color}88)` 
+          style={{
+            transition: 'stroke-dasharray 1.2s cubic-bezier(.4,0,.2,1)',
+            filter: `drop-shadow(0 0 8px ${color}88)`
           }}
         />
       </svg>
@@ -96,13 +96,13 @@ function useCountUp(endValStr) {
   const num = parseFloat(endValStr);
   const isNum = !isNaN(num);
   const suffix = isNum ? String(endValStr).replace(/[0-9.]/g, '') : '';
-  
+
   useEffect(() => {
     if (!isNum) return;
     let start = 0;
     const duration = 1200;
     const startTime = performance.now();
-    
+
     const animate = (currTime) => {
       const elapsed = currTime - startTime;
       const progress = Math.min(elapsed / duration, 1);
@@ -112,7 +112,7 @@ function useCountUp(endValStr) {
     };
     requestAnimationFrame(animate);
   }, [num, isNum]);
-  
+
   if (!isNum) return endValStr;
   return Number.isInteger(num) ? Math.floor(val) + suffix : val.toFixed(1) + suffix;
 }
@@ -133,7 +133,7 @@ function KPICard({ label, value, sub, color, icon, delay = 0 }) {
       </div>
       <div className="kpi-value" style={{ color }}>{animatedValue}</div>
       {sub && <div className="kpi-sub">{sub}</div>}
-      
+
       {/* Mini sparkline visualization hint */}
       <div className="kpi-mini-viz" style={{ color }}>
         <svg width="40" height="20" viewBox="0 0 40 20" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -150,17 +150,17 @@ function KPICard({ label, value, sub, color, icon, delay = 0 }) {
 export default function Dashboard() {
   const router = useRouter();
   const [data, setData] = useState(null);
-  const [tab, setTab]   = useState('overview');
+  const [tab, setTab] = useState('overview');
   const [showAttendanceWarning, setShowAttendanceWarning] = useState(false);
 
   const { theme } = useTheme();
 
   /* ── Derived data ───────────────────────────── */
-  const user       = data?.user || {};
+  const user = data?.user || {};
   const attendance = (data?.attendance?.attendance || []).filter(Boolean);
-  const marks      = (data?.marks?.marks           || []).filter(Boolean);
-  const timetable  = data?.timetable               || null;
-  const courses    = (data?.courses?.courses       || []).filter(Boolean);
+  const marks = (data?.marks?.marks || []).filter(Boolean);
+  const timetable = data?.timetable || null;
+  const courses = (data?.courses?.courses || []).filter(Boolean);
 
   // Deduplicate attendance by course code for snapshot grid
   const uniqueAttendance = useMemo(() => {
@@ -172,9 +172,9 @@ export default function Dashboard() {
 
   /* ── Memoised stats to avoid repeated filter/reduce in render ── */
   const courseStats = useMemo(() => ({
-    theory:    courses.filter(c => c?.slotType === 'Theory').length,
+    theory: courses.filter(c => c?.slotType === 'Theory').length,
     practical: courses.filter(c => c?.slotType === 'Practical').length,
-    credits:   courses.reduce((s, c) => s + (parseFloat(c?.credit) || 0), 0),
+    credits: courses.reduce((s, c) => s + (parseFloat(c?.credit) || 0), 0),
   }), [courses]);
 
   const avgAtt = useMemo(() => {
@@ -195,16 +195,16 @@ export default function Dashboard() {
     const pct = conducted > 0 ? (attended / conducted) * 100 : 0;
     return pct >= 75;
   }).length;
-  
+
   const below75 = uniqueAttendance.length - safeAtt;
 
   const avgScore = marks.length
     ? (marks.reduce((s, m) => {
-        const sc  = parseFloat(m.overall?.scored) || 0;
-        const tot = parseFloat(m.overall?.total)  || 1;
-        const res = tot > 0 ? (sc / tot) * 100 : 0;
-        return s + (isFinite(res) ? res : 0);
-      }, 0) / marks.length).toFixed(1)
+      const sc = parseFloat(m.overall?.scored) || 0;
+      const tot = parseFloat(m.overall?.total) || 1;
+      const res = tot > 0 ? (sc / tot) * 100 : 0;
+      return s + (isFinite(res) ? res : 0);
+    }, 0) / marks.length).toFixed(1)
     : 0;
 
   // Auto-import courses when GPA tab opens
@@ -226,7 +226,7 @@ export default function Dashboard() {
   useEffect(() => {
     if (!router.isReady) return;
     const urlTab = router.query.tab;
-    const validTabs = ['overview','attendance','marks','timetable','courses','gpa','skippro','calendar','helpcenter','reportissue'];
+    const validTabs = ['overview', 'attendance', 'marks', 'timetable', 'courses', 'gpa', 'skippro', 'calendar', 'helpcenter', 'reportissue'];
     if (urlTab && validTabs.includes(urlTab)) {
       setTab(urlTab);
     }
@@ -256,8 +256,8 @@ export default function Dashboard() {
 
         <header className="mobile-header">
           <div className="mh-brand">
-            <img 
-              src="/logos/campuspro-wordmark.svg" 
+            <img
+              src="/logos/campuspro-wordmark.svg"
               alt="CampusPro"
               style={{ width: 140, height: 'auto' }}
             />
@@ -334,11 +334,11 @@ export default function Dashboard() {
                           }}>
                             {(user?.name || 'S')[0].toUpperCase()}
                           </div>
-                          <div style={{display: 'flex', flexDirection: 'column'}}>
-                            <span style={{fontSize: 12, fontWeight: 600, color: 'var(--text-1)', lineHeight: 1.2}}>
+                          <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-1)', lineHeight: 1.2 }}>
                               {user?.name?.split(' ')[0] || 'Student'}
                             </span>
-                            <span style={{fontSize: 10, color: 'var(--text-3)', lineHeight: 1.2}}>
+                            <span style={{ fontSize: 10, color: 'var(--text-3)', lineHeight: 1.2 }}>
                               Sem {user?.semester}
                             </span>
                           </div>
@@ -399,12 +399,12 @@ export default function Dashboard() {
                       <div className="empty-state">No attendance records found.</div>
                     ) : uniqueAttendance.map((a, i) => {
                       const conducted = parseFloat(a.hoursConducted) || 0;
-                      const absent    = parseFloat(a.hoursAbsent) || 0;
-                      const attended  = conducted - absent;
-                      const pctMatch  = conducted > 0 ? (attended / conducted) * 100 : parseFloat(a.attendancePercentage) || 0;
-                      const pct       = parseFloat(pctMatch.toFixed(2));
-                      const clr       = attColor(pct);
-                      
+                      const absent = parseFloat(a.hoursAbsent) || 0;
+                      const attended = conducted - absent;
+                      const pctMatch = conducted > 0 ? (attended / conducted) * 100 : parseFloat(a.attendancePercentage) || 0;
+                      const pct = parseFloat(pctMatch.toFixed(2));
+                      const clr = attColor(pct);
+
                       let marginText = "";
                       let marginColor = "";
                       let marginBg = "";
@@ -418,7 +418,7 @@ export default function Dashboard() {
                       } else {
                         const canSkip = Math.floor((attended - 0.75 * conducted) / 0.75);
                         const classesNeeded = Math.ceil((0.75 * conducted - attended) / 0.25);
-                        
+
                         if (canSkip < 0) {
                           marginText = `Deficit: -${classesNeeded} classes`;
                           marginColor = "var(--rose)";
@@ -449,7 +449,7 @@ export default function Dashboard() {
                               </div>
                             </div>
                           </div>
-                          
+
                           <div className="am-badge-row">
                             <span className="am-badge" style={{ color: marginColor, background: marginBg, border: `1px solid ${marginBorder}` }}>
                               {marginText}
@@ -477,7 +477,7 @@ export default function Dashboard() {
                         <h1 className="page-title">Attendance</h1>
                       </div>
                       <p className="section-helper">
-                        View detailed breakdown of your attendance per subject. 
+                        View detailed breakdown of your attendance per subject.
                         Minimum 75% required to be safe. 85% recommended for buffer.
                       </p>
                     </div>
@@ -487,10 +487,10 @@ export default function Dashboard() {
                   {/* ── Summary strip ─────────────────── */}
                   <div className="sum-strip">
                     {[
-                      { v: `${avgAtt}%`, l: 'Average',    c: 'var(--accent-light)', icon: 'M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16z' },
-                      { v: safeAtt,      l: 'Safe ≥ 75%', c: 'var(--emerald)',       icon: 'M22 11.08V12a10 10 0 1 1-5.93-9.14M22 4L12 14.01l-3-3' },
-                      { v: below75,      l: 'At Risk',    c: 'var(--rose)',           icon: 'M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zm0-7v-2m0-4h.01' },
-                      { v: uniqueAttendance.length, l: 'Subjects', c: 'var(--amber)',      icon: 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z' },
+                      { v: `${avgAtt}%`, l: 'Average', c: 'var(--accent-light)', icon: 'M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16z' },
+                      { v: safeAtt, l: 'Safe ≥ 75%', c: 'var(--emerald)', icon: 'M22 11.08V12a10 10 0 1 1-5.93-9.14M22 4L12 14.01l-3-3' },
+                      { v: below75, l: 'At Risk', c: 'var(--rose)', icon: 'M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zm0-7v-2m0-4h.01' },
+                      { v: uniqueAttendance.length, l: 'Subjects', c: 'var(--amber)', icon: 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z' },
                     ].map((s, i) => (
                       <div key={i} className="sum-pill glass-raised animate-up" style={{ animationDelay: `${i * 45}ms` }}>
                         <div className="sp-icon" style={{ color: s.c, background: `${s.c}12`, border: `1px solid ${s.c}20` }}>
@@ -506,17 +506,17 @@ export default function Dashboard() {
                   <div className="att-cards">
                     {uniqueAttendance.length === 0 ? (
                       <div className="empty-state">No attendance records found.</div>
-                    ) : uniqueAttendance.map((a, i) => { 
-                      const conducted  = parseFloat(a.hoursConducted) || 0;
-                      const absent     = parseFloat(a.hoursAbsent) || 0;
-                      const attended   = conducted - absent;
+                    ) : uniqueAttendance.map((a, i) => {
+                      const conducted = parseFloat(a.hoursConducted) || 0;
+                      const absent = parseFloat(a.hoursAbsent) || 0;
+                      const attended = conducted - absent;
                       const percentage = conducted > 0 ? (attended / conducted) * 100 : 0;
-                      const pct        = parseFloat(percentage.toFixed(2));
-                      const clr        = attColor(pct);
+                      const pct = parseFloat(percentage.toFixed(2));
+                      const clr = attColor(pct);
 
                       // Margin (classes can skip while staying ABOVE 75%):
-                      const canSkip = conducted > 0 
-                        ? Math.floor((attended - 0.75 * conducted) / 0.75) 
+                      const canSkip = conducted > 0
+                        ? Math.floor((attended - 0.75 * conducted) / 0.75)
                         : 0;
 
                       // Deficit (classes needed to REACH 75%):
@@ -548,8 +548,8 @@ export default function Dashboard() {
                                   </span>
                                   <span className="ac-dot">·</span>
                                   <span className="ac-faculty">
-                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display:'inline', marginRight:3, verticalAlign:'middle' }}>
-                                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', marginRight: 3, verticalAlign: 'middle' }}>
+                                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
                                     </svg>
                                     {facultyName}
                                   </span>
@@ -644,7 +644,7 @@ export default function Dashboard() {
                     <div className="sc-titles-group">
                       <h1 className="page-title">Marks</h1>
                       <p className="section-helper">
-                        Internal marks, test performance, and grade estimation. 
+                        Internal marks, test performance, and grade estimation.
                         Zero-credit courses and subjects with no data are excluded from averages.
                       </p>
                     </div>
@@ -672,52 +672,52 @@ export default function Dashboard() {
                     const labCount = courses.filter(c => c.slotType === 'Practical').length;
                     const totalCredits = courses.reduce((acc, c) => acc + (parseFloat(c.credit) || 0), 0);
                     return (
-                      <div style={{ display:'flex', gap:10, marginBottom:24, flexWrap:'wrap' }}>
-                        <div className="glass" style={{ padding:'8px 16px', borderRadius:100, border:'1px solid rgba(255,255,255,.06)', display:'flex', alignItems:'center', gap:8 }}>
-                          <span style={{ fontSize:15, fontWeight:800, color:'var(--accent-light)' }}>{theoryCount}</span>
-                          <span style={{ fontSize:10, fontWeight:700, color:'var(--text-3)', textTransform:'uppercase', letterSpacing:.5 }}>Theory</span>
+                      <div style={{ display: 'flex', gap: 10, marginBottom: 24, flexWrap: 'wrap' }}>
+                        <div className="glass" style={{ padding: '8px 16px', borderRadius: 100, border: '1px solid rgba(255,255,255,.06)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--accent-light)' }}>{theoryCount}</span>
+                          <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: .5 }}>Theory</span>
                         </div>
-                        <div className="glass" style={{ padding:'8px 16px', borderRadius:100, border:'1px solid rgba(255,255,255,.06)', display:'flex', alignItems:'center', gap:8 }}>
-                          <span style={{ fontSize:15, fontWeight:800, color:'var(--emerald)' }}>{labCount}</span>
-                          <span style={{ fontSize:10, fontWeight:700, color:'var(--text-3)', textTransform:'uppercase', letterSpacing:.5 }}>Practical</span>
+                        <div className="glass" style={{ padding: '8px 16px', borderRadius: 100, border: '1px solid rgba(255,255,255,.06)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--emerald)' }}>{labCount}</span>
+                          <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: .5 }}>Practical</span>
                         </div>
-                        <div className="glass" style={{ padding:'8px 16px', borderRadius:100, border:'1px solid rgba(255,255,255,.06)', display:'flex', alignItems:'center', gap:8 }}>
-                          <span style={{ fontSize:15, fontWeight:800, color:'var(--amber)' }}>{totalCredits}</span>
-                          <span style={{ fontSize:10, fontWeight:700, color:'var(--text-3)', textTransform:'uppercase', letterSpacing:.5 }}>Total Credits</span>
+                        <div className="glass" style={{ padding: '8px 16px', borderRadius: 100, border: '1px solid rgba(255,255,255,.06)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--amber)' }}>{totalCredits}</span>
+                          <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: .5 }}>Total Credits</span>
                         </div>
                       </div>
                     );
                   })()}
 
-                  <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))', gap:14 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(280px,1fr))', gap: 14 }}>
                     {courses.map((c, i) => {
                       if (!c) return null;
                       const isTheory = c.slotType === 'Theory';
                       const bar = isTheory ? '#6366f1' : '#10b981';
                       const faculty = typeof c.faculty === 'string' ? c.faculty.split('(')[0]?.trim() || '—' : '—';
                       return (
-                        <div key={i} className="cc-card glass animate-up" style={{ animationDelay:`${i*40}ms`, borderRadius:'var(--radius-lg)', overflow:'hidden', padding:0, transition:'transform .2s,box-shadow .2s' }}
-                          onMouseEnter={e=>e.currentTarget.style.transform='translateY(-4px)'}
-                          onMouseLeave={e=>e.currentTarget.style.transform='translateY(0)'}>
-                          <div style={{ height:3, background:bar }} />
-                          <div style={{ padding:16, display:'flex', flexDirection:'column', gap:10 }}>
-                            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                              <span style={{ fontFamily:'var(--font-mono)', fontSize:10, color:'var(--accent-light)' }}>{c.code}</span>
-                              <span className={`tag ${isTheory?'tag-accent':'tag-emerald'}`} style={{fontSize:9}}>{c.slotType}</span>
+                        <div key={i} className="cc-card glass animate-up" style={{ animationDelay: `${i * 40}ms`, borderRadius: 'var(--radius-lg)', overflow: 'hidden', padding: 0, transition: 'transform .2s,box-shadow .2s' }}
+                          onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-4px)'}
+                          onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}>
+                          <div style={{ height: 3, background: bar }} />
+                          <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--accent-light)' }}>{c.code}</span>
+                              <span className={`tag ${isTheory ? 'tag-accent' : 'tag-emerald'}`} style={{ fontSize: 9 }}>{c.slotType}</span>
                             </div>
-                            <div style={{ fontSize:13.5, fontWeight:600, color:'var(--text-1)', lineHeight:1.4 }}>{c.title}</div>
-                            <div style={{ display:'flex', alignItems:'center', gap:9, paddingBottom:10, borderBottom:'1px solid rgba(255,255,255,.06)' }}>
-                              <div style={{ width:26, height:26, borderRadius:7, background:bar+'22', border:`1px solid ${bar}44`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:700, color:bar, flexShrink:0 }}>
-                                {faculty[0]||'?'}
+                            <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text-1)', lineHeight: 1.4 }}>{c.title}</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 9, paddingBottom: 10, borderBottom: '1px solid rgba(255,255,255,.06)' }}>
+                              <div style={{ width: 26, height: 26, borderRadius: 7, background: bar + '22', border: `1px solid ${bar}44`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: bar, flexShrink: 0 }}>
+                                {faculty[0] || '?'}
                               </div>
-                              <span style={{ fontSize:12, color:'var(--text-3)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{faculty}</span>
+                              <span style={{ fontSize: 12, color: 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{faculty}</span>
                             </div>
-                            <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)' }}>
-                              {[['🏫',c.room||'—','Room'],['🕐',c.slot||'—','Slot'],['⭐',c.credit||'0','Credits']].map(([icon,val,lbl],j)=>(
-                                <div key={j} style={{ display:'flex', flexDirection:'column', alignItems:'center', padding:'8px 4px', borderRight:j<2?'1px solid rgba(255,255,255,.05)':'none', gap:2 }}>
-                                  <span style={{fontSize:13}}>{icon}</span>
-                                  <strong style={{ fontFamily:'var(--font-mono)', fontSize:12, color:'var(--text-1)' }}>{val}</strong>
-                                  <small style={{ fontSize:9, color:'var(--text-3)', textTransform:'uppercase', letterSpacing:.4 }}>{lbl}</small>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)' }}>
+                              {[['🏫', c.room || '—', 'Room'], ['🕐', c.slot || '—', 'Slot'], ['⭐', c.credit || '0', 'Credits']].map(([icon, val, lbl], j) => (
+                                <div key={j} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '8px 4px', borderRight: j < 2 ? '1px solid rgba(255,255,255,.05)' : 'none', gap: 2 }}>
+                                  <span style={{ fontSize: 13 }}>{icon}</span>
+                                  <strong style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-1)' }}>{val}</strong>
+                                  <small style={{ fontSize: 9, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: .4 }}>{lbl}</small>
                                 </div>
                               ))}
                             </div>
@@ -738,7 +738,7 @@ export default function Dashboard() {
                     <div className="sc-titles-group">
                       <h1 className="page-title">Timetable</h1>
                       <p className="section-helper">
-                        Your weekly schedule and class timings. Day orders follow the 
+                        Your weekly schedule and class timings. Day orders follow the
                         official SRM Even Semester 2025-26 academic calendar.
                       </p>
                     </div>
@@ -765,16 +765,16 @@ export default function Dashboard() {
                   {showAttendanceWarning && (
                     <div className="ap-overlay">
                       <div className="ap-warning-modal glass">
-                        <div style={{fontSize: 36, textAlign: 'center'}}>⚠️</div>
-                        <h3 style={{color: 'var(--amber)', textAlign: 'center', fontFamily: 'var(--font-display)', marginBottom: 12}}>
+                        <div style={{ fontSize: 36, textAlign: 'center' }}>⚠️</div>
+                        <h3 style={{ color: 'var(--amber)', textAlign: 'center', fontFamily: 'var(--font-display)', marginBottom: 12 }}>
                           Before You Use Attendance Planner
                         </h3>
-                        <p style={{fontSize: 13, color: 'var(--text-2)', lineHeight: 1.7, marginBottom: 16}}>
+                        <p style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.7, marginBottom: 16 }}>
                           This tool gives estimates based on current attendance and academic calendar.
                           It does <strong>NOT</strong> account for cancelled classes, extra classes, or schedule changes.
                           Use as a rough guide only.
                         </p>
-                        <div style={{display: 'flex', flexDirection: 'column', gap: 8}}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                           <button className="btn btn-primary" onClick={() => {
                             sessionStorage.setItem('ap_warning_ok', 'true');
                             setShowAttendanceWarning(false);
@@ -788,12 +788,12 @@ export default function Dashboard() {
                       </div>
                     </div>
                   )}
-                  
+
                   {/* Actual planner content — only show if warning acknowledged */}
                   {!showAttendanceWarning && (
-                    <AttendancePlannerContent 
-                      attendance={attendance} 
-                      courses={courses} 
+                    <AttendancePlannerContent
+                      attendance={attendance}
+                      courses={courses}
                     />
                   )}
                 </div>
