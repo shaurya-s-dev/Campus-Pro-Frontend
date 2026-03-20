@@ -12,7 +12,6 @@ import MarksSection from '../components/MarksSection';
 
 const AuroraBackground = dynamic(() => import('@/components/AuroraBackground'), { ssr: false });
 const AttendancePlannerContent = dynamic(() => import('./components/SkipProEstimator'), { ssr: false });
-const GpaCalculator = dynamic(() => import('./components/GpaCalculator'), { ssr: false });
 const HelpCenterContent = dynamic(() => import('./components/HelpCenterContent'), { ssr: false });
 const BottomNav = dynamic(() => import('../components/BottomNav'), { ssr: false });
 const ReportIssueContent = dynamic(() => import('./components/ReportIssueContent'), { ssr: false });
@@ -435,6 +434,317 @@ function TodayClasses({ timetable }) {
   );
 }
 
+const GPACalculator = ({ courses }) => {
+  const SRM_GRADES = [
+    { label: 'O',  range: '91-100', points: 10 },
+    { label: 'A+', range: '81-90',  points: 9  },
+    { label: 'A',  range: '71-80',  points: 8  },
+    { label: 'B+', range: '61-70',  points: 7  },
+    { label: 'B',  range: '56-60',  points: 6  },
+    { label: 'C',  range: '50-55',  points: 5  },
+    { label: 'P',  range: '45-49',  points: 4  },
+    { label: 'F',  range: '0-44',   points: 0  },
+  ];
+
+  const gradePoints = Object.fromEntries(SRM_GRADES.map(g => [g.label, g.points]));
+
+  const buildSubjects = (rawCourses) => {
+    if (!rawCourses || rawCourses.length === 0) return [];
+    const seen = new Map();
+    rawCourses.forEach(c => {
+      const credit = parseFloat(c?.credit || c?.credits || '0');
+      if (credit <= 0) return;
+      const rawName = c?.title || c?.name || 'Unknown';
+      const baseName = rawName.replace(/\s*(Lab|Laboratory|Practical)\s*$/i, '').trim();
+      if (seen.has(baseName)) {
+        seen.get(baseName).credits += credit;
+      } else {
+        seen.set(baseName, { name: baseName, credits: credit, grade: 'O' });
+      }
+    });
+    return Array.from(seen.values()).map((s, i) => ({ ...s, id: i + 1 }));
+  };
+
+  const [subjects, setSubjects] = useState(() => buildSubjects(courses));
+  const [prevSems, setPrevSems] = useState([{ id: 1, points: '', credits: '' }]);
+
+  useEffect(() => {
+    if (courses && courses.length > 0 && subjects.length === 0) {
+      setSubjects(buildSubjects(courses));
+    }
+  }, [courses]);
+
+  const totalCredits = subjects.reduce((s, x) => s + (x.credits || 0), 0);
+  const totalPoints  = subjects.reduce((s, x) => s + (x.credits || 0) * (gradePoints[x.grade] ?? 0), 0);
+  const sgpa = totalCredits > 0 ? totalPoints / totalCredits : 0;
+
+  const sgpaToGrade = (v) => {
+    if (v >= 9.5) return 'O';
+    if (v >= 8.5) return 'A+';
+    if (v >= 7.5) return 'A';
+    if (v >= 6.5) return 'B+';
+    if (v >= 5.5) return 'B';
+    if (v >= 4.5) return 'C';
+    if (v >= 4.0) return 'P';
+    return 'F';
+  };
+
+  const validPrev = prevSems.filter(s => s.points !== '' && s.credits !== '');
+  const totalPrevPoints  = validPrev.reduce((s, x) => s + parseFloat(x.points || 0) * parseFloat(x.credits || 0), 0);
+  const totalPrevCredits = validPrev.reduce((s, x) => s + parseFloat(x.credits || 0), 0);
+  const allPoints  = totalPrevPoints + totalPoints;
+  const allCredits = totalPrevCredits + totalCredits;
+  const cgpa = allCredits > 0 ? allPoints / allCredits : 0;
+
+  const updateSubjectGrade = (id, grade) => {
+    setSubjects(prev => prev.map(s => s.id === id ? { ...s, grade } : s));
+  };
+
+  const addSubject = () => {
+    setSubjects(prev => [...prev, {
+      id: Date.now(), name: 'New Subject', credits: 3, grade: 'O'
+    }]);
+  };
+
+  const removeSubject = (id) => {
+    setSubjects(prev => prev.filter(s => s.id !== id));
+  };
+
+  const sgpaColor = sgpa >= 9 ? 'var(--neon-green)' : sgpa >= 7 ? 'var(--neon-yellow)' : sgpa >= 5 ? '#ff9500' : 'var(--neon-red)';
+  const gradeLabel = sgpaToGrade(sgpa);
+
+  return (
+    <div className="tab-panel animate-in" style={{display:'grid', gridTemplateColumns:'320px 1fr', gap:24, alignItems:'start'}}>
+      <div style={{display:'flex', flexDirection:'column', gap:16}}>
+        <div className="glass" style={{borderRadius:20, padding:28, textAlign:'center'}}>
+          <svg viewBox="0 0 200 120" style={{width:'100%', maxWidth:200, margin:'0 auto', display:'block'}}>
+            <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="12" strokeLinecap="round"/>
+            <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke={sgpaColor}
+              strokeWidth="12" strokeLinecap="round" strokeDasharray={`${(sgpa/10)*251.2} 251.2`}
+              style={{filter:`drop-shadow(0 0 6px ${sgpaColor})`}}/>
+            <text x="100" y="90" textAnchor="middle" fontSize="32" fontWeight="800" fill={sgpaColor}
+              style={{filter:`drop-shadow(0 0 8px ${sgpaColor})`}}>
+              {sgpa.toFixed(2)}
+            </text>
+            <text x="100" y="108" textAnchor="middle" fontSize="11" fill="rgba(255,255,255,0.4)">/ 10.00</text>
+          </svg>
+          <div style={{
+            display:'inline-block', marginTop:8,
+            padding:'4px 16px', borderRadius:999,
+            background:`${sgpaColor}20`, border:`1px solid ${sgpaColor}50`,
+            color: sgpaColor, fontWeight:700, fontSize:14,
+          }}>
+            Grade — {gradeLabel}
+          </div>
+          <div style={{display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:8, marginTop:16}}>
+            {[
+              { label:'CREDITS', value: totalCredits.toFixed(1) },
+              { label:'POINTS',  value: totalPoints.toFixed(1)  },
+              { label:'SUBJECTS',value: subjects.length         },
+            ].map(stat => (
+              <div key={stat.label} style={{
+                background:'rgba(255,255,255,0.05)', borderRadius:12, padding:'10px 6px', textAlign:'center'
+              }}>
+                <div style={{fontSize:16, fontWeight:700, color:'white'}}>{stat.value}</div>
+                <div style={{fontSize:9, color:'rgba(255,255,255,0.4)', marginTop:2}}>{stat.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="glass" style={{borderRadius:20, padding:20}}>
+          <div style={{fontSize:11, fontWeight:700, color:'rgba(255,255,255,0.4)', letterSpacing:'0.1em', marginBottom:12}}>
+            SRM GRADING SCALE
+          </div>
+          {SRM_GRADES.map(g => (
+            <div key={g.label} style={{
+              display:'flex', alignItems:'center', gap:10,
+              padding:'7px 0', borderBottom:'1px solid rgba(255,255,255,0.05)'
+            }}>
+              <div style={{
+                width:32, height:32, borderRadius:8, flexShrink:0,
+                background: g.points >= 9 ? 'var(--neon-green-dim)' : g.points >= 7 ? 'rgba(99,102,241,0.15)' : g.points >= 5 ? 'var(--neon-yellow-dim)' : 'var(--neon-red-dim)',
+                border: `1px solid ${g.points >= 9 ? 'var(--neon-green-border)' : g.points >= 7 ? 'rgba(99,102,241,0.3)' : g.points >= 5 ? 'var(--neon-yellow-border)' : 'var(--neon-red-border)'}`,
+                display:'flex', alignItems:'center', justifyContent:'center',
+                fontWeight:800, fontSize:13,
+                color: g.points >= 9 ? 'var(--neon-green)' : g.points >= 7 ? '#818cf8' : g.points >= 5 ? 'var(--neon-yellow)' : 'var(--neon-red)',
+              }}>{g.label}</div>
+              <div style={{flex:1}}>
+                <div style={{fontSize:13, fontWeight:600, color:'white'}}>{
+                  g.label === 'O' ? 'Outstanding' : g.label === 'A+' ? 'Excellent' :
+                  g.label === 'A' ? 'Very Good' : g.label === 'B+' ? 'Good' :
+                  g.label === 'B' ? 'Above Average' : g.label === 'C' ? 'Average' :
+                  g.label === 'P' ? 'Pass' : 'Fail'
+                }</div>
+                <div style={{fontSize:11, color:'rgba(255,255,255,0.4)'}}>{g.range}</div>
+              </div>
+              <div style={{fontWeight:800, fontSize:15, color:'rgba(255,255,255,0.7)'}}>{g.points}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{display:'flex', flexDirection:'column', gap:16}}>
+        <div className="glass" style={{borderRadius:20, padding:24}}>
+          <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16}}>
+            <div>
+              <div style={{fontSize:18, fontWeight:800, color:'white'}}>GPA Calculator</div>
+              <div style={{fontSize:12, color:'rgba(255,255,255,0.4)', marginTop:2}}>
+                {subjects.length} subjects · {totalCredits} total credits
+              </div>
+            </div>
+            <button onClick={() => setSubjects(buildSubjects(courses))} style={{
+              padding:'8px 16px', borderRadius:10,
+              background:'linear-gradient(135deg, #6366f1, #8b5cf6)',
+              border:'none', color:'white', fontWeight:700, fontSize:13, cursor:'pointer',
+            }}>⚡ Re-import</button>
+          </div>
+
+          {subjects.length === 0 ? (
+            <div style={{textAlign:'center', padding:40, color:'rgba(255,255,255,0.3)'}}>
+              <div style={{fontSize:32, marginBottom:8}}>📚</div>
+              <div>No courses loaded yet</div>
+              <button onClick={() => setSubjects(buildSubjects(courses))} style={{
+                marginTop:12, padding:'8px 20px', borderRadius:10,
+                background:'rgba(99,102,241,0.2)', border:'1px solid rgba(99,102,241,0.4)',
+                color:'#818cf8', cursor:'pointer', fontWeight:600,
+              }}>Import My Courses</button>
+            </div>
+          ) : (
+            <div style={{display:'flex', flexDirection:'column', gap:8}}>
+              <div style={{
+                display:'grid', gridTemplateColumns:'1fr 80px 140px 36px',
+                gap:12, padding:'0 12px',
+                fontSize:10, fontWeight:700, color:'rgba(255,255,255,0.3)',
+                letterSpacing:'0.08em',
+              }}>
+                <div>SUBJECT</div>
+                <div style={{textAlign:'center'}}>CREDITS</div>
+                <div style={{textAlign:'center'}}>GRADE</div>
+                <div/>
+              </div>
+
+              {subjects.map(s => (
+                <div key={s.id} style={{
+                  display:'grid', gridTemplateColumns:'1fr 80px 140px 36px',
+                  gap:12, alignItems:'center',
+                  background:'rgba(255,255,255,0.04)',
+                  border:'1px solid rgba(255,255,255,0.08)',
+                  borderRadius:12, padding:'12px',
+                }}>
+                  <div style={{fontSize:13, fontWeight:600, color:'white'}}>{s.name}</div>
+                  <div style={{textAlign:'center', fontSize:14, fontWeight:700, color:'rgba(255,255,255,0.6)'}}>
+                    {s.credits}
+                  </div>
+                  <select
+                    value={s.grade}
+                    onChange={e => updateSubjectGrade(s.id, e.target.value)}
+                    style={{
+                      background:'rgba(99,102,241,0.15)',
+                      border:'1px solid rgba(99,102,241,0.35)',
+                      borderRadius:8, padding:'6px 10px',
+                      color:'white', fontWeight:700, fontSize:13,
+                      cursor:'pointer', width:'100%',
+                    }}
+                  >
+                    {SRM_GRADES.map(g => (
+                      <option key={g.label} value={g.label} style={{background:'#1a1a2e'}}>
+                        {g.label} ({g.points} pts)
+                      </option>
+                    ))}
+                  </select>
+                  <button onClick={() => removeSubject(s.id)} style={{
+                    width:32, height:32, borderRadius:8,
+                    background:'rgba(255,45,85,0.1)', border:'1px solid rgba(255,45,85,0.2)',
+                    color:'var(--neon-red)', cursor:'pointer', fontSize:16,
+                    display:'flex', alignItems:'center', justifyContent:'center',
+                  }}>×</button>
+                </div>
+              ))}
+
+              <button onClick={addSubject} style={{
+                width:'100%', padding:'12px',
+                borderRadius:12, border:'1px dashed rgba(99,102,241,0.3)',
+                background:'transparent', color:'rgba(99,102,241,0.7)',
+                cursor:'pointer', fontSize:13, fontWeight:600, marginTop:4,
+              }}>+ Add Subject</button>
+            </div>
+          )}
+        </div>
+
+        <div className="glass" style={{borderRadius:20, padding:24}}>
+          <div style={{fontSize:16, fontWeight:800, color:'white', marginBottom:4}}>
+            CGPA Calculator
+            <span style={{
+              marginLeft:10, fontSize:11, padding:'2px 10px', borderRadius:999,
+              background:'rgba(255,214,10,0.1)', border:'1px solid rgba(255,214,10,0.3)',
+              color:'var(--neon-yellow)', fontWeight:600,
+            }}>Optional</span>
+          </div>
+          <div style={{fontSize:12, color:'rgba(255,255,255,0.4)', marginBottom:16}}>
+            Add previous semesters to calculate overall CGPA
+          </div>
+
+          <div style={{display:'grid', gridTemplateColumns:'1fr 1fr 36px', gap:8, marginBottom:8}}>
+            <div style={{fontSize:11, color:'rgba(255,255,255,0.3)', fontWeight:700, letterSpacing:'0.08em'}}>Σ GPA POINTS</div>
+            <div style={{fontSize:11, color:'rgba(255,255,255,0.3)', fontWeight:700, letterSpacing:'0.08em'}}>TOTAL CREDITS</div>
+            <div/>
+          </div>
+
+          {prevSems.map((sem, i) => (
+            <div key={sem.id} style={{display:'grid', gridTemplateColumns:'1fr 1fr 36px', gap:8, marginBottom:8}}>
+              <input
+                type="number" placeholder={`e.g. 68.5`} value={sem.points}
+                onChange={e => setPrevSems(prev => prev.map(s => s.id === sem.id ? {...s, points: e.target.value} : s))}
+                style={{
+                  background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)',
+                  borderRadius:8, padding:'8px 12px', color:'white', fontSize:13,
+                }}
+              />
+              <input
+                type="number" placeholder={`e.g. 96`} value={sem.credits}
+                onChange={e => setPrevSems(prev => prev.map(s => s.id === sem.id ? {...s, credits: e.target.value} : s))}
+                style={{
+                  background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)',
+                  borderRadius:8, padding:'8px 12px', color:'white', fontSize:13,
+                }}
+              />
+              <button onClick={() => setPrevSems(prev => prev.filter(s => s.id !== sem.id))} style={{
+                width:36, height:36, borderRadius:8,
+                background:'rgba(255,45,85,0.1)', border:'1px solid rgba(255,45,85,0.2)',
+                color:'var(--neon-red)', cursor:'pointer', fontSize:16,
+              }}>×</button>
+            </div>
+          ))}
+
+          <button onClick={() => setPrevSems(prev => [...prev, {id: Date.now(), points:'', credits:''}])} style={{
+            padding:'8px 16px', borderRadius:8,
+            background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)',
+            color:'rgba(255,255,255,0.6)', cursor:'pointer', fontSize:13, marginBottom:16,
+          }}>+ Add Semester</button>
+
+          {allCredits > 0 && (
+            <div style={{
+              padding:16, borderRadius:12,
+              background:'linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.1))',
+              border:'1px solid rgba(99,102,241,0.3)',
+              display:'flex', justifyContent:'space-between', alignItems:'center',
+            }}>
+              <div style={{fontSize:13, color:'rgba(255,255,255,0.6)'}}>
+                Overall CGPA ({allCredits.toFixed(0)} credits)
+              </div>
+              <div style={{fontSize:28, fontWeight:900, color:'#818cf8',
+                textShadow:'0 0 20px rgba(99,102,241,0.8)'}}>
+                {cgpa.toFixed(2)}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 /* ══════════════════════════════════════════════════
    STREAK TRACKER
    ══════════════════════════════════════════════════ */
@@ -573,7 +883,7 @@ export default function Dashboard() {
   const attendance = (data?.attendance?.attendance || data?.attendance || []).filter(Boolean);
   const marks = (data?.marks?.marks || data?.marks || []).filter(Boolean);
   const timetable = data?.timetable || null;
-  const courses = (data?.courses?.courses || data?.courses || data?.courseData || []).filter(Boolean);
+  const courses = (data?.courses?.courses || data?.courses || []).filter(Boolean);
 
   // Deduplicate attendance by course code for snapshot grid
   const uniqueAttendance = useMemo(() => {
@@ -620,12 +930,6 @@ export default function Dashboard() {
     }, 0) / marks.length).toFixed(1)
     : 0;
 
-  // Auto-import courses when GPA tab opens
-  useEffect(() => {
-    if (tab === 'gpa' && courses.length > 0) {
-      // Logic for gpa tab handled in GpaCalculator via prop
-    }
-  }, [tab, courses.length]);
 
   useEffect(() => {
     if (!requireAuth(router)) return;
@@ -1165,9 +1469,7 @@ export default function Dashboard() {
                   GPA CALCULATOR TAB
               ═══════════════════════════════ */}
               {tab === 'gpa' && (
-                <div className="tab-panel animate-in">
-                  <GpaCalculator courses={courses} marks={marks} />
-                </div>
+                <GPACalculator courses={courses} />
               )}
 
               {/* ═══════════════════════════════
