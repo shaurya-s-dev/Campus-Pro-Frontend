@@ -1,0 +1,52 @@
+<svg width="340" height="64" viewBox="0 0 340 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="iconG" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#818cf8"/>
+      <stop offset="100%" stop-color="#6366f1"/>
+    </linearGradient>
+    <linearGradient id="acG" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#22d3ee"/>
+      <stop offset="100%" stop-color="#818cf8"/>
+    </linearGradient>
+    <linearGradient id="proG" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#818cf8"/>
+      <stop offset="100%" stop-color="#22d3ee"/>
+    </linearGradient>
+    <linearGradient id="cG" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#a5b4fc"/>
+      <stop offset="100%" stop-color="#6366f1"/>
+    </linearGradient>
+    <filter id="g1">
+      <feGaussianBlur stdDeviation="2.5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Icon box -->
+  <rect x="0" y="6" width="52" height="52" rx="12" fill="#0d0e1f"/>
+  <rect x="0" y="6" width="52" height="52" rx="12" fill="none" stroke="url(#iconG)" stroke-width="0.8" opacity="0.45"/>
+
+  <!-- Orbit ellipses inside icon -->
+  <ellipse cx="26" cy="32" rx="18" ry="7" fill="none" stroke="url(#acG)" stroke-width="1" opacity="0.4" transform="rotate(-28 26 32)"/>
+  <ellipse cx="26" cy="32" rx="18" ry="7" fill="none" stroke="url(#acG)" stroke-width="1" opacity="0.22" transform="rotate(52 26 32)"/>
+
+  <!-- Cap accent inside icon -->
+  <rect x="15" y="14" width="22" height="3.5" rx="1.5" fill="url(#iconG)" opacity="0.5"/>
+  <rect x="20" y="10" width="12" height="5" rx="1.5" fill="url(#acG)" opacity="0.4"/>
+
+  <!-- Core inside icon -->
+  <circle cx="26" cy="32" r="8" fill="url(#cG)" filter="url(#g1)"/>
+  <circle cx="26" cy="32" r="4.5" fill="#c7d2fe"/>
+  <circle cx="26" cy="32" r="2" fill="white" opacity="0.9"/>
+
+  <!-- Orbit dots inside icon -->
+  <circle cx="8" cy="28" r="2.5" fill="#22d3ee" filter="url(#g1)" opacity="0.95"/>
+  <circle cx="44" cy="36" r="2.5" fill="#22d3ee" filter="url(#g1)" opacity="0.95"/>
+
+  <!-- Wordmark text -->
+  <text x="64" y="40" font-family="'Segoe UI', system-ui, -apple-system, sans-serif" font-size="28" font-weight="700" letter-spacing="-0.8" fill="white" opacity="0.96">Campus</text>
+  <text x="215" y="40" font-family="'Segoe UI', system-ui, -apple-system, sans-serif" font-size="28" font-weight="800" letter-spacing="-0.8" fill="url(#proG)">Pro</text>
+
+  <!-- Tagline -->
+  <text x="64" y="56" font-family="'Segoe UI', system-ui, sans-serif" font-size="9" letter-spacing="2.2" fill="rgba(165,180,252,0.35)" font-weight="500">SRM STUDENT HUB</text>
+</svg>

@@ -1,0 +1,62 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="iconGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#818cf8"/>
+      <stop offset="100%" stop-color="#6366f1"/>
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#22d3ee"/>
+      <stop offset="100%" stop-color="#818cf8"/>
+    </linearGradient>
+    <linearGradient id="coreGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#a5b4fc"/>
+      <stop offset="100%" stop-color="#6366f1"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="softglow">
+      <feGaussianBlur stdDeviation="18" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background rounded square -->
+  <rect width="512" height="512" rx="112" fill="#0d0e1f"/>
+  <rect width="512" height="512" rx="112" fill="none" stroke="url(#iconGrad)" stroke-width="2" opacity="0.4"/>
+
+  <!-- Background soft glow -->
+  <circle cx="256" cy="240" r="180" fill="#6366f1" opacity="0.07"/>
+
+  <!-- Outer orbit ring -->
+  <circle cx="256" cy="240" r="160" fill="none" stroke="url(#iconGrad)" stroke-width="1.5" opacity="0.2"/>
+
+  <!-- Orbit ellipses -->
+  <ellipse cx="256" cy="240" rx="155" ry="62" fill="none" stroke="url(#accentGrad)" stroke-width="2.5" opacity="0.4" transform="rotate(-30 256 240)"/>
+  <ellipse cx="256" cy="240" rx="155" ry="62" fill="none" stroke="url(#accentGrad)" stroke-width="2.5" opacity="0.2" transform="rotate(50 256 240)"/>
+  <ellipse cx="256" cy="240" rx="155" ry="62" fill="none" stroke="url(#iconGrad)" stroke-width="1.5" opacity="0.15" transform="rotate(10 256 240)"/>
+
+  <!-- Graduation cap top -->
+  <rect x="170" y="118" width="172" height="16" rx="8" fill="url(#iconGrad)" opacity="0.55"/>
+  <rect x="216" y="96" width="80" height="26" rx="6" fill="url(#accentGrad)" opacity="0.45"/>
+
+  <!-- Core glow -->
+  <circle cx="256" cy="240" r="72" fill="url(#coreGrad)" opacity="0.15" filter="url(#softglow)"/>
+  <!-- Core ball -->
+  <circle cx="256" cy="240" r="58" fill="url(#iconGrad)" filter="url(#glow)"/>
+  <circle cx="256" cy="240" r="36" fill="#c7d2fe"/>
+  <circle cx="256" cy="240" r="18" fill="white" opacity="0.92"/>
+
+  <!-- Orbit dots -->
+  <circle cx="96" cy="218" r="14" fill="#22d3ee" filter="url(#glow)"/>
+  <circle cx="416" cy="262" r="14" fill="#22d3ee" filter="url(#glow)"/>
+  <circle cx="256" cy="80" r="10" fill="#818cf8" opacity="0.85" filter="url(#glow)"/>
+  <circle cx="256" cy="400" r="10" fill="#818cf8" opacity="0.7"/>
+  <circle cx="154" cy="358" r="8" fill="#a5b4fc" opacity="0.6"/>
+  <circle cx="358" cy="122" r="8" fill="#a5b4fc" opacity="0.6"/>
+
+  <!-- Wordmark at bottom -->
+  <text x="256" y="448" font-family="'Segoe UI', Arial, sans-serif" font-size="72" font-weight="800" letter-spacing="-2" text-anchor="middle" fill="white" opacity="0.95">Campus</text>
+  <text x="256" y="496" font-family="'Segoe UI', Arial, sans-serif" font-size="38" font-weight="800" letter-spacing="4" text-anchor="middle" fill="url(#accentGrad)">PRO</text>
+</svg>
