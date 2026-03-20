@@ -1,10 +1,12 @@
 'use client';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/router';
+import Head from 'next/head';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import toast, { Toaster } from 'react-hot-toast';
 import CountUp from 'react-countup';
 import { isWeekend, format, addDays, isSameDay } from 'date-fns';
+import { useTheme } from '@/context/ThemeContext';
 import { logout, requireAuth, DataStore, sanitizeObject } from '@/lib/security';
 import Sidebar from './components/Sidebar';
 import TimetableView from './components/TimetableView';
