@@ -418,12 +418,16 @@ export default function Login() {
                   )}
 
                   {error && <div className="err-box">{error}</div>}
-                  <button type="submit" className="btn-submit" disabled={loading}>
-                    {loading ? <span className="btn-loading"><span className="spinner"/>{status}</span> : 'Login Now →'}
+                  <button type="submit" className="btn-submit" disabled={loading} style={{width:'100%', height:48}}>
+                    {loading ? (
+                      <span style={{display:'flex', alignItems:'center', gap:8, justifyContent:'center'}}>
+                        <span className="spinner"/>
+                        Signing in...
+                      </span>
+                    ) : 'Sign In →'}
                   </button>
                 </form>
-                {loading && <div className="progress-bar"><div className="progress-fill"/></div>}
-                <div className="status-badge"><div className="status-dot"/>All systems operational</div>
+                <div className="status-badge" style={{marginTop: 16}}><div className="status-dot"/>All systems operational</div>
               </>
             )}
           </div>
@@ -476,7 +480,7 @@ export default function Login() {
         .field-wrap{position:relative;display:flex;align-items:center}
         .field-icon{position:absolute;left:13px;color:rgba(210,230,255,0.22);pointer-events:none;transition:color 0.22s;z-index:1}
         .field-wrap:focus-within .field-icon{color:#00f5ff}
-        .field-wrap input{width:100%;padding:12px 13px 12px 38px;background:rgba(0,245,255,0.02);border:1px solid rgba(0,245,255,0.08);border-radius:10px;color:#d8e8f8;font-family:'Space Grotesk',sans-serif;font-size:13.5px;outline:none;transition:all 0.22s;caret-color:#00f5ff}
+        .field-wrap input{width:100%;padding:12px 13px 12px 38px;background:rgba(0,245,255,0.02);border:1px solid rgba(0,245,255,0.08);border-radius:10px;color:#d8e8f8;font-family:'Space Grotesk',sans-serif;font-size:16px;outline:none;transition:all 0.22s;caret-color:#00f5ff}
         .field-wrap input::placeholder{color:rgba(210,230,255,0.14)}
         .field-wrap input:focus{border-color:rgba(0,245,255,0.3);background:rgba(0,245,255,0.035);box-shadow:0 0 0 3px rgba(0,245,255,0.055)}
         .field-suffix { position:absolute; right:14px; font-size:13px; color:rgba(210,230,255,0.18); pointer-events:none; font-family:var(--font-mono); font-weight:500; transition:all 0.22s; z-index:2; }

@@ -1010,7 +1010,6 @@ export default function Dashboard() {
       }
     } catch (err) {
       toast.error("Failed to parse data correctly. Please retry.");
-      console.error("Load Task Failed:", err);
     }
   };
 
