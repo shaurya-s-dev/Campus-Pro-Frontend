@@ -284,8 +284,10 @@ export default function Dashboard() {
                   {/* Page header */}
                   <div className="page-hd">
                     <div>
-                      <h1 className="page-title">
-                        {greeting()}, <span className="grad-text">{user?.name?.split(' ')[0] || 'Student'}</span> 👋
+                      <h1 className="dash-greeting">
+                        {greeting()},{' '}
+                        <span className="greeting-name-gradient">{user?.name?.split(' ')[0] || 'Student'}</span>
+                        <span className="greeting-wave"> 👋</span>
                       </h1>
                       <p className="page-sub">
                         {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
@@ -903,9 +905,10 @@ export default function Dashboard() {
         :global(.kpi-mini-viz) { position: absolute; bottom: 12px; right: 12px; opacity: 0.5; }
 
         .page-hd { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; }
-        .page-title { font-family: var(--font-display); font-size: 27px; font-weight: 800; color: #f0f2ff; letter-spacing: -0.6px; line-height: 1.2; }
-        .page-sub { font-size: 12.5px; color: var(--text-3); margin-top: 4px; }
-        .hd-meta { display: flex; align-items: center; gap: 8px; }
+        .dash-greeting { font-family: var(--font-display); font-size: clamp(24px, 4vw, 36px); font-weight: 800; color: #f0f2ff; letter-spacing: -0.03em; line-height: 1.2; display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
+        .greeting-name-gradient { background: linear-gradient(135deg, var(--accent-light) 0%, var(--cyan) 35%, #c084fc 65%, var(--accent-light) 100%); background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; animation: shimmer 4s linear infinite; display: inline; }
+        .greeting-wave { display: inline; animation: wave 2.5s infinite; transform-origin: 70% 70%; }
+        @keyframes wave { 0% { transform: rotate(0deg); } 10% { transform: rotate(14deg); } 20% { transform: rotate(-8deg); } 30% { transform: rotate(14deg); } 40% { transform: rotate(-4deg); } 50% { transform: rotate(10deg); } 60% { transform: rotate(0.0deg); } 100% { transform: rotate(0.0deg); } }
         .profile-corner-btn { display: flex; align-items: center; gap: 10px; padding: 6px 14px 6px 6px; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 100px; text-decoration: none; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
         .profile-corner-btn:hover { background: var(--bg-hover); border-color: var(--accent-border); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
         .profile-avatar-small { width: 32px; height: 32px; background: var(--accent); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-size: 14px; font-weight: 700; }

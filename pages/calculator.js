@@ -72,7 +72,7 @@ function calcSGPA(subjects) {
     totalPts += g.points * cr;
     totalCr  += cr;
   }
-  return totalCr > 0 ? { sgpa: totalPts / totalCr, totalCredits: totalCr, totalPoints: totalPts } : { sgpa: 0, totalCredits: 0, totalPoints: 0 };
+  return totalCr > 0 ? { sgpa: totalPts / totalCr, totalCredits: totalCr, totalPoints: totalPts } : { sgpa: null, totalCredits: 0, totalPoints: 0 };
 }
 
 function calcCGPA(sgpa, totalCr, prevSGPA, prevCr) {
@@ -120,7 +120,7 @@ function ArcGauge({ value, max = 10, size = 148, label }) {
           fill={color} fontSize={28} fontWeight={700}
           fontFamily="'Fira Code', monospace"
           style={{ transition:'fill .4s' }}>
-          {value > 0 ? value.toFixed(2) : '--'}
+          {value !== null && !isNaN(value) ? value.toFixed(2) : '--'}
         </text>
         <text x={size/2} y={size/2 + 20} textAnchor="middle"
           fill="rgba(240,240,250,0.3)" fontSize={12}
@@ -140,8 +140,8 @@ function ArcGauge({ value, max = 10, size = 148, label }) {
    SUBJECT ROW
    ══════════════════════════════════════════════════ */
 function SubjectRow({ s, idx, dispatch, isWeak, isStrong }) {
-  const g = gradeMap[s.grade] || GRADE_SCALE[0];
-  const contrib = ((parseFloat(s.credits) || 0) * g.points).toFixed(1);
+  const g = gradeMap[s.grade] || null;
+  const contrib = g ? ((parseFloat(s.credits) || 0) * g.points).toFixed(1) : '—';
 
   return (
     <div className={`sub-row ${isWeak ? 'row-weak' : ''} ${isStrong ? 'row-strong' : ''}`}>
@@ -178,7 +178,7 @@ function SubjectRow({ s, idx, dispatch, isWeak, isStrong }) {
           className="row-select"
           value={s.grade}
           onChange={e => dispatch({ type:'UPDATE', id:s.id, field:'grade', value:e.target.value })}
-          style={{ color: g?.textColor || 'var(--text-3)', '--grade-bg': g ? `${g.color}15` : 'var(--bg-elevated)' }}
+          style={{ color: g?.textColor || 'var(--text-3)', background: g ? `${g.color}15` : 'var(--bg-elevated)' }}
         >
           <option value="">Select Grade</option>
           {GRADE_SCALE.map(g => (
@@ -189,7 +189,7 @@ function SubjectRow({ s, idx, dispatch, isWeak, isStrong }) {
 
       {/* Contribution */}
       <div className="row-contrib">
-        <div className="contrib-val" style={{ color: g.textColor }}>{contrib}</div>
+        <div className="contrib-val" style={{ color: g ? g.textColor : 'var(--text-4)' }}>{contrib}</div>
         <div className="contrib-lbl">pts</div>
       </div>
 
