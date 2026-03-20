@@ -43,7 +43,7 @@ function TestBarChart({ tests, color }) {
     const ctx    = canvas.getContext('2d');
     const W      = canvas.offsetWidth || 280;
     const H      = 72;
-    const dpr    = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1;
+    const dpr    = window.devicePixelRatio || 1;
     canvas.width  = W * dpr;
     canvas.height = H * dpr;
     ctx.scale(dpr, dpr);

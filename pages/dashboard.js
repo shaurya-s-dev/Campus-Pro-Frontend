@@ -382,9 +382,11 @@ export default function Dashboard() {
                       <div className="alert-icon">
                         <Ico d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zm0-7v-2m0-4h.01" size={14} />
                       </div>
-                      <span><strong>{below75} subject{below75 > 1 ? 's' : ''}</strong> below 75% attendance</span>
+                      <span>
+                        <strong>{below75} subject{below75 > 1 ? 's' : ''}</strong> below 75% — immediate action needed.
+                      </span>
                       <button className="alert-cta" onClick={() => setTab('attendance')}>
-                        View Attendance
+                        View Attendance →
                       </button>
                     </div>
                   )}
@@ -392,7 +394,7 @@ export default function Dashboard() {
                   {/* Attendance mini grid */}
                   <div className="section-hd">
                     <h2 className="section-title">Attendance Snapshot</h2>
-                    <button className="link-btn" onClick={() => setTab('attendance')}>View all</button>
+                    <button className="link-btn" onClick={() => setTab('attendance')}>View all →</button>
                   </div>
                   <div className="att-mini-grid">
                     {uniqueAttendance.length === 0 ? (
@@ -889,10 +891,9 @@ export default function Dashboard() {
 
         .page-hd { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; }
         .dash-greeting { font-family: var(--font-display); font-size: clamp(24px, 4vw, 36px); font-weight: 800; color: #f0f2ff; letter-spacing: -0.03em; line-height: 1.2; display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
-        .greeting-name-gradient { background: linear-gradient(135deg, var(--accent-light) 0%, var(--cyan) 35%, #c084fc 65%, var(--accent-light) 100%); background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; animation: nameGradient 5s linear infinite; display: inline; }
+        .greeting-name-gradient { background: linear-gradient(135deg, var(--accent-light) 0%, var(--cyan) 35%, #c084fc 65%, var(--accent-light) 100%); background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; animation: shimmer 4s linear infinite; display: inline; }
         .greeting-wave { display: inline; animation: wave 2.5s infinite; transform-origin: 70% 70%; }
         @keyframes wave { 0% { transform: rotate(0deg); } 10% { transform: rotate(14deg); } 20% { transform: rotate(-8deg); } 30% { transform: rotate(14deg); } 40% { transform: rotate(-4deg); } 50% { transform: rotate(10deg); } 60% { transform: rotate(0.0deg); } 100% { transform: rotate(0.0deg); } }
-        @keyframes nameGradient { 0% { background-position: 200% center; } 100% { background-position: -200% center; } }
         .profile-corner-btn { display: flex; align-items: center; gap: 10px; padding: 6px 14px 6px 6px; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 100px; text-decoration: none; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
         .profile-corner-btn:hover { background: var(--bg-hover); border-color: var(--accent-border); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
         .profile-avatar-small { width: 32px; height: 32px; background: var(--accent); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-size: 14px; font-weight: 700; }
@@ -900,39 +901,6 @@ export default function Dashboard() {
         .profile-corner-sem { font-size: 10px; color: var(--accent-light); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
 
         .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-        .alert-strip {
-          display: flex; align-items: center; gap: 10px;
-          padding: 11px 16px;
-          background: var(--rose-dim); border: 1px solid var(--rose-border);
-          border-radius: var(--radius-md); font-size: 13px; color: var(--rose);
-          flex-wrap: wrap;
-        }
-        .alert-icon {
-          display: flex; align-items: center; justify-content: center;
-          width: 24px; height: 24px; border-radius: 7px;
-          background: rgba(244,63,94,0.12); border: 1px solid var(--rose-border);
-          flex-shrink: 0;
-        }
-        .alert-strip strong { font-weight: 700; color: var(--rose); }
-        .alert-cta {
-          margin-left: auto; cursor: pointer; font-family: var(--font-body);
-          font-size: 12px; font-weight: 600;
-          padding: 6px 14px; border-radius: var(--radius-sm);
-          background: var(--rose-dim); border: 1px solid var(--rose-border);
-          color: var(--rose); transition: background 0.15s;
-          white-space: nowrap;
-        }
-        .alert-cta:hover { background: rgba(244,63,94,0.18); }
-        .link-btn {
-          background: none; border: none; cursor: pointer;
-          font-size: 12px; font-weight: 600;
-          color: var(--accent-light); font-family: var(--font-body);
-          padding: 5px 10px; border-radius: var(--radius-sm);
-          border: 1px solid var(--accent-border);
-          background: var(--accent-dim);
-          transition: background 0.15s, color 0.15s;
-        }
-        .link-btn:hover { background: rgba(99,102,241,0.18); color: #fff; }
         .section-hd { display: flex; align-items: center; justify-content: space-between; position: relative; padding-left: 12px; margin: 32px 0 16px; }
         .section-hd::before { content: ''; position: absolute; left: 0; top: 4px; bottom: 4px; width: 3px; border-radius: 2px; background: var(--accent); }
         .section-title { font-family: var(--font-display); font-size: 15px; font-weight: 700; color: #dde2f8; letter-spacing: 0.8px; }
