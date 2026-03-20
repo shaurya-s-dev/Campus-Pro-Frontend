@@ -1,68 +1,87 @@
 import { useRef, useEffect, useState, useMemo } from 'react';
 
 /**
- * Vibrant Color Evaluator
- * Based on the new dashboard design system
+ * Neon Color Evaluator
  */
-const getSubjectColor = (pct) => {
-  if (pct >= 85) return '#00f5a0';   // var(--green)
-  if (pct >= 75) return '#ffd60a';   // var(--amber)
-  if (pct >= 60) return '#ff9500';   // var(--orange)
-  return '#ff3b5c';                 // var(--red)
+const getNeonColor = (pct) => {
+  if (pct >= 85) return { color: 'var(--neon-green)', glow: 'var(--neon-green-glow)', dim: 'var(--neon-green-dim)', border: 'var(--neon-green-border)' };
+  if (pct >= 75) return { color: 'var(--neon-yellow)', glow: 'var(--neon-yellow-glow)', dim: 'var(--neon-yellow-dim)', border: 'var(--neon-yellow-border)' };
+  if (pct >= 60) return { color: '#ff9500', glow: '0 0 10px rgba(255,149,0,0.5)', dim: 'rgba(255,149,0,0.1)', border: 'rgba(255,149,0,0.3)' };
+  return { color: 'var(--neon-red)', glow: 'var(--neon-red-glow)', dim: 'var(--neon-red-dim)', border: 'var(--neon-red-border)' };
 };
 
 /**
  * Mini Line Chart Component (Pure SVG Implementation)
  * Renders score progression for a subject across tests.
  */
-const MiniLineChart = ({ data, color }) => {
+const MiniLineChart = ({ data }) => {
   if (!data || data.length === 0) return null;
   
-  const width = 400, height = 100, pad = 24;
+  const W = 400, H = 140, padL = 36, padR = 16, padT = 12, padB = 28;
+  const chartW = W - padL - padR;
+  const chartH = H - padT - padB;
   
-  // Convert test results to percentage scale (0-100)
   const vals = data.map(d => {
-    const sc = parseFloat(d.marks?.scored);
-    const to = parseFloat(d.marks?.total) || 1;
-    return isNaN(sc) ? 0 : (sc / to) * 100;
+    const scored = parseFloat(d.marks?.scored || d.scored || 0);
+    const total = parseFloat(d.marks?.total || d.total || 1) || 1;
+    return (scored / total) * 100;
   });
+  const yMax = 100;
+  
+  const toX = i => padL + (data.length === 1 ? chartW / 2 : (i / (data.length - 1)) * chartW);
+  const toY = v => padT + chartH - (v / yMax) * chartH;
+  
+  // Smooth curve using cubic bezier
+  const pathD = vals.map((v, i) => {
+    const x = toX(i), y = toY(v);
+    if (i === 0) return `M ${x} ${y}`;
+    const px = toX(i - 1), py = toY(vals[i - 1]);
+    const cp1x = px + (x - px) * 0.5, cp1y = py;
+    const cp2x = px + (x - px) * 0.5, cp2y = y;
+    return `C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${x} ${y}`;
+  }).join(' ');
+  
+  const areaD = pathD + ` L ${toX(data.length-1)} ${padT + chartH} L ${toX(0)} ${padT + chartH} Z`;
+  
+  const gradId = `g${Math.random().toString(36).slice(2,7)}`;
+  const yLabels = [0, 20, 40, 60, 80, 100];
 
-  // Handle single data point
-  if (vals.length === 1) {
-    const p = { x: width / 2, y: height - pad - ((vals[0] / 100) * (height - pad * 2)) };
-    return (
-      <svg viewBox={`0 0 ${width} ${height}`} style={{width:'100%', height: 100, overflow:'visible'}}>
-        <circle cx={p.x} cy={p.y} r="5" fill={color} style={{ filter:`drop-shadow(0 0 8px ${color})` }} />
-        <text x={p.x} y={height - 4} textAnchor="middle" fontSize="10" fill="var(--text-3)" fontWeight="600">{data[0].test}</text>
-      </svg>
-    );
-  }
-  
-  const points = vals.map((v, i) => ({
-    x: pad + (i / (vals.length - 1)) * (width - pad * 2),
-    y: height - pad - ((v / 100) * (height - pad * 2))
-  }));
-  
-  const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
-  const areaPath = `${linePath} L ${points[points.length-1].x} ${height} L ${points[0].x} ${height} Z`;
-  
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} style={{width:'100%', height: 110, overflow:'visible'}} className="mlc-svg">
+    <svg viewBox={`0 0 ${W} ${H}`} style={{width:'100%', height: 140}}>
       <defs>
-        <linearGradient id={`grad-${color.replace('#','')}`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.25"/>
-          <stop offset="100%" stopColor={color} stopOpacity="0.01"/>
+        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#00d4ff" stopOpacity="0.4"/>
+          <stop offset="100%" stopColor="#00d4ff" stopOpacity="0.0"/>
         </linearGradient>
       </defs>
-      <path d={areaPath} fill={`url(#grad-${color.replace('#','')})`}/>
-      <path d={linePath} fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ filter:`drop-shadow(0 0 5px ${color}44)` }}/>
-      {points.map((p, i) => (
-        <g key={i} className="mlc-point">
-          <circle cx={p.x} cy={p.y} r="4" fill={color} stroke="var(--bg-surface)" strokeWidth="1.5"/>
-          <text x={p.x} y={height - 4} textAnchor="middle" fontSize="10" fill="var(--text-4)" fontWeight="600" style={{ letterSpacing:'.5px' }}>
-            {data[i].test?.split('-')[0]?.split(' ')[0]}
-          </text>
+      
+      {/* Y axis grid lines */}
+      {yLabels.map(v => (
+        <g key={v}>
+          <line x1={padL} y1={toY(v)} x2={W - padR} y2={toY(v)}
+            stroke="rgba(255,255,255,0.06)" strokeWidth="1"/>
+          <text x={padL - 4} y={toY(v) + 4} textAnchor="end"
+            fontSize="9" fill="rgba(255,255,255,0.3)">{v}</text>
         </g>
+      ))}
+      
+      {/* Area fill */}
+      <path d={areaD} fill={`url(#${gradId})`}/>
+      
+      {/* Line */}
+      <path d={pathD} fill="none" stroke="#00d4ff" strokeWidth="2.5"
+        strokeLinecap="round" strokeLinejoin="round"/>
+      
+      {/* Dots */}
+      {vals.map((v, i) => (
+        <circle key={i} cx={toX(i)} cy={toY(v)} r="5"
+          fill="#00d4ff" stroke="#0d1117" strokeWidth="2.5"/>
+      ))}
+      
+      {/* X axis labels */}
+      {data.map((d, i) => (
+        <text key={i} x={toX(i)} y={H - 4} textAnchor="middle"
+          fontSize="10" fill="rgba(255,255,255,0.45)">{d.test?.split('-')[0]?.split(' ')[0]}</text>
       ))}
     </svg>
   );
@@ -73,9 +92,13 @@ const MiniLineChart = ({ data, color }) => {
  */
 function SummaryStat({ label, value, sub, color, delay }) {
   return (
-    <div className="summary-stat glass animate-up" style={{ '--accent-c': color, animationDelay: `${delay}ms` }}>
-      <div className="ss-accent" />
-      <div className="ss-val" style={{ color }}>{value}</div>
+    <div className="summary-stat glass animate-up" style={{ 
+      animationDelay: `${delay}ms`,
+      borderLeft: `3px solid ${color}`,
+      boxShadow: `0 0 15px ${color}15`,
+      background: `linear-gradient(135deg, ${color}05, transparent)`
+    }}>
+      <div className="ss-val" style={{ color, textShadow: `0 0 10px ${color}60` }}>{value}</div>
       <div className="ss-lbl">{label}</div>
       <div className="ss-sub">{sub}</div>
     </div>
@@ -113,10 +136,9 @@ function TargetCalculator({ marks }) {
     <div className={`target-calc-card glass ${isOpen ? 'is-open' : ''}`}>
       <div className="tc-header" onClick={() => setIsOpen(!isOpen)}>
         <div className="tc-title">
-          <span className="tc-icon">🎯</span>
-          <div className="tc-txt">
-            <strong>Target Grade Calculator</strong>
-            <span>What do I need to score next?</span>
+          <div style={{display:'flex', flexDirection:'column', gap:4}}>
+            <span style={{fontWeight:700, fontSize:15}}>🎯 Target Grade Calculator</span>
+            <span style={{fontSize:13, color:'rgba(255,255,255,0.5)'}}>What do I need to score next?</span>
           </div>
         </div>
         <div className={`tc-toggle ${isOpen ? 'up' : ''}`}>
@@ -238,10 +260,10 @@ export default function MarksSection({ marks = [] }) {
     <div className="marks-tab-container">
       {/* Summary Bar */}
       <div className="marks-summary-bar">
-        <SummaryStat label="AVG SCORE" value={`${stats.avg}%`} sub="Overall performance" color="#00d4ff" delay={0} />
-        <SummaryStat label="TOTAL MARKS" value={stats.total} sub="Accumulated points" color="#bf5af2" delay={50} />
-        <SummaryStat label="SUBJECTS" value={stats.count} sub="Tracked courses" color="#00f5a0" delay={100} />
-        <SummaryStat label="ACTIVE COMP" value={stats.active} sub="Latest assessment" color="#ffd60a" delay={150} />
+        <SummaryStat label="AVG SCORE" value={`${stats.avg}%`} sub="Overall performance" color="var(--neon-cyan)" delay={0} />
+        <SummaryStat label="TOTAL MARKS" value={stats.total} sub="Accumulated points" color="var(--neon-purple)" delay={50} />
+        <SummaryStat label="SUBJECTS" value={stats.count} sub="Tracked courses" color="var(--neon-green)" delay={100} />
+        <SummaryStat label="ACTIVE COMP" value={stats.active} sub="Latest assessment" color="var(--neon-yellow)" delay={150} />
       </div>
 
       <TargetCalculator marks={marks} />
@@ -268,13 +290,16 @@ export default function MarksSection({ marks = [] }) {
           const sc  = parseFloat(m.overall?.scored) || 0;
           const tot = parseFloat(m.overall?.total) || 1;
           const pct = (sc / tot) * 100;
-          const color = getSubjectColor(pct);
+          const neon = getNeonColor(pct);
           const tests = (m.testPerformance || []).slice().reverse(); // Show progression over time
           
           return (
-            <div key={m.courseCode || i} className="marks-card glass animate-up" style={{ animationDelay: `${250 + i * 40}ms` }}>
-              {/* Vibrant side indicator */}
-              <div className="card-sidebar" style={{ background: color }} />
+            <div key={m.courseCode || i} className="marks-card glass animate-up" style={{ 
+              animationDelay: `${250 + i * 40}ms`,
+              borderLeft: `3px solid ${neon.color}`,
+              boxShadow: `inset 0 0 30px ${neon.dim}, -2px 0 12px ${neon.color}40`,
+              background: `linear-gradient(135deg, ${neon.dim}, transparent)`
+            }}>
               
               <div className="mc-head">
                 <div className="mc-titles">
@@ -285,7 +310,7 @@ export default function MarksSection({ marks = [] }) {
                     <span className="mc-type">{m.courseType}</span>
                   </div>
                 </div>
-                <div className="mc-score-bubble" style={{ color: color, background: `${color}15`, borderColor: `${color}30` }}>
+                <div className="mc-score-bubble" style={{ color: neon.color, background: neon.dim, border: `1px solid ${neon.border}`, textShadow: neon.glow }}>
                   {sc.toFixed(1)} / {tot.toFixed(0)}
                 </div>
               </div>
@@ -293,25 +318,34 @@ export default function MarksSection({ marks = [] }) {
               {/* Enhanced Chart Section */}
               {tests.length > 0 ? (
                 <div className="mc-chart-wrap">
-                  <MiniLineChart data={tests} color={color} />
+                  <MiniLineChart data={tests} />
                 </div>
               ) : (
                 <div className="mc-no-tests" style={{ height: 110 }}>No component breakdown available</div>
               )}
 
-              {/* Data Chips */}
-              <div className="mc-chips">
+              {/* Assessment chips exactly as requested */}
+              <div style={{display:'flex', gap:8, flexWrap:'wrap', marginTop:4}}>
                 {tests.map((t, idx) => (
-                  <div key={idx} className="mc-chip glass">
-                    <span className="mcc-label">{t.test}</span>
-                    <span className="mcc-val">{t.marks?.scored}/{t.marks?.total}</span>
+                  <div key={idx} style={{
+                    background:'rgba(255,255,255,0.06)',
+                    border:'1px solid rgba(255,255,255,0.1)',
+                    borderRadius:10,
+                    padding:'8px 16px',
+                    textAlign:'center',
+                    minWidth:80,
+                  }}>
+                    <div style={{fontSize:13, fontWeight:700, color:'#00d4ff'}}>{t.test}</div>
+                    <div style={{fontSize:12, color:'rgba(255,255,255,0.6)', marginTop:2}}>
+                      {t.marks?.scored || t.scored}/{t.marks?.total || t.total}
+                    </div>
                   </div>
                 ))}
               </div>
 
               {/* Global Progress Fill (Neon) */}
               <div className="mc-progress-track">
-                <div className="progress-fill" style={{ width: `${Math.min(pct,100)}%`, '--fill-color': color }} />
+                <div className="progress-fill" style={{ width: `${Math.min(pct,100)}%`, '--fill-color': neon.color }} />
               </div>
             </div>
           );
@@ -326,8 +360,8 @@ export default function MarksSection({ marks = [] }) {
         .summary-stat { 
           padding: 18px; border-radius: 18px; position: relative; overflow: hidden;
           background: rgba(255,255,255,0.03); 
+          border: 1px solid rgba(255,255,255,0.05);
         }
-        .ss-accent { position: absolute; top: 0; left: 0; bottom: 0; width: 3px; background: var(--accent-c); opacity: 0.8; }
         .ss-val { font-family: var(--font-mono); font-size: 24px; font-weight: 800; line-height: 1; margin-bottom: 6px; }
         .ss-lbl { font-size: 10px; font-weight: 700; color: var(--text-4); text-transform: uppercase; letter-spacing: 1px; }
         .ss-sub { font-size: 11px; color: var(--text-3); margin-top: 4px; }
@@ -364,14 +398,6 @@ export default function MarksSection({ marks = [] }) {
         .res-sub { font-size: 11px; color: var(--text-4); margin-top: 10px; }
         .res-mini-bar { height: 6px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden; margin: 12px auto; width: 200px; }
         .res-p { height: 100%; background: linear-gradient(90deg, var(--accent), var(--cyan)); border-radius: 3px; }
-        .summary-stat { 
-          padding: 18px; border-radius: 18px; position: relative; overflow: hidden;
-          background: rgba(255,255,255,0.03); 
-        }
-        .ss-accent { position: absolute; top: 0; left: 0; bottom: 0; width: 3px; background: var(--accent-c); opacity: 0.8; }
-        .ss-val { font-family: var(--font-mono); font-size: 24px; font-weight: 800; line-height: 1; margin-bottom: 6px; }
-        .ss-lbl { font-size: 10px; font-weight: 700; color: var(--text-4); text-transform: uppercase; letter-spacing: 1px; }
-        .ss-sub { font-size: 11px; color: var(--text-3); margin-top: 4px; }
 
         /* Toolbar */
         .marks-toolbar { 
@@ -396,7 +422,6 @@ export default function MarksSection({ marks = [] }) {
           display: flex; flex-direction: column; gap: 16px; cursor: default;
         }
         .marks-card:hover { transform: translateY(-3px); box-shadow: 0 12px 30px rgba(0,0,0,0.4); }
-        .card-sidebar { position: absolute; top: 20px; left: 0; bottom: 20px; width: 4px; border-radius: 0 2px 2px 0; opacity: 0.8; }
 
         .mc-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; }
         .mc-name { font-family: var(--font-display); font-size: 15px; font-weight: 750; color: var(--text-1); line-height: 1.4; }
@@ -413,15 +438,7 @@ export default function MarksSection({ marks = [] }) {
         .mc-chart-wrap { margin: -10px -10px 0 -22px; }
         .mc-no-tests { display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--text-4); font-style: italic; background: rgba(0,0,0,0.1); border-radius: 10px; }
 
-        .mc-chips { display: flex; flex-wrap: wrap; gap: 6px; }
-        .mc-chip { 
-          padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border); 
-          display: flex; flex-direction: column; gap: 2px; min-width: 65px;
-        }
-        .mcc-label { font-size: 9px; font-weight: 700; color: var(--text-4); text-transform: uppercase; }
-        .mcc-val { font-family: var(--font-mono); font-size: 11.5px; font-weight: 700; color: var(--text-1); }
-
-        .mc-progress-track { height: 4px; background: var(--border); border-radius: 3px; overflow: hidden; margin-top: 4px; }
+        .mc-progress-track { height: 4px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden; margin-top: 4px; }
 
         @media (max-width: 1000px) {
           .marks-summary-bar { grid-template-columns: 1fr 1fr; }

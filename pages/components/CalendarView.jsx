@@ -56,12 +56,10 @@ const CALENDAR_DATA = {
     ],
     dayOrders: {
       2:'D2', 3:'D3', 4:'D4', 5:'D5', 6:'D1',
-      7:'D2', 9:'D3',10:'D4',11:'D5',12:'D1',
-      13:'D2',16:'D3',17:'D4',
-      20:'D2',
-      21:'D3',23:'D4',24:'D5',
-      25:'D1',
-      26:'D2',27:'D3',28:'D4',30:'D5',31:'D1',
+      9:'D2', 10:'D3', 11:'D4', 12:'D5', 13:'D1',
+      16:'D5', 17:'D1', 20:'D2',
+      23:'D3', 24:'D4', 25:'D5', 26:'D1', 27:'D2',
+      30:'D3', 31:'D4',
     },
   },
   'April 2026': {
@@ -148,11 +146,20 @@ export default function CalendarView() {
   const activeIdx   = MONTHS.indexOf(activeMonth);
   const isThisMonth = activeMonth === TODAY_KEY;
 
-  const stats = useMemo(() => ({
-    working:  Object.keys(monthData.dayOrders || {}).length,
-    holidays: (monthData.events || []).filter(e => e.type === 'holiday').length,
-    exams:    (monthData.events || []).filter(e => e.type === 'exam').length,
-  }), [monthData]);
+  const stats = useMemo(() => {
+    let workingCount = 0;
+    for (let d = 1; d <= totalDays; d++) {
+      const date = new Date(year, month, d);
+      const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+      const isHoliday = (monthData.events || []).some(e => e.date === d && e.type === 'holiday');
+      if (!isWeekend && !isHoliday) workingCount++;
+    }
+    return {
+      working:  workingCount,
+      holidays: (monthData.events || []).filter(e => e.type === 'holiday').length,
+      exams:    (monthData.events || []).filter(e => e.type === 'exam').length,
+    };
+  }, [totalDays, year, month, monthData]);
 
   const upcomingItems = useMemo(() => {
     const now = new Date(); now.setHours(0,0,0,0);
@@ -244,8 +251,16 @@ export default function CalendarView() {
             {Array.from({ length: startDay }).map((_, i) => <div key={`empty-${i}`} className="grid-day empty" />)}
             {Array.from({ length: totalDays }).map((_, i) => {
               const d = i + 1;
+              const date = new Date(year, month, d);
+              const dayOfWeek = date.getDay();
               const hasEvents = (monthData.events || []).filter(e => e.date === d);
-              const order = monthData.dayOrders?.[d];
+              const isHoliday = hasEvents.some(e => e.type === 'holiday');
+              const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+              
+              const dayOrderValue = monthData.dayOrders?.[d];
+              // Only show day order if it's a working day (Mon-Fri) and not a holiday
+              const order = (isWeekend || isHoliday) ? null : dayOrderValue;
+              
               const selected = selectedDay === d;
               return (
                 <div key={d} className={`grid-day glass-raised ${isToday(d) ? 'is-today' : ''} ${isPast(d) ? 'is-past' : ''} ${selected ? 'is-selected' : ''}`} onClick={() => setSelectedDay(d)}>

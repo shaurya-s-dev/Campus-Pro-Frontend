@@ -125,8 +125,15 @@ const Ico = ({ d, size = 15, sw = 1.8 }) => (
 );
 
 /* ── Color helpers ────────────────────────────────── */
-const attColor = p => p >= 85 ? 'var(--green)' : p >= 75 ? 'var(--amber)' : 'var(--red)';
-const scoreColor = p => p >= 85 ? 'var(--green)' : p >= 70 ? 'var(--amber)' : 'var(--red)';
+const attColor = p => p >= 85 ? 'var(--neon-green)' : p >= 75 ? 'var(--neon-yellow)' : 'var(--neon-red)';
+const scoreColor = p => p >= 85 ? 'var(--neon-green)' : p >= 70 ? 'var(--neon-yellow)' : 'var(--neon-red)';
+
+const getNeonColor = (pct) => {
+  if (pct >= 85) return { color: 'var(--neon-green)', glow: 'var(--neon-green-glow)', dim: 'var(--neon-green-dim)', border: 'var(--neon-green-border)' };
+  if (pct >= 75) return { color: 'var(--neon-yellow)', glow: 'var(--neon-yellow-glow)', dim: 'var(--neon-yellow-dim)', border: 'var(--neon-yellow-border)' };
+  if (pct >= 60) return { color: '#ff9500', glow: '0 0 10px rgba(255,149,0,0.5)', dim: 'rgba(255,149,0,0.1)', border: 'rgba(255,149,0,0.3)' };
+  return { color: 'var(--neon-red)', glow: 'var(--neon-red-glow)', dim: 'var(--neon-red-dim)', border: 'var(--neon-red-border)' };
+};
 
 /* ══════════════════════════════════════════════════
    TIMETABLE CONSTANTS (SRM EVEN SEM 2025-26)
@@ -195,8 +202,8 @@ function CircleProgress({ pct, color = 'var(--accent)', size = 56 }) {
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={6}
           strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
           style={{
-            transition: 'stroke-dasharray 1.2s cubic-bezier(.4,0,.2,1)',
-            filter: `drop-shadow(0 0 8px ${color}88)`
+            transition: 'stroke-dasharray 1.2s cubic-bezier(.4,1.56,.64,1)',
+            filter: `drop-shadow(0 0 6px ${color})`
           }}
         />
       </svg>
@@ -290,13 +297,22 @@ function SmartAlerts({ attendance, marks }) {
     <div className="smart-alerts-container">
       {alerts.map((a, i) => (
         <div key={a.id} className={`alert-card al-${a.type} animate-down`} style={{ animationDelay: `${i * 100}ms` }}>
-          <div className="al-icon">{a.icon}</div>
+          <div className="al-icon">
+            <span style={{fontSize: 20}}>{a.icon}</span>
+          </div>
           <div className="al-content">
             <div className="al-msg">{a.message}</div>
             {a.subjects && (
-              <div className="al-chips">
+              <div style={{display:'flex', flexWrap:'wrap', gap:6, marginTop:8}}>
                 {a.subjects.map((s, si) => (
-                  <span key={si} className="al-chip">{s}</span>
+                  <span key={si} style={{
+                    background:'rgba(255,255,255,0.08)',
+                    border:'1px solid rgba(255,255,255,0.15)',
+                    borderRadius:6,
+                    padding:'2px 10px',
+                    fontSize:11,
+                    color:'rgba(255,255,255,0.7)',
+                  }}>{s}</span>
                 ))}
               </div>
             )}
@@ -350,40 +366,47 @@ function TodayClasses({ timetable }) {
         {/* Timeline bar */}
         <div style={{ position: 'absolute', left: 4, top: 10, bottom: 10, width: 2, background: 'rgba(255,255,255,0.06)' }} />
         
-        {schedule.map((slot, i) => {
-          if (!slot) return null;
-          const sTimes = SLOTS[i];
-          const isLive = i === liveIdx;
-          const isNext = i === nextIdx;
-          const isPast = nowMin >= sTimes.endMin;
-          const dotColor = isLive || isNext ? 'var(--accent)' : isPast ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.3)';
+        {(() => {
+          const seen = new Set();
+          return schedule.map((slot, i) => {
+            if (!slot) return null;
+            const sTimes = SLOTS[i];
+            const key = `${sTimes.start}-${slot.name}`;
+            if (seen.has(key)) return null;
+            seen.add(key);
 
-          return (
-            <div key={i} style={{ position: 'relative', paddingBottom: 20, opacity: isPast ? 0.4 : 1 }}>
-              {/* Dot */}
-              <div style={{ 
-                position: 'absolute', left: -24, top: 4, width: 10, height: 10, 
-                borderRadius: '50%', background: dotColor, border: '2px solid var(--bg-1)',
-                zIndex: 2,
-                boxShadow: (isLive || isNext) ? `0 0 10px ${dotColor}` : 'none'
-              }} className={(isLive || isNext) ? 'pulsing-dot' : ''} />
+            const isLive = i === liveIdx;
+            const isNext = i === nextIdx;
+            const isPast = nowMin >= sTimes.endMin;
+            const dotColor = isLive || isNext ? 'var(--neon-cyan)' : isPast ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.3)';
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: isLive ? 'var(--accent-light)' : 'var(--text-1)' }}>
-                    {slot.name}
+            return (
+              <div key={i} style={{ position: 'relative', paddingBottom: 20, opacity: isPast ? 0.4 : 1 }}>
+                {/* Dot */}
+                <div style={{ 
+                  position: 'absolute', left: -24, top: 4, width: 10, height: 10, 
+                  borderRadius: '50%', background: dotColor, border: '2px solid var(--bg-1)',
+                  zIndex: 2,
+                  boxShadow: (isLive || isNext) ? `0 0 10px ${dotColor}` : 'none'
+                }} className={(isLive || isNext) ? 'pulsing-dot' : ''} />
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: isLive ? 'var(--neon-cyan)' : 'var(--text-1)' }}>
+                      {slot.name}
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>
+                      Room {slot.roomNo} · {slot.slot}
+                    </div>
                   </div>
-                  <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>
-                    Room {slot.roomNo} · {slot.slot}
+                  <div style={{ fontSize: 11, fontWeight: 700, color: isLive ? 'var(--neon-cyan)' : 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
+                    {sTimes.start.replace(' AM', '').replace(' PM', '')}
                   </div>
-                </div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: isLive ? 'var(--accent-light)' : 'var(--text-3)', fontFamily: 'var(--font-mono)' }}>
-                  {sTimes.start.replace(' AM', '').replace(' PM', '')}
                 </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          });
+        })()}
       </div>
 
       <div style={{ 
@@ -394,7 +417,7 @@ function TodayClasses({ timetable }) {
           <span style={{ color: 'var(--text-3)' }}>🎉 No more classes today</span>
         ) : nextClass ? (
           <>
-            <span style={{ color: 'var(--accent-light)', fontWeight: 700 }}>Next:</span>
+            <span style={{ color: 'var(--neon-cyan)', fontWeight: 700, textShadow: 'var(--neon-cyan-glow)' }}>Next:</span>
             <span style={{ color: 'var(--text-2)' }}>
               {nextClass.name} in {nextTime >= 60 ? `${Math.floor(nextTime/60)}h ${nextTime%60}m` : nextTime > 0 ? `${nextTime} min` : 'less than a min'}
             </span>
@@ -504,20 +527,28 @@ function useCountUp(endValStr) {
    ══════════════════════════════════════════════════ */
 function KPICard({ label, value, sub, color, icon, delay = 0 }) {
   const animatedValue = useCountUp(value);
+  const neonColor = color.replace('var(--', '').replace(')', '');
+  const neonValue = `var(--neon-${neonColor})`;
+  
   return (
-    <div className="kpi glass glass-hover animate-up" style={{ animationDelay: `${delay}ms` }}>
-      <div className="kpi-accent" style={{ background: `linear-gradient(90deg, ${color}, transparent)` }} />
+    <div className="kpi glass glass-hover animate-up" style={{ 
+      animationDelay: `${delay}ms`,
+      border: `1px solid var(--neon-${neonColor}-border)`,
+      boxShadow: `0 0 20px var(--neon-${neonColor}-dim)`,
+      background: `linear-gradient(135deg, var(--neon-${neonColor}-dim), transparent)`
+    }}>
+      <div className="kpi-accent" style={{ background: `linear-gradient(90deg, var(--neon-${neonColor}), transparent)` }} />
       <div className="kpi-header">
-        <div className="kpi-icon-wrap" style={{ color, background: `${color}14`, border: `1px solid ${color}22` }}>
+        <div className="kpi-icon-wrap" style={{ color: `var(--neon-${neonColor})`, background: `var(--neon-${neonColor}-dim)`, border: `1px solid var(--neon-${neonColor}-border)` }}>
           <Ico d={icon} size={15} />
         </div>
         <span className="kpi-label">{label}</span>
       </div>
-      <div className="kpi-value" style={{ color }}>{animatedValue}</div>
+      <div className="kpi-value" style={{ color: `var(--neon-${neonColor})`, textShadow: `var(--neon-${neonColor}-glow)` }}>{animatedValue}</div>
       {sub && <div className="kpi-sub">{sub}</div>}
 
       {/* Mini sparkline visualization hint */}
-      <div className="kpi-mini-viz" style={{ color }}>
+      <div className="kpi-mini-viz" style={{ color: `var(--neon-${neonColor})` }}>
         <svg width="40" height="20" viewBox="0 0 40 20" fill="none" stroke="currentColor" strokeWidth="1.5">
           <path d="M2 15 L10 12 L18 16 L26 8 L34 10 L38 2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.3 }} />
         </svg>
@@ -698,34 +729,28 @@ export default function Dashboard() {
                       </button>
                       <Link href="/profile">
                         <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          padding: '5px 12px 5px 5px',
-                          borderRadius: '999px',
-                          background: 'var(--accent-dim)',
-                          border: '1px solid var(--accent-border)',
-                          cursor: 'pointer',
-                          textDecoration: 'none',
-                          flexShrink: 0,
+                          display:'flex', alignItems:'center', gap:8,
+                          padding:'6px 14px 6px 6px',
+                          borderRadius:999,
+                          background:'rgba(255,255,255,0.08)',
+                          border:'1px solid rgba(255,255,255,0.12)',
+                          cursor:'pointer',
                         }}>
                           <div style={{
-                            width: 28, height: 28,
-                            borderRadius: '50%',
-                            background: 'linear-gradient(135deg, var(--accent), #4338ca)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontWeight: 800, fontSize: 12, color: 'white',
-                            flexShrink: 0,
+                            width:30, height:30, borderRadius:'50%',
+                            background:'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                            display:'flex', alignItems:'center', justifyContent:'center',
+                            fontWeight:800, fontSize:13, color:'white',
                           }}>
-                            {(user?.name || 'S')[0].toUpperCase()}
+                            {user?.name?.[0]?.toUpperCase() || 'S'}
                           </div>
-                          <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-1)', lineHeight: 1.2 }}>
-                              {user?.name?.split(' ')[0] || 'Student'}
-                            </span>
-                            <span style={{ fontSize: 10, color: 'var(--text-3)', lineHeight: 1.2 }}>
+                          <div>
+                            <div style={{fontSize:12, fontWeight:600, color:'white', lineHeight:1.2}}>
+                              {user?.name?.split(' ')[0]}
+                            </div>
+                            <div style={{fontSize:10, color:'rgba(255,255,255,0.5)', lineHeight:1.2}}>
                               Sem {user?.semester}
-                            </span>
+                            </div>
                           </div>
                         </div>
                       </Link>
@@ -757,7 +782,7 @@ export default function Dashboard() {
                     />
                     <KPICard
                       label="Semester" value={user?.semester || '—'}
-                      color="var(--amber)"
+                      color="var(--yellow)"
                       icon="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"
                       sub={user?.program?.slice(0, 24) || '—'} delay={180}
                     />
@@ -792,7 +817,7 @@ export default function Dashboard() {
                       const attended = conducted - absent;
                       const pctMatch = conducted > 0 ? (attended / conducted) * 100 : parseFloat(a.attendancePercentage) || 0;
                       const pct = parseFloat(pctMatch.toFixed(2));
-                      const clr = attColor(pct);
+                      const neon = getNeonColor(pct);
 
                       const canSkip = conducted > 0 ? Math.floor((attended - 0.75 * conducted) / 0.75) : 0;
                       const classesNeeded = (pct < 75 && conducted > 0) ? Math.ceil((0.75 * conducted - attended) / 0.25) : 0;
@@ -801,25 +826,30 @@ export default function Dashboard() {
                       if (conducted === 0) {
                         mTxt = "No classes yet"; mClr = "var(--text-3)"; mBg = "rgba(255,255,255,0.02)"; mBdr = "rgba(255,255,255,0.05)";
                       } else if (canSkip < 0) {
-                        mTxt = `Deficit: -${classesNeeded}`; mClr = "#ff3b5c"; mBg = "rgba(255,59,92,0.1)"; mBdr = "rgba(255,59,92,0.2)";
+                        mTxt = `Deficit: -${classesNeeded}`; mClr = "var(--neon-red)"; mBg = "var(--neon-red-dim)"; mBdr = "var(--neon-red-border)";
                       } else {
-                        mTxt = `Margin: +${canSkip}`; mClr = canSkip > 2 ? "#00f5a0" : "#ffd60a"; mBg = canSkip > 2 ? "rgba(0,245,160,0.1)" : "rgba(255,214,10,0.1)"; mBdr = mClr + "33";
+                        mTxt = `Margin: +${canSkip}`; mClr = canSkip > 2 ? "var(--neon-green)" : "var(--neon-yellow)"; mBg = canSkip > 2 ? "var(--neon-green-dim)" : "var(--neon-yellow-dim)"; mBdr = canSkip > 2 ? "var(--neon-green-border)" : "var(--neon-yellow-border)";
                       }
 
                       return (
-                        <div key={a.courseCode || i} className="att-mini-card glass animate-up" style={{ animationDelay: `${i * 40}ms` }}>
+                        <div key={a.courseCode || i} className="att-mini-card glass animate-up" style={{ 
+                          animationDelay: `${i * 40}ms`,
+                          borderLeft: `3px solid ${neon.color}`,
+                          boxShadow: `inset 0 0 30px ${neon.dim}, -2px 0 12px ${neon.color}40`
+                        }}>
                           <div className="am-row">
-                            <CircleProgress pct={pct} color={clr} size={42} />
+                            <CircleProgress pct={pct} color={neon.color} size={42} />
                             <div className="am-main">
                               <div className="am-name">{a.courseTitle}</div>
                               <div className="am-meta">
                                 <span className="am-code">{a.courseCode}</span>
-                                <span className="am-pct" style={{ color: clr }}>{pct}%</span>
+                                <span className="am-pct" style={{ color: neon.color, textShadow: neon.glow, fontWeight: 800 }}>{pct}%</span>
                               </div>
                             </div>
                           </div>
                           <div className="am-footer" style={{ 
-                            color: mClr, background: mBg, borderColor: mBdr, padding: '4px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: '700', marginTop: '8px', border: '1px solid', textAlign: 'center'
+                            color: mClr, background: mBg, borderColor: mBdr, padding: '4px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: '700', marginTop: '8px', border: '1px solid', textAlign: 'center',
+                            boxShadow: `0 0 10px ${mBg}`
                           }}>
                             {mTxt}
                           </div>
@@ -855,16 +885,20 @@ export default function Dashboard() {
                   {/* ── Summary strip ─────────────────── */}
                   <div className="sum-strip">
                     {[
-                      { v: `${avgAtt}%`, l: 'Average', c: 'var(--accent-light)', icon: 'M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16z' },
-                      { v: safeAtt, l: 'Safe ≥ 75%', c: 'var(--emerald)', icon: 'M22 11.08V12a10 10 0 1 1-5.93-9.14M22 4L12 14.01l-3-3' },
-                      { v: below75, l: 'At Risk', c: 'var(--rose)', icon: 'M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zm0-7v-2m0-4h.01' },
-                      { v: uniqueAttendance.length, l: 'Subjects', c: 'var(--amber)', icon: 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z' },
+                      { v: `${avgAtt}%`, l: 'Average', c: 'var(--neon-cyan)', icon: 'M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16z' },
+                      { v: safeAtt, l: 'Safe ≥ 75%', c: 'var(--neon-green)', icon: 'M22 11.08V12a10 10 0 1 1-5.93-9.14M22 4L12 14.01l-3-3' },
+                      { v: below75, l: 'At Risk', c: 'var(--neon-red)', icon: 'M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zm0-7v-2m0-4h.01' },
+                      { v: uniqueAttendance.length, l: 'Subjects', c: 'var(--neon-yellow)', icon: 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z' },
                     ].map((s, i) => (
-                      <div key={i} className="sum-pill glass-raised animate-up" style={{ animationDelay: `${i * 45}ms` }}>
-                        <div className="sp-icon" style={{ color: s.c, background: `${s.c}12`, border: `1px solid ${s.c}20` }}>
+                      <div key={i} className="sum-pill glass-raised animate-up" style={{ 
+                        animationDelay: `${i * 45}ms`,
+                        boxShadow: `0 0 15px ${s.c}15`,
+                        borderColor: `${s.c}30`
+                      }}>
+                        <div className="sp-icon" style={{ color: s.c, background: `${s.c}12`, border: `1px solid ${s.c}20`, boxShadow: `0 0 10px ${s.c}20` }}>
                           <Ico d={s.icon} size={13} />
                         </div>
-                        <div className="sum-val" style={{ color: s.c }}>{s.v}</div>
+                        <div className="sum-val" style={{ color: s.c, textShadow: `0 0 8px ${s.c}60` }}>{s.v}</div>
                         <div className="sum-lbl">{s.l}</div>
                       </div>
                     ))}
@@ -880,7 +914,7 @@ export default function Dashboard() {
                       const attended = conducted - absent;
                       const percentage = conducted > 0 ? (attended / conducted) * 100 : 0;
                       const pct = parseFloat(percentage.toFixed(2));
-                      const clr = attColor(pct);
+                      const neon = getNeonColor(pct);
 
                       // Margin (classes can skip while staying ABOVE 75%):
                       const canSkip = conducted > 0
@@ -894,17 +928,21 @@ export default function Dashboard() {
 
                       const dataStatus = pct >= 85 ? 'safe' : pct >= 75 ? 'caution' : 'atrisk';
                       const statusLabel = pct >= 85 ? 'Excellent' : pct >= 75 ? 'Safe' : 'At Risk';
-                      const statusClr = pct >= 85 ? 'var(--emerald)' : pct >= 75 ? 'var(--amber)' : 'var(--rose)';
+                      const statusClr = neon.color;
 
                       const facultyName = a.facultyName?.split('(')[0]?.trim() || '—';
 
                       return (
-                        <div key={a.courseCode || i} className="att-card glass animate-up" data-status={dataStatus} style={{ animationDelay: `${i * 40}ms` }}>
+                        <div key={a.courseCode || i} className="att-card glass animate-up" data-status={dataStatus} style={{ 
+                          animationDelay: `${i * 40}ms`,
+                          borderLeft: `3px solid ${neon.color}`,
+                          boxShadow: `inset 0 0 30px ${neon.dim}, -2px 0 12px ${neon.color}40`
+                        }}>
 
                           <div className="ac-body">
                             {/* ── Row 1: Circle + Course info + % ── */}
                             <div className="ac-top">
-                              <CircleProgress pct={pct} color={clr} size={58} />
+                              <CircleProgress pct={pct} color={neon.color} size={58} />
 
                               <div className="ac-course">
                                 <div className="ac-title">{a.courseTitle}</div>
@@ -925,8 +963,8 @@ export default function Dashboard() {
                               </div>
 
                               <div className="ac-pct-block">
-                                <div className="ac-pct" style={{ color: clr }}>{pct}%</div>
-                                <span className="ac-status-tag" style={{ color: statusClr, background: `${statusClr}12`, border: `1px solid ${statusClr}22` }}>
+                                <div className="ac-pct" style={{ color: neon.color, textShadow: neon.glow, fontWeight: 800 }}>{pct}%</div>
+                                <span className="ac-status-tag" style={{ color: statusClr, background: neon.dim, border: `1px solid ${neon.border}` }}>
                                   {statusLabel}
                                 </span>
                               </div>
@@ -935,16 +973,16 @@ export default function Dashboard() {
                             {/* ── Segmented progress bar ── */}
                             <div className="ac-bar-wrap">
                               <div className="ac-bar-bg">
-                                <div className="ac-bar-fill" style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${clr}99, ${clr})` }} />
+                                <div className="ac-bar-fill progress-fill" style={{ width: `${pct}%`, '--fill-color': neon.color }} />
                                 {/* 75% danger threshold marker */}
                                 <div className="ac-marker" style={{ left: '75%' }} title="Minimum 75% required">
-                                  <div className="ac-marker-line" style={{ background: 'var(--red)' }} />
-                                  <span className="ac-marker-lbl" style={{ color: 'var(--red)' }}>75%</span>
+                                  <div className="ac-marker-line" style={{ background: 'var(--neon-red)' }} />
+                                  <span className="ac-marker-lbl" style={{ color: 'var(--neon-red)' }}>75%</span>
                                 </div>
                                 {/* 85% safe threshold marker */}
                                 <div className="ac-marker" style={{ left: '85%' }} title="85% for comfortable buffer">
-                                  <div className="ac-marker-line" style={{ background: 'var(--green)' }} />
-                                  <span className="ac-marker-lbl" style={{ color: 'var(--green)' }}>85%</span>
+                                  <div className="ac-marker-line" style={{ background: 'var(--neon-green)' }} />
+                                  <span className="ac-marker-lbl" style={{ color: 'var(--neon-green)' }}>85%</span>
                                 </div>
 
                               </div>
@@ -953,12 +991,12 @@ export default function Dashboard() {
                             {/* ── Stats grid ─── */}
                             <div className="ac-stats">
                               <div className="ac-stat">
-                                <span className="ac-stat-v" style={{ color: 'var(--green)' }}>{attended}</span>
+                                <span className="ac-stat-v" style={{ color: 'var(--neon-green)', textShadow: 'var(--neon-green-glow)' }}>{attended}</span>
                                 <span className="ac-stat-l">Attended</span>
                               </div>
                               <div className="ac-stat-sep" />
                               <div className="ac-stat">
-                                <span className="ac-stat-v" style={{ color: absent > 0 ? 'var(--red)' : 'var(--text-3)' }}>{absent}</span>
+                                <span className="ac-stat-v" style={{ color: absent > 0 ? 'var(--neon-red)' : 'var(--text-3)', textShadow: absent > 0 ? 'var(--neon-red-glow)' : 'none' }}>{absent}</span>
                                 <span className="ac-stat-l">Absent</span>
                               </div>
                               <div className="ac-stat-sep" />
@@ -970,7 +1008,7 @@ export default function Dashboard() {
 
                               {/* Smart advice cell */}
                               {conducted === 0 ? (
-                                <div className="ac-advice" style={{ background: 'var(--card-inset-bg)', borderLeft: '2px solid var(--card-inset-border)' }}>
+                                <div className="ac-advice" style={{ background: 'rgba(255,255,255,0.02)', borderLeft: '2px solid rgba(255,255,255,0.05)' }}>
                                   <span className="adv-ico">ℹ</span>
                                   <div>
                                     <div className="adv-main">No classes conducted yet</div>
@@ -978,18 +1016,21 @@ export default function Dashboard() {
                                   </div>
                                 </div>
                               ) : canSkip <= 0 ? (
-                                <div className="ac-advice danger">
+                                <div className="ac-advice danger" style={{ background: 'var(--neon-red-dim)', borderColor: 'var(--neon-red-border)' }}>
                                   <span className="adv-ico">🚨</span>
                                   <div>
-                                    <div className="adv-main">Deficit: <strong style={{ color: 'var(--red)' }}>{classesNeeded} classes</strong></div>
+                                    <div className="adv-main">Deficit: <strong style={{ color: 'var(--neon-red)', textShadow: 'var(--neon-red-glow)' }}>{classesNeeded} classes</strong></div>
                                     <div className="adv-sub">Need 75% minimum · Currently at {pct}%</div>
                                   </div>
                                 </div>
                               ) : (
-                                <div className={`ac-advice ${canSkip > 3 ? 'safe' : 'warn'}`}>
+                                <div className={`ac-advice ${canSkip > 3 ? 'safe' : 'warn'}`} style={{ 
+                                  background: canSkip > 3 ? 'var(--neon-green-dim)' : 'var(--neon-yellow-dim)',
+                                  borderColor: canSkip > 3 ? 'var(--neon-green-border)' : 'var(--neon-yellow-border)'
+                                }}>
                                   <span className="adv-ico">{canSkip > 3 ? '✓' : '⚠'}</span>
                                   <div>
-                                    <div className="adv-main">Margin: <strong style={{ color: canSkip > 3 ? 'var(--green)' : 'var(--amber)' }}>{canSkip} classes</strong></div>
+                                    <div className="adv-main">Margin: <strong style={{ color: canSkip > 3 ? 'var(--neon-green)' : 'var(--neon-yellow)', textShadow: canSkip > 3 ? 'var(--neon-green-glow)' : 'var(--neon-yellow-glow)' }}>{canSkip} classes</strong></div>
                                     <div className="adv-sub">Need 75% minimum · Currently at {pct}%</div>
                                   </div>
                                 </div>

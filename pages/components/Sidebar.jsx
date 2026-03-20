@@ -148,10 +148,19 @@ export default function Sidebar({ activeTab, onTabChange, user, below75 }) {
               <span className="nav-icon">{icons[item.icon]}</span>
               {!collapsed && <span className="nav-text">{item.label}</span>}
               {item.id === 'attendance' && below75 > 0 && !collapsed && (
-                <span className="nav-badge">{below75}</span>
+                <span style={{
+                  background:'var(--neon-red)',
+                  color:'white',
+                  borderRadius:999,
+                  padding:'1px 7px',
+                  fontSize:11,
+                  fontWeight:700,
+                  marginLeft:'auto',
+                  boxShadow:'0 0 8px rgba(255,45,85,0.6)',
+                }}>{below75}</span>
               )}
               {item.id === 'attendance' && below75 > 0 && collapsed && (
-                <span className="badge-dot" />
+                <span className="badge-dot" style={{ background: 'var(--neon-red)', boxShadow: '0 0 8px var(--neon-red)' }} />
               )}
             </button>
           );
