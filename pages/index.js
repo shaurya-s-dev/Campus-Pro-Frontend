@@ -203,13 +203,18 @@ export default function Login() {
     setLoading(true);
 
     // Prioritize saved credentials for auto-retry
-    const finalAccount = savedCredentials?.account || account;
+    let finalAccount = (savedCredentials?.account || account).trim();
     const finalPassword = savedCredentials?.password || password;
 
     if (!finalAccount || !finalPassword) {
       setError('Please enter your credentials.');
       setLoading(false);
       return;
+    }
+
+    // Automatically append domain if missing
+    if (finalAccount && !finalAccount.includes('@')) {
+      finalAccount = `${finalAccount}@srmist.edu.in`;
     }
 
     setSavedCredentials({ account: finalAccount, password: finalPassword });
@@ -346,7 +351,16 @@ export default function Login() {
                     <label className="field-label">Student ID / Email</label>
                     <div className="field-wrap">
                       <svg className="field-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                      <input type="text" placeholder="NetID or SRM Email" value={account} onChange={e => setAccount(e.target.value)} required autoComplete="username" />
+                      <input 
+                        type="text" 
+                        placeholder="NetID or SRM Email" 
+                        value={account} 
+                        onChange={e => setAccount(e.target.value)} 
+                        required 
+                        autoComplete="username" 
+                        style={{ paddingRight: account.includes('@') ? '13px' : '122px' }}
+                      />
+                      {!account.includes('@') && <span className="field-suffix">@srmist.edu.in</span>}
                     </div>
                   </div>
                   <div className="field-group" style={{ marginBottom:26 }}>
@@ -465,6 +479,8 @@ export default function Login() {
         .field-wrap input{width:100%;padding:12px 13px 12px 38px;background:rgba(0,245,255,0.02);border:1px solid rgba(0,245,255,0.08);border-radius:10px;color:#d8e8f8;font-family:'Space Grotesk',sans-serif;font-size:13.5px;outline:none;transition:all 0.22s;caret-color:#00f5ff}
         .field-wrap input::placeholder{color:rgba(210,230,255,0.14)}
         .field-wrap input:focus{border-color:rgba(0,245,255,0.3);background:rgba(0,245,255,0.035);box-shadow:0 0 0 3px rgba(0,245,255,0.055)}
+        .field-suffix { position:absolute; right:14px; font-size:13px; color:rgba(210,230,255,0.18); pointer-events:none; font-family:var(--font-mono); font-weight:500; transition:all 0.22s; z-index:2; }
+        .field-wrap:focus-within .field-suffix { color:rgba(0,245,255,0.45); }
         .eye-btn{position:absolute;right:12px;background:none;border:none;color:rgba(210,230,255,0.22);cursor:pointer;padding:4px;display:flex;align-items:center;transition:color 0.22s}
         .eye-btn:hover{color:#00f5ff}
         .err-box{background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.22);border-radius:9px;padding:9px 12px;margin-bottom:14px;color:#fca5a5;font-size:12px}
