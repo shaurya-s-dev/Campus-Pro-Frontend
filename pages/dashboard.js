@@ -139,11 +139,11 @@ const getNeonColor = (pct) => {
    ══════════════════════════════════════════════════ */
 const ACADEMIC_CALENDAR = {
   '2026-03-02': 2, '2026-03-03': 3, '2026-03-04': 4, '2026-03-05': 5, '2026-03-06': 1,
-  '2026-03-07': 2, '2026-03-09': 3, '2026-03-10': 4, '2026-03-11': 5, '2026-03-12': 1,
+  '2026-03-07': null, '2026-03-09': 3, '2026-03-10': 4, '2026-03-11': 5, '2026-03-12': 1,
   '2026-03-13': 2, '2026-03-16': 3, '2026-03-17': 4, '2026-03-18': null, '2026-03-19': null,
-  '2026-03-20': 2, '2026-03-21': 3, '2026-03-23': 4, '2026-03-24': 5, '2026-03-25': 1,
-  '2026-03-26': 2, '2026-03-27': 3, '2026-03-28': 4, '2026-03-30': 5, '2026-03-31': 1,
-  '2026-04-01': null, '2026-04-02': 2, '2026-04-03': null, '2026-04-04': 3,
+  '2026-03-20': 2, '2026-03-21': null, '2026-03-23': 4, '2026-03-24': 5, '2026-03-25': 1,
+  '2026-03-26': 2, '2026-03-27': 3, '2026-03-28': null, '2026-03-30': 5, '2026-03-31': 1,
+  '2026-04-01': null, '2026-04-02': 2, '2026-04-03': null, '2026-04-04': null,
 };
 
 const SLOTS = [
@@ -255,7 +255,7 @@ function SmartAlerts({ attendance, marks }) {
     if (borderline.length > 0) res.push({
       id: 'borderline_att',
       type: 'warning',
-      icon: '🟠',
+      icon: '🟡',
       message: `${borderline.length} subject${borderline.length > 1 ? 's are' : ' is'} nearing the 75% danger zone.`,
       subjects: borderline.map(s => s.courseTitle)
     });
@@ -297,7 +297,7 @@ function SmartAlerts({ attendance, marks }) {
       {alerts.map((a, i) => (
         <div key={a.id} className={`alert-card al-${a.type} animate-down`} style={{ animationDelay: `${i * 100}ms` }}>
           <div className="al-icon">
-            <span style={{fontSize: 20}}>{a.icon}</span>
+            <span style={{fontSize: 22, lineHeight: 1}}>{a.icon}</span>
           </div>
           <div className="al-content">
             <div className="al-msg">{a.message}</div>
@@ -316,7 +316,15 @@ function SmartAlerts({ attendance, marks }) {
               </div>
             )}
           </div>
-          <button className="al-close" onClick={() => handleDismiss(a.id)}>✕</button>
+          <button 
+            onClick={() => handleDismiss(a.id)}
+            style={{
+              background: 'none', border: 'none',
+              color: 'rgba(255,255,255,0.4)', cursor: 'pointer',
+              fontSize: 18, lineHeight: 1, padding: '0 4px',
+              flexShrink: 0,
+            }}
+          >×</button>
         </div>
       ))}
     </div>
@@ -338,16 +346,16 @@ function TodayClasses({ timetable }) {
   const liveIdx = schedule.findIndex((s, i) => s && nowMin >= SLOTS[i]?.startMin && nowMin < SLOTS[i]?.endMin);
   const nextIdx = schedule.findIndex((s, i) => s && nowMin < SLOTS[i]?.startMin && (liveIdx === -1 || i > liveIdx));
   const isPastAll = schedule.every((s, i) => !s || nowMin >= SLOTS[i]?.endMin);
+  const dayName = now.toLocaleDateString('en-US', { weekday: 'long' });
+  const isWeekend = now.getDay() === 0 || now.getDay() === 6;
+  const todayDayOrder = isWeekend ? null : dayOrder;
 
-  const nextClass = nextIdx !== -1 ? schedule[nextIdx] : null;
-  const nextTime = nextIdx !== -1 ? SLOTS[nextIdx].startMin - nowMin : 0;
-
-  if (dayOrder === null || dayOrder === undefined) {
+  if (!todayDayOrder) {
     return (
-      <div className="glass today-classes-card empty" style={{ padding: 20, marginBottom: 24, borderRadius: 18, border: '1px solid rgba(255,255,255,0.06)', textAlign: 'center' }}>
-        <div style={{ fontSize: 28, marginBottom: 10 }}>🏝️</div>
-        <div style={{ fontWeight: 700, color: 'var(--text-1)' }}>No Classes Today</div>
-        <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4 }}>Enjoy your holiday!</div>
+      <div className="glass today-classes-card" style={{ padding: '32px', marginBottom: 24, borderRadius: 18, border: '1px solid rgba(255,255,255,0.06)', textAlign:'center', color:'rgba(255,255,255,0.3)' }}>
+        <div style={{fontSize:32, marginBottom:8}}>🎉</div>
+        <div style={{fontSize:15, fontWeight:600}}>No classes today</div>
+        <div style={{fontSize:12, marginTop:4}}>Enjoy your {now.getDay() === 6 ? 'Saturday' : 'Sunday'}!</div>
       </div>
     );
   }
@@ -356,8 +364,8 @@ function TodayClasses({ timetable }) {
     <div className="glass today-classes-card" style={{ padding: '18px 20px', marginBottom: 24, borderRadius: 18, border: '1px solid rgba(255,255,255,0.06)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-1)', margin: 0 }}>Today's Classes</h3>
-        <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--accent-light)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-          {now.toLocaleDateString('en-US', { weekday: 'long' })} · Day Order {dayOrder}
+        <span style={{color:'var(--neon-cyan)', fontWeight:700, fontSize:12}}>
+          {dayName.toUpperCase()}{todayDayOrder ? ` · DAY ORDER ${todayDayOrder}` : ' · NO CLASSES'}
         </span>
       </div>
 
@@ -367,6 +375,9 @@ function TodayClasses({ timetable }) {
         
         {(() => {
           const seen = new Set();
+          const nextClass = nextIdx !== -1 ? schedule[nextIdx] : null;
+          const nextTime = nextIdx !== -1 ? SLOTS[nextIdx].startMin - nowMin : 0;
+          
           return schedule.map((slot, i) => {
             if (!slot) return null;
             const sTimes = SLOTS[i];

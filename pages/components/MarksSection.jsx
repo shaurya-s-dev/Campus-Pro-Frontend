@@ -92,15 +92,23 @@ const MiniLineChart = ({ data }) => {
  */
 function SummaryStat({ label, value, sub, color, delay }) {
   return (
-    <div className="summary-stat glass animate-up" style={{ 
+    <div className="animate-up" style={{ 
+      flex: 1,
+      padding: '20px 24px',
+      background: 'rgba(255,255,255,0.03)',
+      border: `1px solid ${color}25`,
+      borderTop: `3px solid ${color}`,
+      borderRadius: 16,
+      boxShadow: `0 0 20px ${color}10`,
       animationDelay: `${delay}ms`,
-      borderLeft: `3px solid ${color}`,
-      boxShadow: `0 0 15px ${color}15`,
-      background: `linear-gradient(135deg, ${color}05, transparent)`
     }}>
-      <div className="ss-val" style={{ color, textShadow: `0 0 10px ${color}60` }}>{value}</div>
-      <div className="ss-lbl">{label}</div>
-      <div className="ss-sub">{sub}</div>
+      <div style={{fontSize:11, fontWeight:700, color:'rgba(255,255,255,0.4)', letterSpacing:'0.1em', marginBottom:8}}>
+        {label}
+      </div>
+      <div style={{fontSize:28, fontWeight:900, color: color, textShadow:`0 0 20px ${color}60`}}>
+        {value}
+      </div>
+      <div style={{fontSize:12, color:'rgba(255,255,255,0.4)', marginTop:4}}>{sub}</div>
     </div>
   );
 }
@@ -133,7 +141,14 @@ function TargetCalculator({ marks }) {
   const isAlreadyMet = scored >= threshold;
 
   return (
-    <div className={`target-calc-card glass ${isOpen ? 'is-open' : ''}`}>
+    <div className={`target-calc-card glass ${isOpen ? 'is-open' : ''}`} style={{
+      background: 'rgba(255,255,255,0.03)',
+      border: '1px solid rgba(255,255,255,0.08)',
+      borderRadius: 16,
+      padding: '16px 20px',
+      marginBottom: 20,
+      cursor: 'pointer',
+    }}>
       <div className="tc-header" onClick={() => setIsOpen(!isOpen)}>
         <div className="tc-title">
           <div style={{display:'flex', flexDirection:'column', gap:4}}>
