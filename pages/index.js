@@ -332,27 +332,17 @@ export default function Login() {
             </div>
           </div>
 
-          <div className="brand-block">
-            <img
-              src="/logos/campuspro-login-logo.svg"
-              alt="CampusPro"
-              style={{ width: 180, height: 'auto' }}
-            />
-          </div>
-
           <div className="card">
             <div className="corner tl"/><div className="corner tr"/>
             <div className="corner bl"/><div className="corner br"/>
 
-            {screen === null && (
-              <div style={{ display:'flex', flexDirection:'column', alignItems:'center', marginBottom:28 }}>
-                <img
-                  src="/logos/campuspro-login-logo.svg"
-                  alt="CampusPro"
-                  style={{ width:180, height:'auto' }}
-                />
-              </div>
-            )}
+            <div style={{ display:'flex', flexDirection:'column', alignItems:'center', marginBottom:28 }}>
+              <img 
+                src="/logos/campuspro-login-logo.svg" 
+                alt="CampusPro" 
+                style={{ width: 180, height: 'auto' }}
+              />
+            </div>
 
             {screen === 'session' && (
               <SessionLimitScreen 

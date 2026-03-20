@@ -273,7 +273,6 @@ export default function Dashboard() {
               </div>
             </div>
           ) : (
-
             <>
               {/* ═══════════════════════════════
                   OVERVIEW TAB
@@ -644,6 +643,74 @@ export default function Dashboard() {
               )}
 
               {/* ═══════════════════════════════
+                  COURSES TAB
+              ═══════════════════════════════ */}
+              {tab === 'courses' && (
+                <div className="tab-panel animate-in">
+                  <div className="page-hd">
+                    <div className="sc-titles-group">
+                      <div className="page-title-bar">
+                        <h1 className="page-title">Courses</h1>
+                      </div>
+                      <p className="section-helper">
+                        All subjects you are currently enrolled in for this semester, 
+                        including faculty details, room locations, and credits.
+                      </p>
+                    </div>
+                    <span className="tag tag-accent">{courses.length} enrolled</span>
+                  </div>
+
+                  {/* Summary strip */}
+                  <div className="courses-strip">
+                    {[
+                      { label:'Theory',        val: courseStats.theory,    color:'var(--accent-light)' },
+                      { label:'Practical',     val: courseStats.practical, color:'var(--emerald)' },
+                      { label:'Total Credits', val: courseStats.credits,   color:'var(--amber)' },
+                    ].map((s,i) => (
+                      <div key={i} className="cs-chip glass">
+                        <span className="cs-num" style={{color:s.color}}>{s.val}</span>
+                        <span className="cs-lbl">{s.label}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Card grid */}
+                  <div className="courses-grid">
+                    {courses.length === 0 ? (
+                      <div className="empty-state">No enrolled courses found.</div>
+                    ) : courses.map((c, i) => {
+                      const isTheory = c.slotType === 'Theory';
+                      const barColor = isTheory ? '#6366f1' : '#10b981';
+                      const faculty  = c.faculty?.split('(')[0]?.trim() || '—';
+                      return (
+                        <div key={i} className="cc-card glass animate-up" style={{ animationDelay:`${i*45}ms` }}>
+                          <div className="cc-bar" style={{ background: barColor }} />
+                          <div className="cc-body">
+                            <div className="cc-top-row">
+                              <span className="cc-code">{c.code}</span>
+                              <span className={`tag ${isTheory ? 'tag-accent' : 'tag-emerald'}`}>{c.slotType}</span>
+                            </div>
+                            <div className="cc-title">{c.title}</div>
+                            <div className="cc-faculty">
+                              <div className="cc-fav" style={{ background: barColor+'22', color: barColor, border:`1px solid ${barColor}44` }}>
+                                {faculty[0]}
+                              </div>
+                              <span className="cc-fname">{faculty}</span>
+                            </div>
+                            <div className="cc-info-grid">
+                              <div className="ci"><span>🏫</span><strong>{c.room||'—'}</strong><small>Room</small></div>
+                              <div className="ci"><span>🕐</span><strong>{c.slot||'—'}</strong><small>Slot</small></div>
+                              <div className="ci"><span>⭐</span><strong>{c.credit||'0'}</strong><small>Credits</small></div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* ═══════════════════════════════
                   TIMETABLE TAB
               ═══════════════════════════════ */}
               {tab === 'timetable' && (
@@ -658,82 +725,6 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <TimetableView timetableData={timetable} />
-                </div>
-              )}
-
-              {/* ═══════════════════════════════
-                  COURSES TAB
-              ═══════════════════════════════ */}
-               {tab === 'courses' && (
-                 <div className="tab-panel animate-in">
-                   <div className="page-hd">
-                     <div className="sc-titles-group">
-                       <div className="page-title-bar">
-                         <h1 className="page-title">Courses</h1>
-                       </div>
-                       <p className="section-helper">
-                         All subjects you are currently enrolled in for this semester, 
-                         including faculty details, room locations, and credits.
-                       </p>
-                     </div>
-                     <span className="tag tag-accent">{courses.length} enrolled</span>
-                   </div>
-
-                   <div className="courses-summary-strip">
-                    <div className="css-chip">
-                      <span className="css-num">{courseStats.theory}</span>
-                      <span className="css-label">Theory</span>
-                    </div>
-                    <div className="css-chip">
-                      <span className="css-num">{courseStats.practical}</span>
-                      <span className="css-label">Practical</span>
-                    </div>
-                    <div className="css-chip css-chip-accent">
-                      <span className="css-num">{courseStats.credits}</span>
-                      <span className="css-label">Total Credits</span>
-                    </div>
-                  </div>
-
-                  <div className="courses-grid">
-                    {courses.length === 0 ? (
-                      <div className="empty-state">No enrolled courses found.</div>
-                    ) : courses.map((c, i) => {
-                      const isTheory  = c.slotType === 'Theory';
-                      const faculty   = c.faculty?.split('(')[0]?.trim() || '—';
-                      return (
-                        <div key={c.code || i} className="course-card glass glass-hover animate-up" style={{ animationDelay: `${i * 40}ms` }}>
-                          <div className="cc-header">
-                            <div className="cc-left">
-                              <span className="cc-code">{c.code}</span>
-                              <span className={`cc-type-badge ${isTheory ? 'badge-theory' : 'badge-lab'}`}>
-                                {c.slotType || 'Theory'}
-                              </span>
-                            </div>
-                            <span className="cc-credits">{c.credit} cr</span>
-                          </div>
-                          
-                          <h3 className="cc-title">{c.title}</h3>
-                          
-                          <div className="cc-meta">
-                            <div className="cc-meta-row">
-                              <span className="cc-meta-icon">👤</span>
-                              <span className="cc-meta-text">{faculty}</span>
-                            </div>
-                            <div className="cc-meta-row">
-                              <span className="cc-meta-icon">📍</span>
-                              <span className="cc-meta-text">{c.room || '—'} · {c.slot || '?'} Slot</span>
-                            </div>
-                            {c.section && (
-                              <div className="cc-meta-row">
-                                <span className="cc-meta-icon">🆔</span>
-                                <span className="cc-section">Section {c.section}</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
                 </div>
               )}
 
@@ -997,12 +988,27 @@ export default function Dashboard() {
         .cc-type-badge { font-size: 9px; font-weight: 800; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; width: fit-content; }
         .badge-theory { background: var(--accent-dim); color: var(--accent-light); }
         .badge-lab { background: var(--emerald-dim); color: var(--emerald); }
-        .cc-credits { font-size: 12px; font-weight: 700; color: var(--amber); }
-        .cc-title { font-size: 16px; font-weight: 700; color: var(--text-1); line-height: 1.3; }
-        .cc-meta { display: flex; flex-direction: column; gap: 8px; }
-        .cc-meta-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-3); }
-        .cc-meta-icon { opacity: 0.7; font-size: 14px; }
-        .cc-section { color: var(--accent-light); font-weight: 600; }
+        .courses-strip { display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
+        .cs-chip { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 14px; background: var(--card-bg); border: 1px solid var(--accent-border); }
+        .cs-num { font-size: 18px; font-weight: 800; font-family: var(--font-display); }
+        .cs-lbl { font-size: 11px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.5px; }
+
+        .courses-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
+        .cc-card { position: relative; border-radius: 20px; overflow: hidden; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); border: 1px solid var(--accent-border); height: 100%; }
+        .cc-card:hover { transform: translateY(-5px); border-color: var(--accent-light); box-shadow: 0 12px 30px rgba(0,0,0,0.3); }
+        .cc-bar { position: absolute; left: 0; top: 0; bottom: 0; width: 4px; }
+        .cc-body { padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; }
+        .cc-top-row { display: flex; justify-content: space-between; align-items: center; }
+        .cc-code { font-size: 11px; font-weight: 700; color: var(--text-3); letter-spacing: 0.5px; }
+        .cc-title { font-size: 17px; font-weight: 700; color: var(--text-1); line-height: 1.3; }
+        .cc-faculty { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+        .cc-fav { width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; }
+        .cc-fname { font-size: 13px; font-weight: 600; color: var(--text-2); }
+        .cc-info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding-top: 14px; border-top: 1px solid var(--sidebar-border); }
+        .ci { display: flex; flex-direction: column; gap: 2px; }
+        .ci span { font-size: 14px; margin-bottom: 2px; }
+        .ci strong { font-size: 13px; color: var(--text-1); font-weight: 700; }
+        .ci small { font-size: 10px; color: var(--text-4); font-weight: 600; text-transform: uppercase; }
 
         /* Attendance Planner Warning */
         .ap-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }

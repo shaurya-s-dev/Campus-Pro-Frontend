@@ -120,7 +120,7 @@ function ArcGauge({ value, max = 10, size = 148, label }) {
           fill={color} fontSize={28} fontWeight={700}
           fontFamily="'Fira Code', monospace"
           style={{ transition:'fill .4s' }}>
-          {value !== null && !isNaN(value) ? value.toFixed(2) : '--'}
+          {value !== null && !isNaN(value) ? value.toFixed(2) : '—'}
         </text>
         <text x={size/2} y={size/2 + 20} textAnchor="middle"
           fill="rgba(240,240,250,0.3)" fontSize={12}
