@@ -114,8 +114,10 @@ function TestBarChart({ tests, color }) {
 function MarksSummaryStrip({ marks, courses = [] }) {
   // 1. Filter tracks with credits
   const validForAverage = marks.filter(m => {
+    const total = parseFloat(m.overall?.total || '0');
     const c = courses.find(cc => cc.code === m.courseCode);
-    return !c || (parseFloat(c.credit) > 0);
+    const creditVal = parseFloat(c?.credit || '1');
+    return total > 0 && creditVal > 0;
   });
 
   // 2. Filter subjects where NOT absent
@@ -177,7 +179,7 @@ function MarksSummaryStrip({ marks, courses = [] }) {
             {marks.length} Total subjects · 
             {marks.length > subjectsWithMarks.length && (
               <span style={{ color: 'var(--amber-light)', marginLeft: 6 }}>
-                {marks.length - subjectsWithMarks.length} courses excluded (zero-credit or absent)
+                {marks.length - subjectsWithMarks.length} courses excluded (zero-credit, no-marks, or absent)
               </span>
             )}
           </div>
@@ -357,16 +359,24 @@ export default function MarksSection({ marks, courses = [] }) {
                       </span>
                     </div>
                     <div className="mk-name">{m.courseName}</div>
-                    <div className="mk-score-row">
-                      <span className="mk-score-num" style={{ color: gi.color }}>{sc.toFixed(1)}</span>
-                      <span className="mk-score-denom">/ {tot.toFixed(1)}</span>
-                      <span className="mk-pct" style={{ color: gi.color }}>{pct.toFixed(1)}%</span>
-                      {trend && (
-                        <span className="mk-trend" style={{ color: trend==='up' ? '#34d399' : trend==='down' ? '#f87171' : 'rgba(255,255,255,0.3)' }}>
-                          {trend === 'up' ? '↑' : trend === 'down' ? '↓' : '→'}
-                        </span>
-                      )}
-                    </div>
+                    
+                    {tot === 0 ? (
+                      <div className="mk-no-data">
+                        <span className="mnd-icon">📋</span>
+                        <span className="mnd-text">No marks recorded yet</span>
+                      </div>
+                    ) : (
+                      <div className="mk-score-row">
+                        <span className="mk-score-num" style={{ color: gi.color }}>{sc.toFixed(1)}</span>
+                        <span className="mk-score-denom">/ {tot.toFixed(1)}</span>
+                        <span className="mk-pct" style={{ color: gi.color }}>{pct.toFixed(1)}%</span>
+                        {trend && (
+                          <span className="mk-trend" style={{ color: trend==='up' ? '#34d399' : trend==='down' ? '#f87171' : 'rgba(255,255,255,0.3)' }}>
+                            {trend === 'up' ? '↑' : trend === 'down' ? '↓' : '→'}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -582,6 +592,10 @@ export default function MarksSection({ marks, courses = [] }) {
           .mk-quick-stats { display:none; }
           .marks-toolbar { flex-direction:column; align-items:flex-start; }
         }
+
+        .mk-no-data { display: flex; align-items: center; gap: 8px; margin-top: 6px; background: rgba(0,0,0,0.1); padding: 4px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.03); width: fit-content; }
+        .mnd-icon { font-size: 14px; }
+        .mnd-text { font-size: 11.5px; color: rgba(255,255,255,0.25); font-style: italic; }
       `}</style>
     </div>
   );

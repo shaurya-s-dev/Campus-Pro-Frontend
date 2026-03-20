@@ -42,9 +42,6 @@ const NAV_ITEMS = [
   { id: 'gpa',        label: 'GPA Calc',    icon: 'calculator', group: 'tools' },
   { id: 'skippro',    label: 'Attendance Planner', icon: 'zap',        group: 'tools' },
   { id: 'calendar',   label: 'Calendar',    icon: 'calendar',   group: 'tools' },
-
-  { id: 'help',       label: 'Help Center', icon: 'help',       path: '/help',         isLink: true, group: 'support' },
-  { id: 'report',     label: 'Report Issue',icon: 'flag',       path: '/report-issue', isLink: true, group: 'support' },
 ];
 
 export default function Sidebar({ activeTab, onTabChange, user, below75 }) {
@@ -193,21 +190,26 @@ export default function Sidebar({ activeTab, onTabChange, user, below75 }) {
       {/* ── Support & Bottom ─────────────────────── */}
       <div className="bottom">
         {!collapsed && <div className="nav-label">SUPPORT</div>}
-        {NAV_ITEMS.filter(i => i.group === 'support').map(item => {
-          const active = isPathActive(item.path);
-          return (
-            <Link
-              key={item.id}
-              href={item.path}
-              className={`nav-item${active ? ' nav-active' : ''}`}
-              title={collapsed ? item.label : undefined}
-            >
-              {active && <span className="active-bar" />}
-              <span className="nav-icon">{icons[item.icon]}</span>
-              {!collapsed && <span className="nav-text" style={{ fontSize: '12px' }}>{item.label}</span>}
-            </Link>
-          );
-        })}
+        
+        <button 
+          onClick={() => handleNavClick('helpcenter')} 
+          className={`nav-item ${activeTab === 'helpcenter' ? 'nav-active' : ''}`}
+          title={collapsed ? 'Help Center' : undefined}
+        >
+          {activeTab === 'helpcenter' && <span className="active-bar" />}
+          <span className="nav-icon">{icons.help}</span>
+          {!collapsed && <span className="nav-text" style={{ fontSize: '12px' }}>Help Center</span>}
+        </button>
+
+        <button 
+          onClick={() => handleNavClick('reportissue')} 
+          className={`nav-item ${activeTab === 'reportissue' ? 'nav-active' : ''}`}
+          title={collapsed ? 'Report Issue' : undefined}
+        >
+          {activeTab === 'reportissue' && <span className="active-bar" />}
+          <span className="nav-icon">{icons.flag}</span>
+          {!collapsed && <span className="nav-text" style={{ fontSize: '12px' }}>Report Issue</span>}
+        </button>
         
         <div className="divider-sm" style={{ margin: '8px 4px', height: '1px', background: 'var(--border)' }} />
 

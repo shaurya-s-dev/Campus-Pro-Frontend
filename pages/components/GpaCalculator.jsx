@@ -23,13 +23,7 @@ const gradeMap = Object.fromEntries(GRADE_SCALE.map(g => [g.grade, g]));
    ══════════════════════════════════════════════════ */
 let idCounter = 10000;
 const newSubject = () => ({ id: idCounter++, name: '', credits: 3, grade: 'O', locked: false });
-const defaultSubs = [
-  { id: 1, name: 'Data Structures and Algorithms', credits: 4, grade: 'O',  locked: false },
-  { id: 2, name: 'Object Oriented Programming',    credits: 4, grade: 'A+', locked: false },
-  { id: 3, name: 'Engineering Physics',            credits: 3, grade: 'A',  locked: false },
-  { id: 4, name: 'Transforms & BVP',               credits: 4, grade: 'B+', locked: false },
-  { id: 5, name: 'Computer Networks',              credits: 3, grade: 'A+', locked: false },
-];
+const defaultSubs = [];
 
 function reducer(state, action) {
   switch (action.type) {
@@ -39,8 +33,14 @@ function reducer(state, action) {
       ...state,
       subjects: state.subjects.map(s => s.id === action.id ? { ...s, [action.field]: action.value } : s),
     };
-    case 'RESET':   return { ...state, subjects: [newSubject()] };
-    case 'DEMO':    return { ...state, subjects: defaultSubs };
+    case 'RESET':   return { ...state, subjects: [] };
+    case 'DEMO':    return { ...state, subjects: [
+      { id: 1, name: 'Data Structures and Algorithms', credits: 4, grade: 'O',  locked: false },
+      { id: 2, name: 'Object Oriented Programming',    credits: 4, grade: 'A+', locked: false },
+      { id: 3, name: 'Engineering Physics',            credits: 3, grade: 'A',  locked: false },
+      { id: 4, name: 'Transforms & BVP',               credits: 4, grade: 'B+', locked: false },
+      { id: 5, name: 'Computer Networks',              credits: 3, grade: 'A+', locked: false },
+    ] };
     case 'IMPORT':  return { ...state, subjects: action.subjects };
     case 'SET_PREV_SGPA':   return { ...state, prevSGPA: action.value };
     case 'SET_PREV_CREDITS': return { ...state, prevCredits: action.value };
@@ -518,7 +518,13 @@ export default function GpaCalculator({ courses = [] }) {
           {/* Subjects table */}
           <div className="subjects-card glass animate-up delay-1">
             <div className="sc-head">
-              <h2 className="sc-title">Subjects</h2>
+              <div className="sc-titles-group">
+                <h2 className="sc-title">GPA Calculator</h2>
+                <p className="section-helper">
+                  Uses SRM's official grading scale (O=10, A+=9, A=8...). 
+                  Import your courses to get started — then select your expected grade for each subject.
+                </p>
+              </div>
               <div className="sc-meta">
                 <span className="tag tag-accent">{subjects.length} subjects · {totalCredits} credits</span>
               </div>
@@ -550,16 +556,27 @@ export default function GpaCalculator({ courses = [] }) {
             </div>
 
             <div className="subjects-list">
-              {subjects.map((s, i) => (
-                <SubjectRow
-                  key={s.id}
-                  s={s}
-                  idx={i}
-                  dispatch={dispatch}
-                  isStrong={isStrong(s)}
-                  isWeak={isWeak(s)}
-                />
-              ))}
+              {subjects.length === 0 ? (
+                <div className="gpa-empty animate-up">
+                  <div className="gpa-empty-icon">%</div>
+                  <div className="gpa-empty-title">No subjects added yet</div>
+                  <div className="gpa-empty-sub">
+                    Click "Import My Courses" to load your subjects automatically, 
+                    or add them manually using the button below.
+                  </div>
+                </div>
+              ) : (
+                subjects.map((s, i) => (
+                  <SubjectRow
+                    key={s.id}
+                    s={s}
+                    idx={i}
+                    dispatch={dispatch}
+                    isStrong={isStrong(s)}
+                    isWeak={isWeak(s)}
+                  />
+                ))
+              )}
             </div>
 
             <button className="add-btn" onClick={() => dispatch({ type:'ADD' })}>
@@ -642,7 +659,14 @@ export default function GpaCalculator({ courses = [] }) {
           display:grid; grid-template-columns:24px 1fr 120px 170px 52px 28px; gap:10px;
           padding:0 14px 8px; font-size:9.5px; color:var(--text-4); text-transform:uppercase; letter-spacing:.6px; font-weight:600;
         }
-        .subjects-list { display:flex; flex-direction:column; gap:7px; margin-bottom:12px; }
+        .subjects-list { display:flex; flex-direction:column; gap:7px; margin-bottom:12px; min-height: 100px; }
+        
+        .section-helper { font-size: 12.5px; color: var(--text-3); margin-top: 4px; margin-bottom: 16px; line-height: 1.6; max-width: 600px; }
+        .gpa-empty { padding: 40px 20px; text-align: center; background: rgba(0,0,0,0.1); border-radius: 12px; border: 1px dashed var(--border); }
+        .gpa-empty-icon { font-size: 32px; color: var(--text-4); margin-bottom: 12px; opacity: 0.5; }
+        .gpa-empty-title { font-size: 15px; font-weight: 700; color: var(--text-2); margin-bottom: 6px; }
+        .gpa-empty-sub { font-size: 12.5px; color: var(--text-4); max-width: 320px; margin: 0 auto; line-height: 1.6; }
+
         .add-btn {
           display:flex; align-items:center; gap:8px;
           width:100%; padding:11px 14px; border-radius:var(--radius-md);

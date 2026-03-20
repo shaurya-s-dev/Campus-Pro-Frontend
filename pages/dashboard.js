@@ -9,6 +9,17 @@ import MarksSection from '../components/MarksSection';
 import GpaCalculator from './components/GpaCalculator';
 import SkipProEstimator from './components/SkipProEstimator';
 import CalendarView from './components/CalendarView';
+import HelpCenterContent from './components/HelpCenterContent';
+import ReportIssueContent from './components/ReportIssueContent';
+
+// Show only on mobile — 5 key tabs
+const MOBILE_NAV = [
+  { id: 'overview',    label: 'Home'       },
+  { id: 'attendance',  label: 'Attendance' },
+  { id: 'marks',       label: 'Marks'      },
+  { id: 'timetable',   label: 'Timetable'  },
+  { id: 'courses',     label: 'Courses'    },
+];
 
 /* ── SVG Icon ─────────────────────────────────────── */
 const Ico = ({ d, size = 15, sw = 1.8 }) => (
@@ -183,7 +194,7 @@ export default function Dashboard() {
   // Read tab from URL on mount & update tab
   useEffect(() => {
     const urlTab = router.query.tab;
-    const validTabs = ['overview','attendance','marks','timetable','courses','gpa','skippro','calendar'];
+    const validTabs = ['overview','attendance','marks','timetable','courses','gpa','skippro','calendar','helpcenter','reportissue'];
     if (urlTab && validTabs.includes(urlTab)) {
       setTab(urlTab);
     }
@@ -251,9 +262,11 @@ export default function Dashboard() {
       </div>
 
       <div className="app-shell">
-        <Sidebar activeTab={tab} onTabChange={handleTabChange} user={user} below75={below75} />
+        <div className="sb-desk">
+          <Sidebar activeTab={tab} onTabChange={handleTabChange} user={user} below75={below75} />
+        </div>
 
-        <main className="main">
+        <main className="main-content">
 
           {!data ? (
             <div className="tab-panel animate-in" style={{ padding: '0 4px' }}>
@@ -438,7 +451,13 @@ export default function Dashboard() {
               {tab === 'attendance' && (
                 <div className="tab-panel animate-in">
                   <div className="page-hd">
-                    <h1 className="page-title">Attendance</h1>
+                    <div className="sc-titles-group">
+                      <h1 className="page-title">Attendance</h1>
+                      <p className="section-helper">
+                        Your official attendance records directly from SRM Academia. 
+                        Safe subjects are ≥75%. Margin shows classes you can afford to skip.
+                      </p>
+                    </div>
                     <span className="tag tag-accent">{attendance.length} subjects</span>
                   </div>
 
@@ -605,7 +624,13 @@ export default function Dashboard() {
               {tab === 'marks' && (
                 <div className="tab-panel animate-in">
                   <div className="page-hd">
-                    <h1 className="page-title">Marks</h1>
+                    <div className="sc-titles-group">
+                      <h1 className="page-title">Marks</h1>
+                      <p className="section-helper">
+                        Internal marks, test performance, and grade estimation. 
+                        Zero-credit courses and subjects with no data are excluded from averages.
+                      </p>
+                    </div>
                     <span className="tag tag-accent">{marks.length} subjects</span>
                   </div>
                   <MarksSection marks={marks} courses={courses} />
@@ -617,6 +642,15 @@ export default function Dashboard() {
               ═══════════════════════════════ */}
               {tab === 'timetable' && (
                 <div className="tab-panel animate-in">
+                  <div className="page-hd" style={{ marginBottom: -10 }}>
+                    <div className="sc-titles-group">
+                      <h1 className="page-title">Timetable</h1>
+                      <p className="section-helper">
+                        Your weekly schedule and class timings. Day orders follow the 
+                        official SRM Even Semester 2025-26 academic calendar.
+                      </p>
+                    </div>
+                  </div>
                   <TimetableView timetableData={timetable} />
                 </div>
               )}
@@ -627,7 +661,13 @@ export default function Dashboard() {
               {tab === 'courses' && (
                 <div className="tab-panel animate-in">
                   <div className="page-hd">
-                    <h1 className="page-title">Courses</h1>
+                    <div className="sc-titles-group">
+                      <h1 className="page-title">Courses</h1>
+                      <p className="section-helper">
+                        All subjects you are currently enrolled in for this semester, 
+                        including faculty details, room locations, and credits.
+                      </p>
+                    </div>
                     <span className="tag tag-accent">{courses.length} enrolled</span>
                   </div>
 
@@ -720,6 +760,23 @@ export default function Dashboard() {
               {tab === 'calendar' && (
                 <div className="tab-panel animate-in">
                   <CalendarView />
+                </div>
+              )}
+              {/* ═══════════════════════════════
+                  HELP CENTER TAB
+              ═══════════════════════════════ */}
+              {tab === 'helpcenter' && (
+                <div className="tab-panel animate-in">
+                  <HelpCenterContent />
+                </div>
+              )}
+
+              {/* ═══════════════════════════════
+                  REPORT ISSUE TAB
+              ═══════════════════════════════ */}
+              {tab === 'reportissue' && (
+                <div className="tab-panel animate-in">
+                  <ReportIssueContent user={user} />
                 </div>
               )}
             </>
@@ -1028,6 +1085,9 @@ export default function Dashboard() {
         .section-title { font-family: var(--font-display); font-size: 15px; font-weight: 700; color: #dde2f8; letter-spacing: 0.8px; }
         .link-btn { background: none; border: none; color: var(--accent-light); font-size: 12px; cursor: pointer; font-family: var(--font-body); }
         .link-btn:hover { text-decoration: underline; }
+        
+        .section-helper { font-size: 12.5px; color: var(--text-3); margin-top: 4px; margin-bottom: 16px; line-height: 1.6; max-width: 600px; }
+        .sc-titles-group { display: flex; flex-direction: column; }
         
         .empty-state {
           padding: 40px 20px;
