@@ -300,9 +300,9 @@ export default function Dashboard() {
                   <div className="page-hd">
                     <div>
                       <h1 className="dash-greeting">
-                        {greeting()},{' '}
-                        <span className="greeting-name-gradient">{user?.name?.split(' ')[0] || 'Student'}</span>
-                        <span className="greeting-wave"> 👋</span>
+                        <span className="greet-text" style={{ opacity: 0.85 }}>{greeting()},</span><br className="mob-br" />
+                        <span className="greeting-name-gradient" style={{ marginLeft: 6 }}>{user?.name?.split(' ')[0] || 'Student'}</span>
+                        <span className="greeting-wave">👋</span>
                       </h1>
                       <p className="page-sub">
                         {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
@@ -440,28 +440,26 @@ export default function Dashboard() {
                       }
 
                       return (
-                        <div key={a.courseCode ? `mini-${a.courseCode}` : i} className="att-mini glass-raised glass-hover animate-up" style={{ animationDelay: `${i * 50}ms`, position:'relative' }}>
-                          <div className="card-shimmer"></div>
-                          <div className="am-top">
-                            <CircleProgress pct={pct} color={clr} size={46} />
-                            <div className="am-info">
+                        <div key={a.courseCode ? `mini-${a.courseCode}` : i} className="att-mini-card glass animate-up" style={{ animationDelay: `${i * 40}ms` }}>
+                          <div className="am-row">
+                            <CircleProgress pct={pct} color={clr} size={42} stroke={3.5} />
+                            <div className="am-main">
                               <div className="am-name">{a.courseTitle}</div>
-                              <div className="am-code">{a.courseCode}</div>
-                              <div className="am-pct" style={{ color: clr }}>{pct}%</div>
+                              <div className="am-meta">
+                                <span className="am-code">{a.courseCode}</span>
+                                <span className="am-pct" style={{ color: clr }}>{pct}%</span>
+                              </div>
                             </div>
                           </div>
-                          <div className="progress-track" style={{ marginTop: 8 }}>
-                            <div className="progress-fill" style={{ width: `${Math.min(pct,100)}%`, background: clr, animation: 'progressBar 1.2s cubic-bezier(0.4, 0, 0.2, 1) both' }} />
-                          </div>
-                          <div className="am-footer">
-                            <span className="am-hrs">{attended}/{conducted} hrs</span>
-                            <span className="am-tag" title={`Need 75% minimum · Currently at ${pct}%`} style={{
-                              color:       marginColor,
-                              background:  marginBg,
-                              border:      `1px solid ${marginBorder}`,
-                            }}>
+                          
+                          <div className="am-badge-row">
+                            <span className="am-badge" style={{ color: marginColor, background: marginBg, border: `1px solid ${marginBorder}` }}>
                               {marginText}
                             </span>
+                          </div>
+
+                          <div className="am-progress-track">
+                            <div className="am-progress-fill" style={{ width: `${pct}%`, background: clr, boxShadow: `0 0 8px ${clr}44` }} />
                           </div>
                         </div>
                       );
@@ -908,7 +906,43 @@ export default function Dashboard() {
         .section-title { font-family: var(--font-display); font-size: 15px; font-weight: 700; color: #dde2f8; letter-spacing: 0.8px; }
         .section-helper { font-size: 12.5px; color: var(--text-3); margin-top: 4px; margin-bottom: 16px; line-height: 1.6; max-width: 600px; }
         
-        .att-mini-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+        .att-mini-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+        .att-mini-card { 
+          background: rgba(255, 255, 255, 0.03); 
+          border: 1px solid rgba(255, 255, 255, 0.06); 
+          border-radius: 18px; 
+          padding: 16px; 
+          display: flex; 
+          flex-direction: column; 
+          gap: 14px; 
+          transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+          backdrop-filter: blur(8px);
+          position: relative;
+          overflow: hidden;
+        }
+        .att-mini-card:hover { 
+          background: rgba(255, 255, 255, 0.05); 
+          transform: translateY(-4px); 
+          border-color: rgba(255, 255, 255, 0.12);
+          box-shadow: 0 12px 24px rgba(0,0,0,0.3);
+        }
+        .am-row { display: flex; align-items: center; gap: 14px; }
+        .am-main { flex: 1; min-width: 0; }
+        .am-name { font-size: 14px; font-weight: 700; color: var(--text-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; }
+        .am-meta { display: flex; align-items: center; gap: 8px; }
+        .am-code { font-family: var(--font-mono); font-size: 11px; color: var(--text-4); font-weight: 600; }
+        .am-pct  { font-family: var(--font-mono); font-size: 13px; font-weight: 800; }
+        .am-badge-row { display: flex; }
+        .am-badge { font-size: 10px; font-weight: 700; padding: 4px 10px; border-radius: 8px; text-transform: uppercase; letter-spacing: 0.4px; }
+        .am-progress-track { height: 4px; background: rgba(255,255,255,0.05); border-radius: 10px; overflow: hidden; margin-top: 2px; }
+        .am-progress-fill { height: 100%; border-radius: 10px; transition: width 1s ease-out; }
+        
+        .mob-br { display: none; }
+        @media (max-width: 768px) {
+          .mob-br { display: block; }
+          .dash-greeting { gap: 0; }
+          .greeting-name-gradient { margin-left: 0 !important; }
+        }
         .sum-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
         .sum-pill { border-radius: var(--radius-md); padding: 16px; text-align: center; }
         .sum-val  { font-family: var(--font-mono); font-size: 26px; font-weight: 700; }
