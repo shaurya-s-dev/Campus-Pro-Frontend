@@ -232,7 +232,7 @@ export default function MarksSection({ marks }) {
     });
 
   if (!marks.length) return (
-    <div style={{ textAlign:'center', padding:'64px 24px', color:'rgba(255,255,255,0.25)', fontFamily:"'Syne',sans-serif", fontSize:16 }}>
+    <div className="empty-state">
       No marks data available yet.
     </div>
   );
@@ -298,6 +298,7 @@ export default function MarksSection({ marks }) {
               className={`mk-card glass ${isExp ? 'mk-expanded' : ''}`}
               style={{ animationDelay: `${i * 40}ms` }}
             >
+              <div className="card-shimmer"></div>
               {/* Top accent line */}
               <div className="mk-accent-line" style={{ background: `linear-gradient(90deg, ${gi.color}, transparent)` }} />
 
@@ -449,6 +450,13 @@ export default function MarksSection({ marks }) {
         }
         .mk-card:hover { transform:translateY(-3px); box-shadow:0 12px 40px rgba(0,0,0,0.4); }
         .mk-expanded { transform:translateY(-2px); }
+
+        .card-shimmer {
+          position: absolute;
+          top: 0; left: 0; right: 0; height: 80px;
+          background: linear-gradient(to bottom, rgba(255,255,255,0.03), transparent);
+          pointer-events: none;
+        }
 
         /* Accent top line */
         .mk-accent-line { height:3px; width:100%; }

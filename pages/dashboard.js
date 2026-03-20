@@ -36,25 +36,52 @@ function CircleProgress({ pct, color = 'var(--accent)', size = 56 }) {
       <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(255,255,255,.05)" strokeWidth={4.5} />
       <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={4.5}
         strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
-        style={{ transition: 'stroke-dasharray 1.1s cubic-bezier(.4,0,.2,1)' }}
+        style={{ transition: 'stroke-dasharray 1.2s cubic-bezier(.4,0,.2,1)', filter: `drop-shadow(0 0 6px ${color}66)` }}
       />
     </svg>
   );
+}
+
+function useCountUp(endValStr) {
+  const [val, setVal] = useState(0);
+  const num = parseFloat(endValStr);
+  const isNum = !isNaN(num);
+  const suffix = isNum ? String(endValStr).replace(/[0-9.]/g, '') : '';
+  
+  useEffect(() => {
+    if (!isNum) return;
+    let start = 0;
+    const duration = 1200;
+    const startTime = performance.now();
+    
+    const animate = (currTime) => {
+      const elapsed = currTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const current = num * progress;
+      setVal(current);
+      if (progress < 1) requestAnimationFrame(animate);
+    };
+    requestAnimationFrame(animate);
+  }, [num, isNum]);
+  
+  if (!isNum) return endValStr;
+  return Number.isInteger(num) ? Math.floor(val) + suffix : val.toFixed(1) + suffix;
 }
 
 /* ══════════════════════════════════════════════════
    KPI Card
    ══════════════════════════════════════════════════ */
 function KPICard({ label, value, sub, color, icon, delay = 0 }) {
+  const animatedValue = useCountUp(value);
   return (
-    <div className="kpi animate-up glass glass-hover" style={{ animationDelay: `${delay}ms` }}>
+    <div className="kpi glass glass-hover animate-up" style={{ animationDelay: `${delay}ms` }}>
       <div className="kpi-header">
         <div className="kpi-icon-wrap" style={{ color, background: `${color}14`, border: `1px solid ${color}22` }}>
-          <Ico d={icon} size={13} />
+          <Ico d={icon} size={15} />
         </div>
         <span className="kpi-label">{label}</span>
       </div>
-      <div className="kpi-value" style={{ color }}>{value}</div>
+      <div className="kpi-value" style={{ color }}>{animatedValue}</div>
       {sub && <div className="kpi-sub">{sub}</div>}
 
       <style jsx>{`
@@ -64,15 +91,19 @@ function KPICard({ label, value, sub, color, icon, delay = 0 }) {
           position: relative;
           overflow: hidden;
           cursor: default;
+          transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s;
+        }
+        .kpi:hover {
+          transform: translateY(-3px);
         }
         .kpi-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
         .kpi-icon-wrap {
-          width: 28px; height: 28px; border-radius: 7px;
+          width: 30px; height: 30px; border-radius: 8px;
           display: flex; align-items: center; justify-content: center; flex-shrink: 0;
         }
-        .kpi-label { font-size: 10.5px; color: var(--text-3); font-weight: 600; letter-spacing: 0.4px; text-transform: uppercase; }
-        .kpi-value { font-family: var(--font-mono); font-size: 28px; font-weight: 700; letter-spacing: -1px; line-height: 1; }
-        .kpi-sub   { font-size: 11px; color: var(--text-3); margin-top: 6px; }
+        .kpi-label { font-size: 11.5px; color: var(--text-2); font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; }
+        .kpi-value { font-family: var(--font-mono); font-size: 32px; font-weight: 800; letter-spacing: -1.2px; line-height: 1; }
+        .kpi-sub   { font-size: 11.5px; color: var(--text-2); margin-top: 6px; }
 
       `}</style>
     </div>
@@ -91,6 +122,7 @@ export default function Dashboard() {
     if (!requireAuth(router)) return;
     const raw = DataStore.get();
     if (!raw) { router.replace('/'); return; }
+    if (raw.tokenInvalid) { import('@/lib/security').then(s => s.logout(router)); return; }
     setData(sanitizeObject(raw));
   }, [router]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -113,10 +145,22 @@ export default function Dashboard() {
   }), [courses]);
 
   const avgAtt   = attendance.length
-    ? (attendance.reduce((s, a) => s + parseFloat(a.attendancePercentage || 0), 0) / attendance.length).toFixed(1)
+    ? (attendance.reduce((s, a) => {
+        const c = parseFloat(a.hoursConducted) || 0;
+        const p = c > 0 ? ((c - (parseFloat(a.hoursAbsent) || 0)) / c) * 100 : parseFloat(a.attendancePercentage) || 0;
+        return s + p;
+      }, 0) / attendance.length).toFixed(1)
     : 0;
-  const below75  = attendance.filter(a => parseFloat(a.attendancePercentage) < 75).length;
-  const safeAtt  = attendance.filter(a => parseFloat(a.attendancePercentage) >= 75).length;
+  const below75  = attendance.filter((a) => {
+    const c = parseFloat(a.hoursConducted) || 0;
+    const p = c > 0 ? ((c - (parseFloat(a.hoursAbsent) || 0)) / c) * 100 : parseFloat(a.attendancePercentage) || 0;
+    return p < 75;
+  }).length;
+  const safeAtt  = attendance.filter((a) => {
+    const c = parseFloat(a.hoursConducted) || 0;
+    const p = c > 0 ? ((c - (parseFloat(a.hoursAbsent) || 0)) / c) * 100 : parseFloat(a.attendancePercentage) || 0;
+    return p >= 75;
+  }).length;
   const avgScore = marks.length
     ? (marks.reduce((s, m) => {
         const sc  = parseFloat(m.overall?.scored) || 0;
@@ -164,7 +208,9 @@ export default function Dashboard() {
                         {greeting()}, <span className="grad-text">{user.name?.split(' ')[0] || 'Student'}</span> 👋
                       </h1>
                       <p className="page-sub">
-                        {user.department?.replace(/\(.*\)/, '').trim()} · {user.section} Section · Year {user.year}
+                        {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                        {user.department ? ' · ' + user.department.replace(/\(.*\)/, '').trim() : ''}
+                        {user.section ? ' · ' + user.section + ' Section' : ''}
                       </p>
                     </div>
                     <div className="hd-meta">
@@ -222,15 +268,51 @@ export default function Dashboard() {
                     <button className="link-btn" onClick={() => setTab('attendance')}>View all →</button>
                   </div>
                   <div className="att-mini-grid">
-                    {attendance.map((a, i) => {
-                      const pct       = parseFloat(a.attendancePercentage);
-                      const clr       = attColor(pct);
+                    {attendance.length === 0 ? (
+                      <div className="empty-state">No attendance records found.</div>
+                    ) : attendance.map((a, i) => {
                       const conducted = parseFloat(a.hoursConducted) || 0;
                       const absent    = parseFloat(a.hoursAbsent) || 0;
                       const attended  = conducted - absent;
-                      const canMiss   = Math.floor(attended - 0.75 * conducted);
+                      const pctMatch  = conducted > 0 ? (attended / conducted) * 100 : parseFloat(a.attendancePercentage) || 0;
+                      const pct       = parseFloat(pctMatch.toFixed(2));
+                      const clr       = attColor(pct);
+                      
+                      let marginText = "";
+                      let marginColor = "";
+                      let marginBg = "";
+                      let marginBorder = "";
+
+                      if (conducted === 0) {
+                        marginText = "No classes yet";
+                        marginColor = "var(--text-3)";
+                        marginBg = "var(--card-inset-bg)";
+                        marginBorder = "var(--card-inset-border)";
+                      } else {
+                        const canSkip = Math.floor((attended - 0.75 * conducted) / 0.75);
+                        const classesNeeded = Math.ceil((0.75 * conducted - attended) / 0.25);
+                        
+                        if (canSkip < 0) {
+                          marginText = `Deficit: -${classesNeeded} classes`;
+                          marginColor = "var(--rose)";
+                          marginBg = "var(--rose-dim)";
+                          marginBorder = "var(--rose-border)";
+                        } else if (canSkip === 0) {
+                          marginText = "Margin: 0 classes";
+                          marginColor = "var(--amber)";
+                          marginBg = "var(--amber-dim)";
+                          marginBorder = "var(--amber-border)";
+                        } else {
+                          marginText = `Margin: +${canSkip} classes`;
+                          marginColor = canSkip > 3 ? "var(--emerald)" : "var(--amber)";
+                          marginBg = canSkip > 3 ? "var(--emerald-dim)" : "var(--amber-dim)";
+                          marginBorder = canSkip > 3 ? "var(--emerald-border)" : "var(--amber-border)";
+                        }
+                      }
+
                       return (
-                        <div key={a.courseCode ? `mini-${a.courseCode}` : i} className="att-mini glass-raised glass-hover animate-up" style={{ animationDelay: `${i * 50}ms` }}>
+                        <div key={a.courseCode ? `mini-${a.courseCode}` : i} className="att-mini glass-raised glass-hover animate-up" style={{ animationDelay: `${i * 50}ms`, position:'relative' }}>
+                          <div className="card-shimmer"></div>
                           <div className="am-top">
                             <CircleProgress pct={pct} color={clr} size={46} />
                             <div className="am-info">
@@ -240,16 +322,16 @@ export default function Dashboard() {
                             </div>
                           </div>
                           <div className="progress-track" style={{ marginTop: 8 }}>
-                            <div className="progress-fill" style={{ width: `${Math.min(pct,100)}%`, background: clr }} />
+                            <div className="progress-fill" style={{ width: `${Math.min(pct,100)}%`, background: clr, animation: 'progressBar 1.2s cubic-bezier(0.4, 0, 0.2, 1) both' }} />
                           </div>
                           <div className="am-footer">
                             <span className="am-hrs">{attended}/{conducted} hrs</span>
-                            <span className="am-tag" style={{
-                              color:       clr,
-                              background:  pct >= 85 ? 'var(--emerald-dim)' : pct >= 75 ? 'var(--amber-dim)' : 'var(--rose-dim)',
-                              border:      `1px solid ${pct >= 85 ? 'var(--emerald-border)' : pct >= 75 ? 'var(--amber-border)' : 'var(--rose-border)'}`,
+                            <span className="am-tag" title={`Need 75% minimum · Currently at ${pct}%`} style={{
+                              color:       marginColor,
+                              background:  marginBg,
+                              border:      `1px solid ${marginBorder}`,
                             }}>
-                              {canMiss >= 0 ? `Skip ${canMiss} more` : `Need ${Math.abs(canMiss)}`}
+                              {marginText}
                             </span>
                           </div>
                         </div>
@@ -289,12 +371,15 @@ export default function Dashboard() {
 
                   {/* ── Attendance cards ──────────────── */}
                   <div className="att-cards">
-                    {attendance.map((a, i) => { // key uses courseCode for stability
-                      const pct        = parseFloat(a.attendancePercentage);
-                      const clr        = attColor(pct);
+                    {attendance.length === 0 ? (
+                      <div className="empty-state">No attendance records found.</div>
+                    ) : attendance.map((a, i) => { // key uses courseCode for stability
                       const conducted  = parseFloat(a.hoursConducted) || 0;
                       const absent     = parseFloat(a.hoursAbsent) || 0;
                       const attended   = conducted - absent;
+                      const pctMatch   = conducted > 0 ? (attended / conducted) * 100 : parseFloat(a.attendancePercentage) || 0;
+                      const pct        = parseFloat(pctMatch.toFixed(2));
+                      const clr        = attColor(pct);
 
                       // Classes needed to reach 75% / classes that can be skipped
                       const toReach75 = Math.ceil((0.75 * conducted - attended) / 0.25);
@@ -381,28 +466,36 @@ export default function Dashboard() {
                               <div className="ac-stat-sep" />
 
                               {/* Smart advice cell */}
-                              {pct >= 85 ? (
-                                <div className="ac-advice safe">
-                                  <span className="adv-ico">✓</span>
+                              {conducted === 0 ? (
+                                <div className="ac-advice" style={{ background: 'var(--card-inset-bg)', borderLeft: '2px solid var(--card-inset-border)' }}>
+                                  <span className="adv-ico">ℹ</span>
                                   <div>
-                                    <div className="adv-main">Safe — can skip <strong>{canSkip75}</strong> more</div>
-                                    <div className="adv-sub">and stay above 75%</div>
+                                    <div className="adv-main">No classes conducted yet</div>
+                                    <div className="adv-sub">Need 75% minimum · Currently at {pct}%</div>
                                   </div>
                                 </div>
-                              ) : pct >= 75 ? (
-                                <div className="ac-advice warn">
-                                  <span className="adv-ico">⚠</span>
-                                  <div>
-                                    <div className="adv-main">Borderline — skip max <strong>{canSkip75}</strong></div>
-                                    <div className="adv-sub">Attend more to reach 85%</div>
-                                  </div>
-                                </div>
-                              ) : (
+                              ) : canSkip75 < 0 ? (
                                 <div className="ac-advice danger">
                                   <span className="adv-ico">🚨</span>
                                   <div>
-                                    <div className="adv-main">Need <strong>{toReach75}</strong> consecutive</div>
-                                    <div className="adv-sub">classes to reach 75%</div>
+                                    <div className="adv-main">Deficit: <strong style={{ color: 'var(--rose)' }}>-{toReach75} classes</strong></div>
+                                    <div className="adv-sub">Need 75% minimum · Currently at {pct}%</div>
+                                  </div>
+                                </div>
+                              ) : canSkip75 === 0 ? (
+                                <div className="ac-advice warn">
+                                  <span className="adv-ico">⚠</span>
+                                  <div>
+                                    <div className="adv-main">Margin: <strong style={{ color: 'var(--amber)' }}>0 classes</strong></div>
+                                    <div className="adv-sub">Need 75% minimum · Currently at {pct}%</div>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className={`ac-advice ${canSkip75 > 3 ? 'safe' : 'warn'}`}>
+                                  <span className="adv-ico">{canSkip75 > 3 ? '✓' : '⚠'}</span>
+                                  <div>
+                                    <div className="adv-main">Margin: <strong style={{ color: canSkip75 > 3 ? 'var(--emerald)' : 'var(--amber)' }}>+{canSkip75} classes</strong></div>
+                                    <div className="adv-sub">Need 75% minimum · Currently at {pct}%</div>
                                   </div>
                                 </div>
                               )}
@@ -461,13 +554,16 @@ export default function Dashboard() {
                   </div>
 
                   <div className="courses-grid">
-                    {courses.map((c, i) => {
+                    {courses.length === 0 ? (
+                      <div className="empty-state">No enrolled courses found.</div>
+                    ) : courses.map((c, i) => {
                       const isTheory  = c.slotType === 'Theory';
                       const faculty   = c.faculty?.split('(')[0]?.trim() || '—';
                       const accentClr = isTheory ? 'var(--accent-light)' : 'var(--emerald)';
                       const barClr    = isTheory ? '#6366f1' : '#10b981';
                       return (
-                        <div key={c.code || i} className="cc-card glass glass-hover animate-up" style={{ animationDelay: `${i * 40}ms` }}>
+                        <div key={c.code || i} className="cc-card glass glass-hover animate-up" style={{ animationDelay: `${i * 40}ms`, position:'relative' }}>
+                          <div className="card-shimmer"></div>
                           {/* Top accent stripe */}
                           <div className="cc-stripe" style={{ background: `linear-gradient(90deg, ${barClr}, transparent)` }} />
                           <div className="cc-body">
@@ -599,12 +695,20 @@ export default function Dashboard() {
           will-change: transform;
         }
 
-        /* Vignette so edges stay dark */
         .dash-bg-vignette {
           position: absolute;
           inset: 0;
           background:
             radial-gradient(ellipse 80% 70% at 50% 50%, transparent 50%, rgba(5,6,15,0.55) 100%);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          *, ::before, ::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+            scroll-behavior: auto !important;
+          }
         }
       `}</style>
 
@@ -628,8 +732,13 @@ export default function Dashboard() {
 
         /* ── Tab panels ───────────────────────── */
         .tab-panel { display: flex; flex-direction: column; gap: 20px; }
-        .animate-in { animation: fadeIn .3s cubic-bezier(.4,0,.2,1) both; }
-        @keyframes fadeIn { from { opacity:0; transform:translateY(6px) } to { opacity:1; transform:translateY(0) } }
+        .animate-in { animation: fadeIn .4s cubic-bezier(.4,0,.2,1) both; }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(12px) } to { opacity:1; transform:translateY(0) } }
+        @keyframes progressBar { from { width: 0; } }
+
+        /* General interaction */
+        button:active, a:active { transform: scale(0.97); transition: transform 0.1s; }
+        input:focus { box-shadow: 0 0 0 3px rgba(0, 245, 255, 0.15); border-color: rgba(0, 245, 255, 0.4); }
 
         /* ── Page header ──────────────────────── */
         .page-hd {
@@ -699,9 +808,19 @@ export default function Dashboard() {
 
         /* ── Section header ───────────────────── */
         .section-hd { display: flex; align-items: center; justify-content: space-between; }
-        .section-title { font-family: var(--font-display); font-size: 14.5px; font-weight: 700; color: #dde2f8; }
+        .section-title { font-family: var(--font-display); font-size: 15px; font-weight: 700; color: #dde2f8; letter-spacing: 0.8px; }
         .link-btn { background: none; border: none; color: var(--accent-light); font-size: 12px; cursor: pointer; font-family: var(--font-body); }
         .link-btn:hover { text-decoration: underline; }
+        
+        .empty-state {
+          padding: 40px 20px;
+          text-align: center;
+          font-size: 14px;
+          color: var(--text-3);
+          background: rgba(255, 255, 255, 0.02);
+          border-radius: var(--radius-md);
+          border: 1px dashed rgba(255, 255, 255, 0.1);
+        }
 
         /* ── Attendance mini cards ────────────── */
         .att-mini-grid {
@@ -796,6 +915,13 @@ export default function Dashboard() {
         .ac-marker { position: absolute; top: -2px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 4px; z-index: 2; }
         .ac-marker-line { width: 1.5px; height: 9px; background: var(--amber); border-radius: 1px; }
         .ac-marker-lbl { position: absolute; top: 11px; font-size: 8.5px; font-weight: 700; color: var(--amber); white-space: nowrap; font-family: var(--font-mono); }
+        
+        .card-shimmer {
+          position: absolute;
+          top: 0; left: 0; right: 0; height: 80px;
+          background: linear-gradient(to bottom, rgba(255,255,255,0.03), transparent);
+          pointer-events: none;
+        }
         .ac-stats { display: flex; align-items: stretch; background: var(--card-inset-bg); border: 1px solid var(--card-inset-border); border-radius: var(--radius-md); overflow: hidden; }
         .ac-stat { display: flex; flex-direction: column; align-items: center; padding: 10px 20px; gap: 2px; flex-shrink: 0; }
         .ac-stat-v { font-family: var(--font-mono); font-size: 18px; font-weight: 700; color: var(--text-1); line-height: 1; }

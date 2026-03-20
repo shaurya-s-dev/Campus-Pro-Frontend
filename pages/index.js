@@ -9,18 +9,7 @@ const ACADEMIA_SESSIONS_URL =
 /* ── Detection helpers ───────────────────────────────────────────────────── */
 function detectSessionLimit(data) {
   if (!data) return false;
-  // Explicit string sent by new backend
-  if (data.message === 'SESSION_LIMIT') return true;
-  // Struct flag from backend
-  if (data.session?.sessionLimit) return true;
-  // Keyword scan on any message/error string
-  const msg = extractMsgLower(data);
-  return (
-    msg.includes('session_limit') ||
-    msg.includes('sessions-reminder') ||
-    (msg.includes('session') && (msg.includes('limit') || msg.includes('exceeded') || msg.includes('maximum'))) ||
-    (msg.includes('too many') && msg.includes('session'))
-  );
+  return data.message === 'SESSION_LIMIT' || data.session?.sessionLimit === true;
 }
 
 function detectDailyLimit(data) {
@@ -59,7 +48,7 @@ function getRedirectUrl(data) {
 }
 
 /* ── Session limit screen ────────────────────────────────────────────────── */
-function SessionLimitScreen({ redirectUrl, onBack }) {
+function SessionLimitScreen({ onBack }) {
   return (
     <div className="info-screen">
       <div className="info-icon">🔒</div>
@@ -68,20 +57,16 @@ function SessionLimitScreen({ redirectUrl, onBack }) {
         SRM Academia limits you to <strong>2 active sessions</strong> at once.
         You need to terminate your old sessions before logging in here.
       </div>
-      <a href={redirectUrl || ACADEMIA_SESSIONS_URL} target="_blank" rel="noreferrer" className="info-btn-amber">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-          <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
-        </svg>
-        Open Academia — Manage Sessions
+      <a href="https://academia.srmist.edu.in" target="_blank" rel="noreferrer" className="info-btn-amber">
+        Go to Academia
       </a>
-      <button className="info-btn-back" onClick={onBack}>← Back to Login</button>
       <div className="info-steps">
-        <div className="step"><span className="step-n">1</span>Click above to open Academia</div>
-        <div className="step"><span className="step-n">2</span>Scroll to <em>Active Sessions</em></div>
-        <div className="step"><span className="step-n">3</span>Click <em>Terminate</em> on old sessions</div>
-        <div className="step"><span className="step-n">4</span>Return here and log in again</div>
+        <div className="step"><span className="step-n">1</span>Open Academia</div>
+        <div className="step"><span className="step-n">2</span>Go to account settings</div>
+        <div className="step"><span className="step-n">3</span>Terminate old sessions</div>
+        <div className="step"><span className="step-n">4</span>Come back and login again</div>
       </div>
+      <button className="info-btn-back" onClick={onBack}>Back to Login</button>
       <style jsx>{`
         .info-screen{display:flex;flex-direction:column;align-items:center;text-align:center;padding:4px 0}
         .info-icon{font-size:38px;margin-bottom:12px}

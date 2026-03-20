@@ -262,7 +262,7 @@ export default function Sidebar({ activeTab, onTabChange, user, below75 }) {
           overflow-y: auto;
           overflow-x: hidden;
           flex-shrink: 0;
-          transition: width 0.26s cubic-bezier(.4,0,.2,1);
+          transition: width 0.3s cubic-bezier(.4,0,.2,1);
           z-index: 30;
         }
         .sidebar::-webkit-scrollbar { width: 0; }
@@ -465,17 +465,17 @@ export default function Sidebar({ activeTab, onTabChange, user, below75 }) {
         .active-bar {
           position: absolute;
           left: 0; top: 22%; bottom: 22%;
-          width: 2.5px;
+          width: 3px;
           border-radius: 0 3px 3px 0;
           background: linear-gradient(to bottom, var(--accent-light), var(--accent));
-          box-shadow: none;
+          box-shadow: 0 0 8px var(--accent-light);
         }
 
         .nav-icon {
           display: flex;
           align-items: center;
           flex-shrink: 0;
-          transition: transform 0.14s;
+          transition: transform 0.14s, opacity 0.2s;
         }
         .nav-text { flex: 1; white-space: nowrap; }
         .nav-external { color: var(--text-4); display: flex; align-items: center; margin-left: auto; }
