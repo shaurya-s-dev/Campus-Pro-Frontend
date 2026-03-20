@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-import AuroraBackground from '@/components/AuroraBackground';
+import dynamic from 'next/dynamic';
+const AuroraBackground = dynamic(() => import('@/components/AuroraBackground'), { ssr: false });
 import Sidebar from '@/components/Sidebar';
 import { DataStore, requireAuth, sanitizeObject } from '@/lib/security';
 

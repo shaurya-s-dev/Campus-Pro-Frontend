@@ -4,7 +4,8 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useTheme } from '@/context/ThemeContext';
 import { DataStore, TokenStore, requireAuth, logout } from '@/lib/security';
-import AuroraBackground from '@/components/AuroraBackground';
+import dynamic from 'next/dynamic';
+const AuroraBackground = dynamic(() => import('@/components/AuroraBackground'), { ssr: false });
 
 /* ── Icon helper ─────────────────────────────────── */
 const Ico = ({ d, size = 16, sw = 1.8 }) => (

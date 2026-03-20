@@ -1,7 +1,8 @@
 import { useState, useCallback, useMemo } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
-import AuroraBackground from '@/components/AuroraBackground';
+import dynamic from 'next/dynamic';
+const AuroraBackground = dynamic(() => import('@/components/AuroraBackground'), { ssr: false });
 
 /* ════════════════════════════════════════════════════
    CONSTANTS

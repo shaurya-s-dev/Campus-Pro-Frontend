@@ -3,7 +3,8 @@ import { DataStore } from '@/lib/security';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useTheme } from '@/context/ThemeContext';
-import AuroraBackground from '@/components/AuroraBackground';
+import dynamic from 'next/dynamic';
+const AuroraBackground = dynamic(() => import('@/components/AuroraBackground'), { ssr: false });
 
 /* ══════════════════════════════════════════════════
    SRM GRADING SYSTEM (Official KTR scale)
@@ -454,7 +455,8 @@ export default function Calculator() {
   const [skippedCount, setSkippedCount] = useState(0);
 
   const handleImport = () => {
-    const courses = DataStore.get('courses') || [];
+    const rawData = DataStore.get();
+    const courses = rawData?.courses?.courses || [];
     const importable = courses.filter(c => parseFloat(c.credit) > 0);
     setSkippedCount(courses.length - importable.length);
     

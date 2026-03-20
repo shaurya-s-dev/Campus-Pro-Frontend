@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
+import dynamic from 'next/dynamic';
 import { useTheme } from '@/context/ThemeContext';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
@@ -12,7 +13,8 @@ import SkipProEstimator from './components/SkipProEstimator';
 import CalendarView from './components/CalendarView';
 import HelpCenterContent from './components/HelpCenterContent';
 import ReportIssueContent from './components/ReportIssueContent';
-import AuroraBackground from '../components/AuroraBackground';
+
+const AuroraBackground = dynamic(() => import('../components/AuroraBackground'), { ssr: false });
 
 // Show only on mobile — 5 key tabs
 const MOBILE_NAV = [
@@ -141,44 +143,7 @@ export default function Dashboard() {
   const [tab, setTab]   = useState('overview');
   const [showAttendanceWarning, setShowAttendanceWarning] = useState(false);
 
-  // Auto-import courses when GPA tab opens
-  useEffect(() => {
-    if (tab === 'gpa' && courses.length > 0) {
-      // Small Delay to ensure component mount if needed, or check state
-      // Actually, auto-import handled in GpaCalculator via prop if needed, 
-      // but the user wants auto-run import logic in the parent/tab switch.
-      // We'll trust the GpaCalculator.jsx handles its own logic or handle here.
-    }
-  }, [tab, courses.length]);
   const { theme } = useTheme();
-  useEffect(() => {
-    if (!requireAuth(router)) return;
-    const raw = DataStore.get();
-    if (!raw) { router.replace('/'); return; }
-    if (raw.tokenInvalid) { import('@/lib/security').then(s => s.logout(router)); return; }
-    setData(sanitizeObject(raw));
-  }, [router]);
-
-  // Read tab from URL on mount & update tab
-  useEffect(() => {
-    const urlTab = router.query.tab;
-    const validTabs = ['overview','attendance','marks','timetable','courses','gpa','skippro','calendar','helpcenter','reportissue'];
-    if (urlTab && validTabs.includes(urlTab)) {
-      setTab(urlTab);
-    }
-  }, [router.query.tab]);
-
-  // Update URL when tab changes
-  const handleTabChange = (newTab) => {
-    if (newTab === 'skippro') {
-      const acknowledged = sessionStorage.getItem('ap_warning_ok') === 'true';
-      if (!acknowledged) {
-        setShowAttendanceWarning(true);
-      }
-    }
-    setTab(newTab);
-    router.push(`/dashboard?tab=${newTab}`, undefined, { shallow: true });
-  };
 
   /* ── Derived data ───────────────────────────── */
   const user       = data?.user || {};
@@ -201,16 +166,19 @@ export default function Dashboard() {
         return s + (isFinite(p) ? p : 0);
       }, 0) / attendance.length).toFixed(1)
     : 0;
+
   const below75  = attendance.filter((a) => {
     const c = parseFloat(a.hoursConducted) || 0;
     const p = c > 0 ? ((c - (parseFloat(a.hoursAbsent) || 0)) / c) * 100 : parseFloat(a.attendancePercentage) || 0;
     return (isFinite(p) ? p : 0) < 75;
   }).length;
+
   const safeAtt  = attendance.filter((a) => {
     const c = parseFloat(a.hoursConducted) || 0;
     const p = c > 0 ? ((c - (parseFloat(a.hoursAbsent) || 0)) / c) * 100 : parseFloat(a.attendancePercentage) || 0;
     return (isFinite(p) ? p : 0) >= 75;
   }).length;
+
   const avgScore = marks.length
     ? (marks.reduce((s, m) => {
         const sc  = parseFloat(m.overall?.scored) || 0;
@@ -219,6 +187,44 @@ export default function Dashboard() {
         return s + (isFinite(res) ? res : 0);
       }, 0) / marks.length).toFixed(1)
     : 0;
+
+  // Auto-import courses when GPA tab opens
+  useEffect(() => {
+    if (tab === 'gpa' && courses.length > 0) {
+      // Logic for gpa tab handled in GpaCalculator via prop
+    }
+  }, [tab, courses.length]);
+
+  useEffect(() => {
+    if (!requireAuth(router)) return;
+    const raw = DataStore.get();
+    if (!raw) { router.replace('/'); return; }
+    if (raw.tokenInvalid) { import('@/lib/security').then(s => s.logout(router)); return; }
+    setData(sanitizeObject(raw));
+  }, [router]);
+
+  // Read tab from URL on mount & update tab
+  useEffect(() => {
+    if (!router.isReady) return;
+    const urlTab = router.query.tab;
+    const validTabs = ['overview','attendance','marks','timetable','courses','gpa','skippro','calendar','helpcenter','reportissue'];
+    if (urlTab && validTabs.includes(urlTab)) {
+      setTab(urlTab);
+    }
+  }, [router.isReady, router.query.tab]);
+
+  // Update URL when tab changes
+  const handleTabChange = (newTab) => {
+    if (newTab === 'skippro') {
+      const acknowledged = sessionStorage.getItem('ap_warning_ok') === 'true';
+      if (!acknowledged) {
+        setShowAttendanceWarning(true);
+      }
+    }
+    setTab(newTab);
+    router.push(`/dashboard?tab=${newTab}`, undefined, { shallow: true });
+  };
+
 
   return (
     <>

@@ -1,6 +1,7 @@
 import Head from 'next/head';
 import TimetableView from '@/components/TimetableView';
-import AuroraBackground from '@/components/AuroraBackground';
+import dynamic from 'next/dynamic';
+const AuroraBackground = dynamic(() => import('@/components/AuroraBackground'), { ssr: false });
 
 export default function TimetablePage() {
   return (

@@ -4,7 +4,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import Sidebar from '@/components/Sidebar';
 import { DataStore, requireAuth, sanitizeObject } from '@/lib/security';
-import AuroraBackground from '@/components/AuroraBackground';
+import dynamic from 'next/dynamic';
+const AuroraBackground = dynamic(() => import('@/components/AuroraBackground'), { ssr: false });
 
 /* ── Academic Calendar Data ─────────────────────────── */
 const ACADEMIC_CALENDAR = {
