@@ -452,12 +452,12 @@ export default function GpaCalculator({ courses = [] }) {
   const [skippedCount, setSkippedCount] = useState(0);
   const [importNote, setImportNote] = useState('');
 
-  // Auto-import on mount if empty
+  // Auto-import when courses are available and subjects list is still empty
   useEffect(() => {
-    if (subjects.length === 0) {
+    if (subjects.length === 0 && courses.length > 0) {
       handleImport();
     }
-  }, []);
+  }, [courses.length]); // re-run when courses arrive (e.g. after dashboard data loads)
 
   const handleImport = () => {
     // Priority: passed prop > DataStore
