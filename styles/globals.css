@@ -24,57 +24,52 @@
 :root,
 [data-theme='dark'] {
 
-  /* ── Backgrounds: 5-step elevation ladder ── */
-  --bg-void:        #04050d;   /* page body behind everything    */
-  --bg-base:        #07080f;   /* main content area              */
-  --bg-surface:     #0d0f1d;   /* cards, panels                  */
-  --bg-elevated:    #131528;   /* hover, focused inputs          */
-  --bg-overlay:     #181a30;   /* dropdowns, tooltips, modals    */
+  /* ── Backgrounds ── */
+  --bg-void:        #04050d;
+  --bg-base:        #07080f;
+  --bg-surface:     #0d0f1d;
+  --bg-elevated:    #131528;
+  --bg-overlay:     #181a30;
   --bg-hover:       rgba(255,255,255,0.045);
   --bg-active:      rgba(99,102,241,0.13);
-  /* Subtle fill — used inside cards for stats strips etc. */
   --bg-subtle:      rgba(255,255,255,0.04);
   --bg-subtle-2:    rgba(255,255,255,0.065);
 
-  /* ── Primary accent: indigo ── */
+  /* ── VIBRANT STATUS COLORS ── */
+  --green:          #00f5a0;
+  --green-dim:      rgba(0, 245, 160, 0.12);
+  --green-border:   rgba(0, 245, 160, 0.25);
+  --emerald:        var(--green);
+  --emerald-dim:    var(--green-dim);
+  --emerald-border: var(--green-border);
+
+  --amber:          #ffd60a;
+  --amber-dim:      rgba(255, 214, 10, 0.12);
+  --amber-border:   rgba(255, 214, 10, 0.25);
+
+  --red:            #ff3b5c;
+  --red-dim:        rgba(255, 59, 92, 0.12);
+  --red-border:     rgba(255, 59, 92, 0.25);
+  --rose:           var(--red);
+  --rose-dim:       var(--red-dim);
+  --rose-border:    var(--red-border);
+
+  --orange:         #ff9500;
+  --orange-dim:     rgba(255, 149, 0, 0.12);
+
+  --cyan:           #00d4ff;
+  --cyan-dim:       rgba(0, 212, 255, 0.12);
+  --cyan-border:    rgba(0, 212, 255, 0.25);
+
+  --purple:         #bf5af2;
+  --purple-dim:     rgba(191, 90, 242, 0.12);
+
+  /* ── Accent (primary brand color) ── */
   --accent:         #6366f1;
-  --accent-light:   #818cf8;
-  --accent-vivid:   #7c7fff;
-  --accent-glow:    rgba(99,102,241,0.12);
-  --accent-dim:     rgba(99,102,241,0.12);
-  --accent-border:  rgba(99,102,241,0.24);
-
-  /* ── Secondary: cyan ── */
-  --cyan:           #22d3ee;
-  --cyan-dim:       rgba(34,211,238,0.10);
-  --cyan-border:    rgba(34,211,238,0.20);
-  --cyan-glow:      rgba(34,211,238,0.08);
-
-  /* ── Tertiary: violet ── */
-  --violet:         #a78bfa;
-  --violet-dim:     rgba(167,139,250,0.10);
-  --violet-border:  rgba(167,139,250,0.22);
-
-  /* ── Status: emerald (success/safe) ── */
-  --emerald:        #10b981;
-  --emerald-light:  #34d399;
-  --emerald-dim:    rgba(16,185,129,0.13);   /* lifted from 0.09 */
-  --emerald-border: rgba(16,185,129,0.24);   /* lifted from 0.18 */
-  --emerald-glow:   rgba(16,185,129,0.08);
-
-  /* ── Status: rose (danger/at-risk) ── */
-  --rose:           #f43f5e;
-  --rose-light:     #fb7185;
-  --rose-dim:       rgba(244,63,94,0.13);    /* lifted from 0.09 */
-  --rose-border:    rgba(244,63,94,0.24);    /* lifted from 0.20 */
-  --rose-glow:      rgba(244,63,94,0.08);
-
-  /* ── Status: amber (warning) ── */
-  --amber:          #f59e0b;
-  --amber-light:    #fbbf24;
-  --amber-dim:      rgba(245,158,11,0.12);   /* lifted from 0.09 */
-  --amber-border:   rgba(245,158,11,0.24);
-  --amber-glow:     rgba(245,158,11,0.07);
+  --accent-bright:  #818cf8;
+  --accent-dim:     rgba(99, 102, 241, 0.15);
+  --accent-border:  rgba(99, 102, 241, 0.3);
+  --accent-light:   var(--accent-bright);
 
   /* ── Text: 5-stop opacity scale ── */
   --text-1:         #eef0fc;         /* headings, primary values */
@@ -505,9 +500,10 @@ a { color: inherit; text-decoration: none; }
 }
 .progress-fill {
   height: 100%;
-  border-radius: 3px;
-  animation: progressBar 1.1s cubic-bezier(.4,0,.2,1) both;
-  transition: width 0.8s cubic-bezier(.4,0,.2,1);
+  border-radius: 4px;
+  transition: width 1s cubic-bezier(.4, 0, .2, 1);
+  background: linear-gradient(90deg, var(--fill-color, var(--accent)), color-mix(in srgb, var(--fill-color, var(--accent)) 70%, white));
+  box-shadow: 0 0 8px var(--fill-color, var(--accent));
 }
 
 /* ════════════════════════════════════════════════════════

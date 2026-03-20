@@ -44,8 +44,8 @@ const Ico = ({ d, size = 15, sw = 1.8 }) => (
 );
 
 /* ── Color helpers ────────────────────────────────── */
-const attColor = p => p >= 85 ? 'var(--emerald)' : p >= 75 ? 'var(--amber)' : 'var(--rose)';
-const scoreColor = p => p >= 80 ? 'var(--emerald)' : p >= 60 ? 'var(--amber)' : 'var(--rose)';
+const attColor = p => p >= 85 ? 'var(--green)' : p >= 75 ? 'var(--amber)' : 'var(--red)';
+const scoreColor = p => p >= 85 ? 'var(--green)' : p >= 70 ? 'var(--amber)' : 'var(--red)';
 
 /* ── Greeting ─────────────────────────────────────── */
 const greeting = () => {
@@ -351,19 +351,19 @@ export default function Dashboard() {
                   <div className="kpi-grid">
                     <KPICard
                       label="Attendance" value={`${avgAtt}%`}
-                      color="var(--accent-light)"
-                      icon="M22 12l-4 4m0 0l-4-4m4 4V8M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16z"
+                      color="var(--cyan)"
+                      icon="M12 2v20m10-10H2"
                       sub={`${safeAtt} safe · ${below75} at risk`} delay={0}
                     />
                     <KPICard
                       label="Avg Score" value={`${avgScore}%`}
-                      color={scoreColor(parseFloat(avgScore))}
+                      color="var(--purple)"
                       icon="M18 20V10m-6 10V4M6 20v-6"
                       sub={`${marks.length} subjects tracked`} delay={60}
                     />
                     <KPICard
                       label="Subjects" value={courses.length}
-                      color="var(--cyan)"
+                      color="var(--green)"
                       icon="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"
                       sub={`${courseStats.theory} theory · ${courseStats.practical} lab`}
                       delay={120}
@@ -421,9 +421,9 @@ export default function Dashboard() {
 
                         if (canSkip < 0) {
                           marginText = `Deficit: -${classesNeeded} classes`;
-                          marginColor = "var(--rose)";
-                          marginBg = "var(--rose-dim)";
-                          marginBorder = "var(--rose-border)";
+                          marginColor = "var(--red)";
+                          marginBg = "var(--red-dim)";
+                          marginBorder = "var(--red-border)";
                         } else if (canSkip === 0) {
                           marginText = "Margin: 0 classes";
                           marginColor = "var(--amber)";
@@ -431,9 +431,9 @@ export default function Dashboard() {
                           marginBorder = "var(--amber-border)";
                         } else {
                           marginText = `Margin: +${canSkip} classes`;
-                          marginColor = canSkip > 3 ? "var(--emerald)" : "var(--amber)";
-                          marginBg = canSkip > 3 ? "var(--emerald-dim)" : "var(--amber-dim)";
-                          marginBorder = canSkip > 3 ? "var(--emerald-border)" : "var(--amber-border)";
+                          marginColor = canSkip > 3 ? "var(--green)" : "var(--amber)";
+                          marginBg = canSkip > 3 ? "var(--green-dim)" : "var(--amber-dim)";
+                          marginBorder = canSkip > 3 ? "var(--green-border)" : "var(--amber-border)";
                         }
                       }
 
@@ -570,13 +570,13 @@ export default function Dashboard() {
                                 <div className="ac-bar-fill" style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${clr}99, ${clr})` }} />
                                 {/* 75% danger threshold marker */}
                                 <div className="ac-marker" style={{ left: '75%' }} title="Minimum 75% required">
-                                  <div className="ac-marker-line" style={{ background: 'var(--rose)' }} />
-                                  <span className="ac-marker-lbl" style={{ color: 'var(--rose)' }}>75%</span>
+                                  <div className="ac-marker-line" style={{ background: 'var(--red)' }} />
+                                  <span className="ac-marker-lbl" style={{ color: 'var(--red)' }}>75%</span>
                                 </div>
                                 {/* 85% safe threshold marker */}
                                 <div className="ac-marker" style={{ left: '85%' }} title="85% for comfortable buffer">
-                                  <div className="ac-marker-line" style={{ background: 'var(--emerald)' }} />
-                                  <span className="ac-marker-lbl" style={{ color: 'var(--emerald)' }}>85%</span>
+                                  <div className="ac-marker-line" style={{ background: 'var(--green)' }} />
+                                  <span className="ac-marker-lbl" style={{ color: 'var(--green)' }}>85%</span>
                                 </div>
 
                               </div>
@@ -585,12 +585,12 @@ export default function Dashboard() {
                             {/* ── Stats grid ─── */}
                             <div className="ac-stats">
                               <div className="ac-stat">
-                                <span className="ac-stat-v" style={{ color: 'var(--emerald)' }}>{attended}</span>
+                                <span className="ac-stat-v" style={{ color: 'var(--green)' }}>{attended}</span>
                                 <span className="ac-stat-l">Attended</span>
                               </div>
                               <div className="ac-stat-sep" />
                               <div className="ac-stat">
-                                <span className="ac-stat-v" style={{ color: absent > 0 ? 'var(--rose)' : 'var(--text-3)' }}>{absent}</span>
+                                <span className="ac-stat-v" style={{ color: absent > 0 ? 'var(--red)' : 'var(--text-3)' }}>{absent}</span>
                                 <span className="ac-stat-l">Absent</span>
                               </div>
                               <div className="ac-stat-sep" />
@@ -613,7 +613,7 @@ export default function Dashboard() {
                                 <div className="ac-advice danger">
                                   <span className="adv-ico">🚨</span>
                                   <div>
-                                    <div className="adv-main">Deficit: <strong style={{ color: 'var(--rose)' }}>{classesNeeded} classes</strong></div>
+                                    <div className="adv-main">Deficit: <strong style={{ color: 'var(--red)' }}>{classesNeeded} classes</strong></div>
                                     <div className="adv-sub">Need 75% minimum · Currently at {pct}%</div>
                                   </div>
                                 </div>
@@ -621,7 +621,7 @@ export default function Dashboard() {
                                 <div className={`ac-advice ${canSkip > 3 ? 'safe' : 'warn'}`}>
                                   <span className="adv-ico">{canSkip > 3 ? '✓' : '⚠'}</span>
                                   <div>
-                                    <div className="adv-main">Margin: <strong style={{ color: canSkip > 3 ? 'var(--emerald)' : 'var(--amber)' }}>{canSkip} classes</strong></div>
+                                    <div className="adv-main">Margin: <strong style={{ color: canSkip > 3 ? 'var(--green)' : 'var(--amber)' }}>{canSkip} classes</strong></div>
                                     <div className="adv-sub">Need 75% minimum · Currently at {pct}%</div>
                                   </div>
                                 </div>
