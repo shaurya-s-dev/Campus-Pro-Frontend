@@ -501,7 +501,7 @@ export default function Login() {
         .status-dot{width:5px;height:5px;border-radius:50%;background:#22c55e;box-shadow:0 0 6px #22c55e;animation:pulse 2.2s ease-in-out infinite}
         @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.4;transform:scale(0.72)}}
         .footer-note{margin-top:18px;font-size:10px;letter-spacing:0.7px;color:rgba(210,230,255,0.14);text-align:center;animation:fadeUp 0.7s 0.22s cubic-bezier(0.16,1,0.3,1) both}
-        @media (max-width:460px){.card{width:calc(100vw - 26px);padding:30px 20px 26px}.brand-name{font-size:44px}}
+        @media (max-width:640px){.card{width:calc(100vw - 24px);padding:24px 18px}.brand-name{font-size:40px}}
       `}</style>
     </>
   );

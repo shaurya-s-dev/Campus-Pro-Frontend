@@ -782,6 +782,41 @@ export default function Dashboard() {
             </>
           )}
         </main>
+
+        <nav className="mobile-bottom-nav">
+          {MOBILE_NAV.map(item => {
+            const iconsMap = {
+              grid: "M3 3h7v7H3z M14 3h7v7h-7z M14 14h7v7h-7z M3 14h7v7H3z",
+              chart: "M22 12l-4 4m0 0l-4-4m4 4V8M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16z",
+              award: "M12 15l-2 5l2-1l2 1l-2-5z M12 2a7 7 0 1 0 0 14a7 7 0 0 0 0 -14z",
+              clock: "M12 6v6l4 2 M12 2a10 10 0 1 0 0 20a10 10 0 0 0 0 -20z",
+              book: "M4 19.5A2.5 2.5 0 0 1 6.5 17H20 M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"
+            };
+            const iconIdMap = {
+              overview: 'grid',
+              attendance: 'chart',
+              marks: 'award',
+              timetable: 'clock',
+              courses: 'book'
+            };
+            const iconD = iconsMap[iconIdMap[item.id]];
+
+            return (
+              <button
+                key={item.id}
+                className={`mbn-item ${tab === item.id ? 'mbn-active' : ''}`}
+                onClick={() => handleTabChange(item.id)}
+              >
+                <span className="mbn-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d={iconD} />
+                  </svg>
+                </span>
+                <span className="mbn-label">{item.label}</span>
+              </button>
+            );
+          })}
+        </nav>
       </div>
 
       <style jsx global>{`
@@ -1218,50 +1253,18 @@ export default function Dashboard() {
         .sum-val  { font-family: var(--font-mono); font-size: 26px; font-weight: 700; line-height: 1; }
         .sum-lbl  { font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
 
-        /* ── Responsive ───────────────────────── */
-        .profile-corner-pill {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          padding: 5px 12px 5px 5px;
-          border-radius: 999px;
-          background: var(--bg-elevated);
-          border: 1px solid var(--border);
-          cursor: pointer;
-          transition: all 0.18s;
-          text-decoration: none;
-        }
-        .profile-corner-pill:hover {
-          background: var(--bg-active);
-          border-color: var(--accent);
-          transform: translateY(-2px);
-          box-shadow: var(--shadow-sm);
-        }
-        .pcp-avatar {
-          width: 28px; height: 28px;
-          border-radius: 50%;
-          background: linear-gradient(135deg, var(--accent), #4338ca);
-          display: flex; align-items: center; justify-content: center;
-          font-weight: 800; font-size: 12px; color: white;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        }
-        .pcp-info { display: flex; flex-direction: column; line-height: 1; }
-        .pcp-name { font-size: 12px; font-weight: 600; color: var(--text-1); margin-bottom: 2px; }
-        .pcp-sem { font-size: 9px; color: var(--text-3); font-weight: 500; text-transform: uppercase; letter-spacing: 0.3px; }
+      `}</style>
+      <style jsx>{`
+        .app-shell { display: flex; min-height: 100vh; position: relative; }
+        .main-content { flex: 1; min-width: 0; }
 
-        @media (max-width: 1200px) {
-          .kpi-grid { grid-template-columns: repeat(2, 1fr); }
-        }
         @media (max-width: 860px) {
-          .main { padding: 60px 16px 24px; }
-          .kpi-grid { grid-template-columns: repeat(2, 1fr); }
-          .sum-strip { grid-template-columns: repeat(2, 1fr); }
+          .app-shell { flex-direction: column; }
+          .main-content { padding: 16px 14px 80px; }
           .hd-meta { display: none; }
         }
+
         @media (max-width: 520px) {
-          .kpi-grid { grid-template-columns: 1fr 1fr; }
-          .att-mini-grid { grid-template-columns: 1fr; }
-          .courses-grid { grid-template-columns: 1fr; }
           .page-title { font-size: 22px; }
         }
       `}</style>
