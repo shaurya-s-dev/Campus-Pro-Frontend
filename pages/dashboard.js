@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo, useRef, dynamic } from 'react';
+'use client';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import toast, { Toaster } from 'react-hot-toast';
@@ -12,8 +13,7 @@ import AttendancePlanner from './components/SkipProEstimator';
 import MarksSection from './components/MarksSection';
 import HelpCenterContent from './components/HelpCenterContent';
 import ReportIssueContent from './components/ReportIssueContent';
-
-const AuroraBackground = dynamic(() => import('@/components/AuroraBackground'), { ssr: false });
+import AuroraBackground from '@/components/AuroraBackground';
 
 /* ── Storage Wrapper ──────────────────────────── */
 const safeGet = (key) => { try { return sessionStorage.getItem(key); } catch { return null; } };
