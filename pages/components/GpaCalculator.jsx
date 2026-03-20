@@ -34,13 +34,7 @@ function reducer(state, action) {
       subjects: state.subjects.map(s => s.id === action.id ? { ...s, [action.field]: action.value } : s),
     };
     case 'RESET':   return { ...state, subjects: [] };
-    case 'DEMO':    return { ...state, subjects: [
-      { id: 1, name: 'Data Structures and Algorithms', credits: 4, grade: 'O',  locked: false },
-      { id: 2, name: 'Object Oriented Programming',    credits: 4, grade: 'A+', locked: false },
-      { id: 3, name: 'Engineering Physics',            credits: 3, grade: 'A',  locked: false },
-      { id: 4, name: 'Transforms & BVP',               credits: 4, grade: 'B+', locked: false },
-      { id: 5, name: 'Computer Networks',              credits: 3, grade: 'A+', locked: false },
-    ] };
+    case 'DEMO':    return { ...state, subjects: [] };
     case 'IMPORT':  return { ...state, subjects: action.subjects };
     case 'SET_PREV_SGPA':   return { ...state, prevSGPA: action.value };
     case 'SET_PREV_CREDITS': return { ...state, prevCredits: action.value };
@@ -136,8 +130,8 @@ function ArcGauge({ value, max = 10, size = 148, label }) {
    SUBJECT ROW
    ══════════════════════════════════════════════════ */
 function SubjectRow({ s, idx, dispatch, isWeak, isStrong }) {
-  const g = gradeMap[s.grade] || GRADE_SCALE[0];
-  const contrib = ((parseFloat(s.credits) || 0) * g.points).toFixed(1);
+  const g = gradeMap[s.grade] || { points: 0 };
+  const contrib = ((parseFloat(s.credits) || 0) * (g.points ?? 0)).toFixed(1);
 
   return (
     <div className={`sub-row ${isWeak ? 'row-weak' : ''} ${isStrong ? 'row-strong' : ''}`}>
@@ -452,17 +446,16 @@ export default function GpaCalculator({ courses = [] }) {
   const [skippedCount, setSkippedCount] = useState(0);
   const [importNote, setImportNote] = useState('');
 
-  // Auto-import on mount if empty
+  // Auto-import on mount if empty and courses available
   useEffect(() => {
-    if (subjects.length === 0) {
+    if (subjects.length === 0 && courses && courses.length > 0) {
       handleImport();
     }
-  }, []);
+  }, [courses, subjects.length]);
 
   const handleImport = () => {
-    // Priority: passed prop > DataStore
-    const courseData = courses.length > 0 ? courses : (DataStore.get()?.courses?.courses || []);
-    const importable = courseData.filter(c => parseFloat(c.credit || '0') > 0);
+    if (!courses || courses.length === 0) return;
+    const importable = (courses || []).filter(c => parseFloat(c?.credit || c?.credits || '0') > 0);
     
     if (importable.length === 0) {
       alert("No courses with credits found to import.");
@@ -473,18 +466,18 @@ export default function GpaCalculator({ courses = [] }) {
     const seen = new Map();
     
     importable.forEach(c => {
-      const baseName = c.title.replace(/\s*(Lab|Laboratory|Practical|Theory|Practice|Laboratory-Credits)\s*$/i, '').trim();
+      if (!c?.title && !c?.name) return;
+      const baseName = (c.title || c.name).replace(/\s*(Lab|Laboratory|Practical|Theory|Practice|Laboratory-Credits)\s*$/i, '').trim();
       
       if (seen.has(baseName)) {
         const existing = seen.get(baseName);
-        const existingCredit = parseFloat(existing.credit);
-        const newCredit = parseFloat(c.credit);
+        const existingCredit = parseFloat(existing.credit || existing.credits || '0');
+        const newCredit = parseFloat(c.credit || c.credits || '0');
         if (newCredit > existingCredit) {
-          existing.credit = c.credit;
+          existing.credit = c.credit || c.credits;
         }
-        existing._mergeCount = (existing._mergeCount || 0) + 1;
       } else {
-        seen.set(baseName, { ...c, title: baseName, _mergeCount: 0 });
+        seen.set(baseName, { ...c, title: baseName });
       }
     });
 
@@ -530,7 +523,7 @@ export default function GpaCalculator({ courses = [] }) {
           <div className="calc-nums glass">
             {[
               { l:'Total Credits',  v: totalCredits },
-              { l:'Grade Points',   v: totalPoints.toFixed(1) },
+              { l:'Grade Points',   v: (isNaN(totalPoints) ? 0 : totalPoints).toFixed(1) },
               { l:'Subjects',       v: subjects.length },
             ].map((s,i) => (
               <div key={i} className="calc-num-item">
@@ -595,8 +588,14 @@ export default function GpaCalculator({ courses = [] }) {
                   <div className="gpa-empty-icon">%</div>
                   <div className="gpa-empty-title">No subjects added yet</div>
                   <div className="gpa-empty-sub">
-                    Click "Import My Courses" to load your subjects automatically, 
-                    or add them manually using the button below.
+                    {!courses || courses.length === 0 ? (
+                      <p>Loading your courses...</p>
+                    ) : (
+                      <>
+                        Click "Import My Courses" to load your subjects automatically, 
+                        or add them manually using the button below.
+                      </>
+                    )}
                   </div>
                 </div>
               ) : (
@@ -658,7 +657,7 @@ export default function GpaCalculator({ courses = [] }) {
                 <div className="cgpa-result-val" style={{
                   color: cgpa >= 9 ? 'var(--emerald)' : cgpa >= 8 ? 'var(--accent-light)' : cgpa >= 7 ? 'var(--cyan)' : 'var(--amber)'
                 }}>
-                  {cgpa.toFixed(2)} / 10.00
+                  {(isNaN(cgpa) ? 0 : cgpa).toFixed(2)} / 10.00
                 </div>
               </div>
             )}

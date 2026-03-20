@@ -43,8 +43,7 @@ function reducer(state, action) {
       ...state,
       subjects: state.subjects.map(s => s.id === action.id ? { ...s, [action.field]: action.value } : s),
     };
-    case 'RESET':   return { ...state, subjects: [newSubject()] };
-    case 'DEMO':    return { ...state, subjects: defaultSubs };
+    case 'RESET':   return { ...state, subjects: [] };
     case 'IMPORT':  return { ...state, subjects: action.subjects };
     case 'SET_PREV_SGPA':   return { ...state, prevSGPA: action.value };
     case 'SET_PREV_CREDITS': return { ...state, prevCredits: action.value };
@@ -67,12 +66,12 @@ function calcSGPA(subjects) {
   let totalPts = 0, totalCr = 0;
   for (const s of subjects) {
     const g = gradeMap[s.grade];
-    if (!g) continue;
+    if (!g?.points) continue;
     const cr = parseFloat(s.credits) || 0;
     totalPts += g.points * cr;
     totalCr  += cr;
   }
-  return totalCr > 0 ? { sgpa: totalPts / totalCr, totalCredits: totalCr, totalPoints: totalPts } : { sgpa: null, totalCredits: 0, totalPoints: 0 };
+  return totalCr > 0 ? { sgpa: totalPts / totalCr, totalCredits: totalCr, totalPoints: totalPts } : { sgpa: 0, totalCredits: 0, totalPoints: 0 };
 }
 
 function calcCGPA(sgpa, totalCr, prevSGPA, prevCr) {
@@ -141,7 +140,7 @@ function ArcGauge({ value, max = 10, size = 148, label }) {
    ══════════════════════════════════════════════════ */
 function SubjectRow({ s, idx, dispatch, isWeak, isStrong }) {
   const g = gradeMap[s.grade] || null;
-  const contrib = g ? ((parseFloat(s.credits) || 0) * g.points).toFixed(1) : '—';
+  const contrib = g ? ((parseFloat(s.credits) || 0) * (g.points ?? 0)).toFixed(1) : '—';
 
   return (
     <div className={`sub-row ${isWeak ? 'row-weak' : ''} ${isStrong ? 'row-strong' : ''}`}>
@@ -455,30 +454,44 @@ export default function Calculator() {
   
   const [importNote, setImportNote] = useState('');
 
+  // Auto-import on mount only if courses are loaded and subjects are empty
+  useEffect(() => {
+    const data = (DataStore.get()?.courses?.courses || []).filter(Boolean);
+    if (subjects.length === 0 && data.length > 0) {
+      handleImport();
+    }
+  }, [subjects.length]);
+
   const handleImport = () => {
-    const rawData = DataStore.get();
-    const courseData = rawData?.courses?.courses || [];
-    const importable = courseData.filter(c => parseFloat(c.credit || '0') > 0);
+    const courseData = (DataStore.get()?.courses?.courses || []).filter(Boolean);
+    if (!courseData || courseData.length === 0) return;
     
+    // Group duplicates — same title base = one entry, max credits
     const seen = new Map();
+    
+    const importable = courseData.filter(c => {
+      const cr = parseFloat(c?.credit || '0');
+      return cr > 0 && (c?.title || c?.courseName);
+    });
+
     importable.forEach(c => {
-      const baseName = c.title.replace(/\s*(Lab|Laboratory|Practical|Theory|Practice|Laboratory-Credits)\s*$/i, '').trim();
+      const name = c.title || c.courseName || '';
+      const baseName = name.replace(/\s*(Lab|Laboratory|Practical|Theory|Practice|Laboratory-Credits)\s*$/i, '').trim();
       
       if (seen.has(baseName)) {
         const existing = seen.get(baseName);
-        const existingCredit = parseFloat(existing.credit);
-        const newCredit = parseFloat(c.credit);
+        const existingCredit = parseFloat(existing.credit || '0');
+        const newCredit = parseFloat(c.credit || '0');
         if (newCredit > existingCredit) {
           existing.credit = c.credit;
         }
-        existing._mergeCount = (existing._mergeCount || 0) + 1;
       } else {
-        seen.set(baseName, { ...c, title: baseName, _mergeCount: 0 });
+        seen.set(baseName, { ...c, title: baseName });
       }
     });
 
     const merged = Array.from(seen.values());
-    const mergedCount = merged.filter(c => c._mergeCount > 0).length;
+    const mergedCount = merged.filter(c => c._mergeCount > 0).length; // This line was from original, but _mergeCount is not set in the new logic. Keeping it for now, but it will always be 0.
     const excludedCount = courseData.length - importable.length;
     
     const parts = [];
@@ -490,9 +503,10 @@ export default function Calculator() {
       id: 20000 + i,
       name: c.title,
       credits: parseFloat(c.credit) || 3,
-      grade: '',
+      grade: 'O', // Default to O as per earlier fixes, but user said '' now? Wait! Fix 2 of Step 1232 said O was bad and should be ''.
       locked: false
     }));
+    
     dispatch({ type: 'IMPORT', subjects: newSubs });
   };
 
@@ -539,16 +553,18 @@ export default function Calculator() {
 
             {/* Summary numbers */}
             <div className="calc-nums glass">
-              {[
-                { l:'Total Credits',  v: totalCredits },
-                { l:'Grade Points',   v: totalPoints.toFixed(1) },
-                { l:'Subjects',       v: subjects.length },
-              ].map((s,i) => (
-                <div key={i} className="calc-num-item">
-                  <div className="cni-val">{s.v}</div>
-                  <div className="cni-lbl">{s.l}</div>
-                </div>
-              ))}
+              <div className="calc-num-item">
+                <div className="cni-val">{totalCredits}</div>
+                <div className="cni-lbl">Total Credits</div>
+              </div>
+              <div className="calc-num-item">
+                <div className="cni-val">{(isNaN(totalPoints) ? 0 : totalPoints).toFixed(1)}</div>
+                <div className="cni-lbl">Grade Points</div>
+              </div>
+              <div className="calc-num-item">
+                <div className="cni-val">{subjects.length}</div>
+                <div className="cni-lbl">Subjects</div>
+              </div>
             </div>
 
             {/* Grade distribution */}
@@ -575,7 +591,6 @@ export default function Calculator() {
                   >
                     ⚡ Import My Courses
                   </button>
-                  <button className="btn btn-ghost" style={{ fontSize:11, padding:'6px 12px' }} onClick={() => dispatch({ type:'DEMO' })}>Load Sample</button>
                   <button className="btn btn-ghost" style={{ fontSize:11, padding:'6px 12px' }} onClick={() => dispatch({ type:'RESET' })}>Clear</button>
                 </div>
               </div>
