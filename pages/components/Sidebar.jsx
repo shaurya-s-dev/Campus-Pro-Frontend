@@ -27,6 +27,9 @@ const icons = {
   sun:       <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>,
   moon:      <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>,
   menu:      <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>,
+  zap:       <svg width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.75" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,
+  help:      <svg width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.75" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
+  flag:      <svg width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.75" viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>,
 };
 
 const NAV_ITEMS = [
@@ -35,8 +38,13 @@ const NAV_ITEMS = [
   { id: 'marks',      label: 'Marks',       icon: 'award',      path: '/dashboard?tab=marks',        group: 'main' },
   { id: 'timetable',  label: 'Timetable',   icon: 'clock',      path: '/dashboard?tab=timetable',    group: 'main' },
   { id: 'courses',    label: 'Courses',     icon: 'book',       path: '/dashboard?tab=courses',      group: 'main' },
+  
   { id: 'calculator', label: 'GPA Calc',    icon: 'calculator', path: '/calculator',   isLink: true, group: 'tools' },
+  { id: 'skippro',    label: 'Skip Pro',    icon: 'zap',        path: '/skip-pro',     isLink: true, group: 'tools' },
   { id: 'calendar',   label: 'Calendar',    icon: 'calendar',   path: '/calendar',     isLink: true, group: 'tools' },
+
+  { id: 'help',       label: 'Help Center', icon: 'help',       path: '/help',         isLink: true, group: 'support' },
+  { id: 'report',     label: 'Report Issue',icon: 'flag',       path: '/report-issue', isLink: true, group: 'support' },
 ];
 
 export default function Sidebar({ activeTab, onTabChange, user, below75 }) {
@@ -208,8 +216,27 @@ export default function Sidebar({ activeTab, onTabChange, user, below75 }) {
         })}
       </nav>
 
-      {/* ── Bottom ─────────────────────────────── */}
+      {/* ── Support & Bottom ─────────────────────── */}
       <div className="bottom">
+        {!collapsed && <div className="nav-label">SUPPORT</div>}
+        {NAV_ITEMS.filter(i => i.group === 'support').map(item => {
+          const active = isPathActive(item.path);
+          return (
+            <Link
+              key={item.id}
+              href={item.path}
+              className={`nav-item${active ? ' nav-active' : ''}`}
+              title={collapsed ? item.label : undefined}
+            >
+              {active && <span className="active-bar" />}
+              <span className="nav-icon">{icons[item.icon]}</span>
+              {!collapsed && <span className="nav-text" style={{ fontSize: '12px' }}>{item.label}</span>}
+            </Link>
+          );
+        })}
+        
+        <div className="divider-sm" style={{ margin: '8px 4px', height: '1px', background: 'var(--border)' }} />
+
         {/* Theme toggle */}
         <button
           className={`theme-btn${collapsed ? ' theme-mini' : ''}`}

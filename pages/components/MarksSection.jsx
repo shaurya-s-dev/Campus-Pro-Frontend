@@ -111,11 +111,17 @@ function TestBarChart({ tests, color }) {
 }
 
 /* ── Overview summary strip ─────────────────────── */
-function MarksSummaryStrip({ marks }) {
-  const total = marks.length;
+function MarksSummaryStrip({ marks, courses = [] }) {
+  // Filter OUT subjects that have 0 credits
+  const validMarks = marks.filter(m => {
+    const course = courses.find(c => c.code === m.courseCode);
+    return !course || (parseFloat(course.credit) > 0);
+  });
+  
+  const total = validMarks.length;
   if (!total) return null;
 
-  const grades = marks.map(m => {
+  const grades = validMarks.map(m => {
     const sc  = parseFloat(m.overall?.scored) || 0;
     const tot = parseFloat(m.overall?.total)  || 1;
     return getGrade((sc / tot) * 100);
@@ -124,13 +130,11 @@ function MarksSummaryStrip({ marks }) {
   const gradeCounts = {};
   grades.forEach(g => { gradeCounts[g.grade] = (gradeCounts[g.grade] || 0) + 1; });
 
-  const avgPct = marks.reduce((s, m) => {
-    const sc  = parseFloat(m.overall?.scored) || 0;
-    const tot = parseFloat(m.overall?.total)  || 1;
-    return s + (sc / tot) * 100;
-  }, 0) / total;
+  const totalScored = validMarks.reduce((s, m) => s + (parseFloat(m.overall?.scored) || 0), 0);
+  const totalMax    = validMarks.reduce((s, m) => s + (parseFloat(m.overall?.total) || 1), 0);
+  const avgPct      = (totalScored / totalMax) * 100;
 
-  const topSubject = [...marks].sort((a, b) => {
+  const topSubject = [...validMarks].sort((a, b) => {
     const pa = (parseFloat(a.overall?.scored)||0) / (parseFloat(a.overall?.total)||1);
     const pb = (parseFloat(b.overall?.scored)||0) / (parseFloat(b.overall?.total)||1);
     return pb - pa;
@@ -144,6 +148,7 @@ function MarksSummaryStrip({ marks }) {
 
   return (
     <div className="summary-strip">
+
       {/* Average gauge */}
       <div className="ss-main glass">
         <div className="ss-gauge-wrap">
@@ -157,10 +162,13 @@ function MarksSummaryStrip({ marks }) {
           <div className="ss-grade-badge" style={{ color: avgGrade.color, background: avgGrade.bg, border: `1px solid ${avgGrade.border}` }}>
             Grade {avgGrade.grade} · {avgGrade.label}
           </div>
-          <div className="ss-sub-text">{total} subjects · Even Sem 2025–26</div>
+          <div className="ss-total-marks">
+            Total Scored: <strong style={{ color: '#fff' }}>{totalScored.toFixed(2)}</strong> / {totalMax.toFixed(0)}
+          </div>
+          <div className="ss-sub-text">{total} graded subjects · <span style={{ color: 'var(--amber)' }}>{marks.length - validMarks.length} courses (0 credits) skipped</span></div>
           {topSubject && (
             <div className="ss-top-sub">
-              🏆 Best: <span style={{ color: avgGrade.color }}>{topSubject.courseName?.split(' ').slice(0,3).join(' ')}</span>
+              🏆 Current Best: <span style={{ color: avgGrade.color }}>{topSubject.courseName}</span>
               <span className="ss-top-pct">{topPct}%</span>
             </div>
           )}
@@ -188,16 +196,18 @@ function MarksSummaryStrip({ marks }) {
 
       <style jsx>{`
         .summary-strip { display:grid; grid-template-columns:1fr 200px; gap:14px; margin-bottom:22px; }
-        .ss-main { border-radius:16px; padding:18px; display:flex; align-items:center; gap:18px; }
+        .ss-main { border-radius:18px; padding:22px; display:flex; align-items:center; gap:22px; position: relative; overflow: hidden; }
+        .ss-main::after { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(255,255,255,0.03), transparent); pointer-events: none; }
         .ss-gauge-wrap { position:relative; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
         .ss-gauge-center { position:absolute; display:flex; flex-direction:column; align-items:center; justify-content:center; }
-        .ss-avg-pct  { font-family:'Fira Code',monospace; font-size:16px; font-weight:700; line-height:1; }
-        .ss-avg-label { font-size:9px; color:rgba(255,255,255,0.35); margin-top:1px; }
+        .ss-avg-pct  { font-family:'Fira Code',monospace; font-size:18px; font-weight:700; line-height:1; }
+        .ss-avg-label { font-size:9px; color:rgba(255,255,255,0.3); margin-top:2px; text-transform:uppercase; letter-spacing:0.5px; }
         .ss-info { flex:1; }
-        .ss-grade-badge { display:inline-block; font-size:11.5px; font-weight:700; padding:4px 12px; border-radius:20px; margin-bottom:8px; }
-        .ss-sub-text { font-size:11.5px; color:rgba(255,255,255,0.35); margin-bottom:8px; }
-        .ss-top-sub { font-size:12px; color:rgba(255,255,255,0.45); display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
-        .ss-top-pct { font-family:'Fira Code',monospace; font-size:11px; font-weight:700; }
+        .ss-grade-badge { display:inline-block; font-size:11px; font-weight:700; padding:4.5px 12px; border-radius:20px; margin-bottom:10px; text-transform:uppercase; letter-spacing:0.4px; }
+        .ss-total-marks { font-size: 15px; color: rgba(255,255,255,0.5); margin-bottom: 4px; }
+        .ss-sub-text { font-size:11px; color:rgba(255,255,255,0.25); margin-bottom:12px; }
+        .ss-top-sub { font-size:11.5px; color:rgba(255,255,255,0.35); display:flex; align-items:center; gap:6px; flex-wrap:wrap; background: rgba(0,0,0,0.1); padding: 8px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.04); }
+        .ss-top-pct { font-family:'Fira Code',monospace; font-size:10.5px; font-weight:700; }
 
         .ss-dist { border-radius:16px; padding:16px; display:flex; flex-direction:column; gap:8px; }
         .ssd-title { font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:rgba(255,255,255,0.25); margin-bottom:4px; }
@@ -216,12 +226,18 @@ function MarksSummaryStrip({ marks }) {
 /* ══════════════════════════════════════════════════
    MAIN MARKS SECTION
    ══════════════════════════════════════════════════ */
-export default function MarksSection({ marks }) {
+export default function MarksSection({ marks, courses = [] }) {
   const [sortBy, setSortBy]   = useState('default'); // 'default' | 'high' | 'low' | 'type'
   const [filter, setFilter]   = useState('all');     // 'all' | 'Theory' | 'Practical'
   const [expanded, setExpanded] = useState(null);
 
-  const sorted = [...marks]
+  // Filter OUT subjects that have 0 credits
+  const validMarksForList = marks.filter(m => {
+    const course = courses.find(c => c.code === m.courseCode);
+    return !course || (parseFloat(course.credit) > 0);
+  });
+
+  const sorted = [...validMarksForList]
     .filter(m => filter === 'all' || m.courseType === filter)
     .sort((a, b) => {
       const pa = (parseFloat(a.overall?.scored)||0)/(parseFloat(a.overall?.total)||1);
@@ -241,10 +257,11 @@ export default function MarksSection({ marks }) {
     <div className="marks-section">
 
       {/* Summary strip */}
-      <MarksSummaryStrip marks={marks} />
+      <MarksSummaryStrip marks={marks} courses={courses} />
 
       {/* Toolbar */}
       <div className="marks-toolbar">
+
         {/* Filter */}
         <div className="tb-filters">
           {['all','Theory','Practical'].map(f => (

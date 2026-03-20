@@ -1,4 +1,5 @@
-import { useState, useCallback, useReducer, useId } from 'react';
+import { useState, useCallback, useReducer, useEffect } from 'react';
+import { DataStore } from '@/lib/security';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useTheme } from '@/context/ThemeContext';
@@ -42,6 +43,7 @@ function reducer(state, action) {
     };
     case 'RESET':   return { ...state, subjects: [newSubject()] };
     case 'DEMO':    return { ...state, subjects: defaultSubs };
+    case 'IMPORT':  return { ...state, subjects: action.subjects };
     case 'SET_PREV_SGPA':   return { ...state, prevSGPA: action.value };
     case 'SET_PREV_CREDITS': return { ...state, prevCredits: action.value };
     case 'SET_TARGET':      return { ...state, target: action.value };
@@ -447,6 +449,25 @@ export default function Calculator() {
   const [state, dispatch] = useReducer(reducer, initState);
   const { subjects, prevSGPA, prevCredits, target } = state;
   const { theme } = useTheme();
+  
+  const [skippedCount, setSkippedCount] = useState(0);
+
+  const handleImport = () => {
+    const courses = DataStore.get('courses') || [];
+    const importable = courses.filter(c => parseFloat(c.credit) > 0);
+    setSkippedCount(courses.length - importable.length);
+    
+    if (importable.length > 0) {
+      const newSubs = importable.map((c, i) => ({
+        id: 1000 + i,
+        name: c.title || c.courseName || 'Untitled',
+        credits: parseFloat(c.credit) || 3,
+        grade: 'O',
+        locked: false
+      }));
+      dispatch({ type: 'IMPORT', subjects: newSubs });
+    }
+  };
 
   // Core calc
   const { sgpa, totalCredits, totalPoints } = calcSGPA(subjects);
@@ -528,10 +549,23 @@ export default function Calculator() {
                   <span className="tag tag-accent">{subjects.length} subjects · {totalCredits} credits</span>
                 </div>
                 <div className="sc-actions">
+                  <button 
+                    className="btn btn-accent" 
+                    style={{ fontSize:11, padding:'6px 14px', borderRadius: '8px' }} 
+                    onClick={handleImport}
+                  >
+                    ⚡ Import My Courses
+                  </button>
                   <button className="btn btn-ghost" style={{ fontSize:11, padding:'6px 12px' }} onClick={() => dispatch({ type:'DEMO' })}>Load Sample</button>
                   <button className="btn btn-ghost" style={{ fontSize:11, padding:'6px 12px' }} onClick={() => dispatch({ type:'RESET' })}>Clear</button>
                 </div>
               </div>
+              
+              {skippedCount > 0 && (
+                <div style={{ padding: '8px 16px', fontSize: '11px', color: 'var(--amber)', background: 'var(--amber-dim)', borderBottom: '1px solid var(--amber-border)' }}>
+                  ⚠️ {skippedCount} zero-credit courses excluded from calculation
+                </div>
+              )}
 
               {/* Column headers */}
               <div className="sc-col-headers">

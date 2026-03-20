@@ -462,7 +462,8 @@ export default function TimetableView({ timetableData }) {
           <div className="today-banner banner-class">
             <span className="tb-dot" />
             <div className="tb-text">
-              Today is <strong>Day Order {todayOrder}</strong> · {new Date().toLocaleDateString('en-IN', { weekday: 'long', month: 'long', day: 'numeric' })}
+              Today is <strong>Day Order {todayOrder}</strong> · {periods.length} periods scheduled
+              <span className="tb-date">{new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
             </div>
           </div>
         )}

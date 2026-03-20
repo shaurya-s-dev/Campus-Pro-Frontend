@@ -518,7 +518,7 @@ export default function Dashboard() {
                     <h1 className="page-title">Marks</h1>
                     <span className="tag tag-accent">{marks.length} subjects</span>
                   </div>
-                  <MarksSection marks={marks} />
+                  <MarksSection marks={marks} courses={courses} />
                 </div>
               )}
 
