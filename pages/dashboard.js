@@ -1,20 +1,19 @@
-import { useEffect, useState, useMemo, useRef } from 'react';
-import dynamic from 'next/dynamic';
-import { useTheme } from '@/context/ThemeContext';
+import { useState, useEffect, useMemo, useRef, dynamic } from 'react';
 import { useRouter } from 'next/router';
-import Head from 'next/head';
-import Script from 'next/script';
-import Link from 'next/link';
-import Sidebar from '@/components/Sidebar';
-import TimetableView from '../components/TimetableView';
-import { DataStore, requireAuth, sanitizeObject } from '@/lib/security';
-import MarksSection from '../components/MarksSection';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import toast, { Toaster } from 'react-hot-toast';
+import CountUp from 'react-countup';
+import { isWeekend, format, addDays, isSameDay } from 'date-fns';
+import { logout, requireAuth, DataStore, sanitizeObject } from '@/lib/security';
+import Sidebar from './components/Sidebar';
+import TimetableView from './components/TimetableView';
+import CalendarView from './components/CalendarView';
+import AttendancePlanner from './components/SkipProEstimator';
+import MarksSection from './components/MarksSection';
+import HelpCenterContent from './components/HelpCenterContent';
+import ReportIssueContent from './components/ReportIssueContent';
 
 const AuroraBackground = dynamic(() => import('@/components/AuroraBackground'), { ssr: false });
-const AttendancePlannerContent = dynamic(() => import('./components/SkipProEstimator'), { ssr: false });
-const HelpCenterContent = dynamic(() => import('./components/HelpCenterContent'), { ssr: false });
-const ReportIssueContent = dynamic(() => import('./components/ReportIssueContent'), { ssr: false });
-const CalendarView = dynamic(() => import('./components/CalendarView'), { ssr: false });
 
 /* ── Storage Wrapper ──────────────────────────── */
 const safeGet = (key) => { try { return sessionStorage.getItem(key); } catch { return null; } };
@@ -22,23 +21,19 @@ const safeSet = (key, val) => { try { sessionStorage.setItem(key, val); } catch 
 
 /* ── Timetable Helper ─────────────────── */
 const isHoliday = (date) => {
-  const ds = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+  const ds = format(date, 'yyyy-MM-dd');
   return ACADEMIC_CALENDAR[ds] === null;
 };
-const isWorkingDay = (date) => {
-  const day = date.getDay();
-  if (day === 0 || day === 6) return false;
-  if (isHoliday(date)) return false;
-  return true;
-};
+const isWorkingDay = (date) => !isWeekend(date) && !isHoliday(date);
+
 const getDayOrder = (date) => {
   if (!isWorkingDay(date)) return null;
   const semStart = new Date('2026-01-13');
   let count = 0;
-  const d = new Date(semStart);
+  let d = new Date(semStart);
   while (d < date) {
     if (isWorkingDay(d)) count++;
-    d.setDate(d.getDate() + 1);
+    d = addDays(d, 1);
   }
   return (count % 5) + 1;
 };
@@ -251,17 +246,25 @@ const getRingColor = (pct) => {
 function CircleProgress({ pct, size = 56 }) {
   const r = 26;
   const circumference = 2 * Math.PI * r;
-  const dashOffset = circumference - (pct / 100) * circumference;
   const color = getRingColor(pct);
+  const shouldReduceMotion = useReducedMotion();
 
   return (
     <div className="cp-wrap" style={{ width: 64, height: 64 }}>
       <svg width="64" height="64" viewBox="0 0 64 64">
         <circle cx="32" cy="32" r="26" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="5"/>
-        <circle cx="32" cy="32" r="26" fill="none" stroke={color} strokeWidth="5"
-          strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={dashOffset}
+        <motion.circle 
+          cx="32" cy="32" r="26" 
+          fill="none" 
+          stroke={color} 
+          strokeWidth="5"
+          strokeLinecap="round" 
+          strokeDasharray={circumference}
+          initial={{ strokeDashoffset: circumference }}
+          animate={{ strokeDashoffset: circumference - (pct / 100) * circumference }}
+          transition={{ duration: shouldReduceMotion ? 0 : 1.2, ease: "easeOut" }}
           transform="rotate(-90 32 32)"
-          style={{ transition: 'stroke-dashoffset 1s ease-out', filter: `drop-shadow(0 0 4px ${color})` }}
+          style={{ filter: `drop-shadow(0 0 4px ${color})` }}
         />
       </svg>
     </div>
@@ -886,24 +889,34 @@ function useCountUp(endValStr) {
    KPI Card
    ══════════════════════════════════════════════════ */
 function KPICard({ label, value, sub, color, icon, delay = 0 }) {
-  const animatedValue = useCountUp(value);
-  
+  const shouldReduceMotion = useReducedMotion();
+  const val = parseFloat(value) || 0;
+  const suffix = typeof value === 'string' && value.includes('%') ? '%' : '';
+
   return (
-    <div className="kpi glass glass-hover animate-up" style={{ 
-      animationDelay: `${delay}ms`,
-      border: `1px solid ${color}25`,
-      background: `linear-gradient(135deg, ${color}0a, transparent)`,
-      overflow: 'hidden', position: 'relative'
-    }}>
+    <motion.div 
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: delay / 1000, duration: shouldReduceMotion ? 0 : 0.4 }}
+      whileHover={{ scale: 1.02, translateY: -2 }}
+      className="kpi glass glass-hover" 
+      style={{ 
+        border: `1px solid ${color}25`,
+        background: `linear-gradient(135deg, ${color}0a, transparent)`,
+        overflow: 'hidden', position: 'relative'
+      }}
+    >
       <div className="kpi-header">
         <div className="kpi-icon-wrap" style={{ color: color, background: `${color}15`, border: `1px solid ${color}25` }}>
           <Ico d={icon} size={15} />
         </div>
         <span className="kpi-label" style={{ color: `${color}99`, fontWeight: 700, letterSpacing: '0.1em', fontSize: 11 }}>{label}</span>
       </div>
-      <div className="kpi-value" style={{ color: color, fontSize: 36, fontWeight: 900, textShadow: `0 0 16px ${color}80`, margin: '6px 0 4px', lineHeight: 1 }}>{animatedValue}</div>
+      <div className="kpi-value" style={{ color: color, fontSize: 36, fontWeight: 900, textShadow: `0 0 16px ${color}80`, margin: '6px 0 4px', lineHeight: 1 }}>
+        <CountUp end={val} decimals={suffix === '%' ? 1 : 0} duration={shouldReduceMotion ? 0 : 1.2} suffix={suffix} useEasing={true} />
+      </div>
       {sub && <div className="kpi-sub" style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>{sub}</div>}
-    </div>
+    </motion.div>
   );
 }
 
@@ -975,13 +988,32 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!requireAuth(router)) return;
-    const raw = DataStore.get();
-    if (!raw) { router.replace('/'); return; }
-    if (raw.tokenInvalid) { import('@/lib/security').then(s => s.logout(router)); return; }
-    setData(sanitizeObject(raw));
+    load();
   }, [router]);
 
-  // Read tab from URL on mount & update tab
+  const load = () => {
+    const stored = DataStore.get();
+    if (!stored) {
+      toast.error("No valid session found. Please login again.");
+      logout(router);
+      return;
+    }
+    
+    try {
+      const clean = sanitizeObject(stored);
+      setData(clean);
+      if (clean.profile?.name) {
+        toast.success(`Welcome back, ${clean.profile.name.split(' ')[0]}!`, {
+          style: { background: '#0d1117', color: '#39ff14', border: '1px solid #10b981' },
+          icon: '👋', duration: 4000 
+        });
+      }
+    } catch (err) {
+      toast.error("Failed to parse data correctly. Please retry.");
+      console.error("Load Task Failed:", err);
+    }
+  };
+
   useEffect(() => {
     if (!router.isReady) return;
     const urlTab = router.query.tab;
@@ -991,16 +1023,14 @@ export default function Dashboard() {
     }
   }, [router.isReady, router.query.tab]);
 
-  // Update URL when tab changes
   const handleTabChange = (newTab) => {
     if (newTab === 'skippro') {
       const acknowledged = safeGet('ap_warning_ok') === 'true';
-      if (!acknowledged) {
-        setShowAttendanceWarning(true);
-      }
+      if (!acknowledged) setShowAttendanceWarning(true);
     }
     setTab(newTab);
     setSidebarOpen(false);
+    toast.dismiss(); // Clear any persistent toasts on tab change
     router.push(`/dashboard?tab=${newTab}`, undefined, { shallow: true });
   };
 
@@ -1030,6 +1060,21 @@ export default function Dashboard() {
         </header>
 
         <main className="main-content">
+          <Toaster
+            position="top-center"
+            toastOptions={{
+              style: {
+                background: 'rgba(20,20,35,0.95)',
+                color: 'white',
+                border: '1px solid rgba(255,255,255,0.1)',
+                backdropFilter: 'blur(20px)',
+                borderRadius: '12px',
+                fontSize: '14px',
+              },
+              success: { iconTheme: { primary: '#39ff14', secondary: 'black' } },
+              error:   { iconTheme: { primary: '#ff2d55', secondary: 'black' } },
+            }}
+          />
 
           {!data ? (
             <div className="tab-panel animate-in" style={{ padding: '0 4px' }}>
@@ -1039,525 +1084,304 @@ export default function Dashboard() {
               <div className="kpi-grid">
                 <Skeleton type="stat" count={4} />
               </div>
-              <div className="section-hd" style={{ marginTop: 24 }}>
-                <div className="skeleton-item sk-text" style={{ width: '150px' }} />
-              </div>
-              <div className="att-mini-grid">
-                <Skeleton type="card" count={3} />
-              </div>
             </div>
           ) : (
-            <>
-              {/* ═══════════════════════════════
-                  OVERVIEW TAB
-              ═══════════════════════════════ */}
-              {tab === 'overview' && (
-                <div className="tab-panel animate-in">
-
-                  {/* Page header */}
-                  <div className="page-hd">
-                    <div>
-                      <h1 className="dash-greeting">
-                        <span className="greet-text" style={{ opacity: 0.85 }}>{greeting()},</span><br className="mob-br" />
-                        <span className="greeting-name-gradient" style={{ marginLeft: 6 }}>{String(user?.name || '').split(' ')[0] || 'Student'}</span>
-                        <span className="greeting-wave">👋</span>
-                      </h1>
-                      <p className="page-sub">
-                        {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                        {user?.department && typeof user.department === 'string' ? ' · ' + user.department.replace(/\(.*\)/, '').trim() : ''}
-                        {user?.section ? ' · ' + user.section + ' Section' : ''}
-                      </p>
-                    </div>
-                    <div className="hd-actions" style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                      <button className="export-btn glass" onClick={() => handleExport(attendance, marks, user)}>
-                        📄 Export PDF
-                      </button>
-                      <Link href="/profile">
-                        <div style={{
-                          display:'flex', alignItems:'center', gap:8,
-                          padding:'6px 14px 6px 6px',
-                          borderRadius:999,
-                          background:'rgba(255,255,255,0.08)',
-                          border:'1px solid rgba(255,255,255,0.12)',
-                          cursor:'pointer',
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={tab}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.2 }}
+                className="tab-container"
+              >
+                {/* ═══════════════════════════════
+                    OVERVIEW TAB
+                ═══════════════════════════════ */}
+                {tab === 'overview' && (
+                  <div className="tab-panel">
+                    <div className="page-hd">
+                      <div>
+                        <motion.h1 
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          className="dash-greeting"
+                        >
+                          <span className="greet-text" style={{ opacity: 0.85 }}>{greeting()},</span><br className="mob-br" />
+                          <span className="greeting-name-gradient" style={{ marginLeft: 6 }}>{String(user?.name || '').split(' ')[0] || 'Student'}</span>
+                          <span className="greeting-wave">👋</span>
+                        </motion.h1>
+                        <p className="page-sub">
+                          {format(new Date(), 'EEEE, d MMMM yyyy')}
+                          {user?.department && typeof user.department === 'string' ? ' · ' + user.department.replace(/\(.*\)/, '').trim() : ''}
+                        </p>
+                      </div>
+                      <div className="hd-actions" style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                        <button className="export-btn glass" onClick={() => {
+                          toast.promise(
+                            new Promise(res => setTimeout(res, 1000)),
+                            { loading: 'Generating Report...', success: 'PDF Export Ready!', error: 'Export failed.' }
+                          );
+                          handleExport(attendance, marks, user);
                         }}>
-                          <div style={{
-                            width:30, height:30, borderRadius:'50%',
-                            background:'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                            display:'flex', alignItems:'center', justifyContent:'center',
-                            fontWeight:800, fontSize:13, color:'white',
-                          }}>
-                            {user?.name?.[0]?.toUpperCase() || 'S'}
-                          </div>
-                          <div>
-                            <div style={{fontSize:12, fontWeight:600, color:'white', lineHeight:1.2}}>
-                              {user?.name?.split(' ')[0]}
-                            </div>
-                            <div style={{fontSize:10, color:'rgba(255,255,255,0.5)', lineHeight:1.2}}>
-                              Sem {user?.semester}
-                            </div>
-                          </div>
-                        </div>
-                      </Link>
+                          📄 Export PDF
+                        </button>
+                      </div>
                     </div>
-                  </div>
 
-                  <SmartAlerts attendance={attendance} marks={marks} />
+                    <SmartAlerts attendance={attendance} marks={marks} />
 
-                  {/* KPI grid */}
-                  <div className="kpi-grid">
-                    <KPICard
-                      label="ATTENDANCE" value={`${avgAtt}%`}
-                      color="#39ff14"
-                      icon="M12 2v20m10-10H2"
-                      sub={`${safeAtt} ON TRACK · ${below75} BELOW 75%`} delay={0}
-                    />
-                    <KPICard
-                      label="AVG SCORE" value={`${avgScore}%`}
-                      color="#bf5af2"
-                      icon="M18 20V10m-6 10V4M6 20v-6"
-                      sub={`${marks?.length || 0} subjects tracked`} delay={60}
-                    />
-                    <KPICard
-                      label="SUBJECTS" value={(courses || []).length}
-                      color="#00d4ff"
-                      icon="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"
-                      sub={`${courseStats.theory} Theory · ${courseStats.practical} Lab`}
-                      delay={120}
-                    />
-                    <KPICard
-                      label="SEMESTER" value={user?.semester || '—'}
-                      color="#ffe600"
-                      icon="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"
-                      sub="B.Tech Student" delay={180}
-                    />
-                  </div>
+                    <div className="kpi-grid">
+                      <KPICard
+                        label="ATTENDANCE" value={`${avgAtt}%`}
+                        color="#39ff14"
+                        icon="M12 2v20m10-10H2"
+                        sub={`${safeAtt} ON TRACK · ${below75} BELOW 75%`} delay={0}
+                      />
+                      <KPICard
+                        label="AVG SCORE" value={`${avgScore}%`}
+                        color="#bf5af2"
+                        icon="M18 20V10m-6 10V4M6 20v-6"
+                        sub={`${marks?.length || 0} subjects tracked`} delay={60}
+                      />
+                      <KPICard
+                        label="SUBJECTS" value={(courses || []).length}
+                        color="#00d4ff"
+                        icon="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"
+                        sub={`${courseStats.theory} Theory · ${courseStats.practical} Lab`}
+                        delay={120}
+                      />
+                      <KPICard
+                        label="SEMESTER" value={user?.semester || '—'}
+                        color="#ffe600"
+                        icon="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"
+                        sub="B.Tech Student" delay={180}
+                      />
+                    </div>
 
-                  <TodayClasses timetable={timetable} />
+                    <TodayClasses timetable={timetable} />
 
-                  {/* Alert banner */}
+                    <div className="section-hd">
+                      <h2 className="section-title">Attendance Snapshot</h2>
+                      <button className="link-btn" onClick={() => handleTabChange('attendance')}>See details</button>
+                    </div>
+                    <div className="att-mini-grid">
+                      {uniqueAttendance.length === 0 ? (
+                        <div className="empty-state">No attendance records found.</div>
+                      ) : (uniqueAttendance || []).map((a, i) => {
+                        const conducted = parseFloat(a.hoursConducted || '0') || 0;
+                        const absent = parseFloat(a.hoursAbsent || '0') || 0;
+                        const attended = conducted - absent;
+                        const pctMatch = conducted > 0 ? (attended / conducted) * 100 : parseFloat(a.attendancePercentage || '0') || 0;
+                        const pctVal = isNaN(pctMatch) || !isFinite(pctMatch) ? 0 : pctMatch;
+                        const pct = parseFloat(pctVal.toFixed(2));
+                        const color = getRingColor(pct);
 
-                  {/* Attendance mini grid */}
-                  <div className="section-hd">
-                    <h2 className="section-title">Attendance Snapshot</h2>
-                    <button className="link-btn" onClick={() => setTab('attendance')}>See details</button>
-                  </div>
-                  <div className="att-mini-grid">
-                    {uniqueAttendance.length === 0 ? (
-                      <div className="empty-state">No attendance records found.</div>
-                    ) : (uniqueAttendance || []).map((a, i) => {
-                      const conducted = parseFloat(a.hoursConducted || '0') || 0;
-                      const absent = parseFloat(a.hoursAbsent || '0') || 0;
-                      const attended = conducted - absent;
-                      const pctMatch = conducted > 0 ? (attended / conducted) * 100 : parseFloat(a.attendancePercentage || '0') || 0;
-                      const pctVal = isNaN(pctMatch) || !isFinite(pctMatch) ? 0 : pctMatch;
-                      const pct = parseFloat(pctVal.toFixed(2));
-                      const color = getRingColor(pct);
+                        const canSkip = Math.floor((attended - 0.75 * conducted) / 0.75);
+                        const mustAttend = canSkip < 0 ? Math.ceil((0.75 * conducted - attended) / 0.25) : 0;
 
-                      const canSkip = Math.floor((attended - 0.75 * conducted) / 0.75);
-                      const mustAttend = canSkip < 0 ? Math.ceil((0.75 * conducted - attended) / 0.25) : 0;
+                        const getAdvice = () => {
+                          if (conducted === 0) return { icon: 'ℹ', color: 'rgba(255,255,255,0.4)', text: 'No classes yet' };
+                          if (canSkip > 3) return { icon: '✓', color: '#39ff14', text: `You can skip ${cls(canSkip)} more safely` };
+                          if (canSkip > 0) return { icon: '⚠', color: '#ffe600', text: `Only ${canSkip} ${canSkip === 1 ? 'skip' : 'skips'} left — don't miss` };
+                          if (canSkip === 0) return { icon: '⚠', color: '#ffe600', text: `At the limit — attend all classes` };
+                          return { icon: '🚨', color: '#ff2d55', text: `Attend next ${cls(mustAttend)} to reach 75%` };
+                        };
+                        
+                        const advice = getAdvice();
 
-                      const getAdvice = () => {
-                        if (conducted === 0) return { icon: 'ℹ', color: 'rgba(255,255,255,0.4)', text: 'No classes yet' };
-                        if (canSkip > 3) return { icon: '✓', color: '#39ff14', text: `You can skip ${cls(canSkip)} more safely` };
-                        if (canSkip > 0) return { icon: '⚠', color: '#ffe600', text: `Only ${canSkip} ${canSkip === 1 ? 'skip' : 'skips'} left — don't miss` };
-                        if (canSkip === 0) return { icon: '⚠', color: '#ffe600', text: `At the limit — attend all classes` };
-                        return { icon: '🚨', color: '#ff2d55', text: `Attend next ${cls(mustAttend)} to reach 75%` };
-                      };
-                      
-                      const advice = getAdvice();
-
-                      return (
-                        <div key={a.courseCode || i} className="att-mini-card glass animate-up" style={{ 
-                          animationDelay: `${i * 40}ms`,
-                          borderLeft: `3px solid ${color}`,
-                          padding: '16px'
-                        }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                            <CircleProgress pct={pct} size={42} />
-                            <div style={{ flex: 1 }}>
-                              <div style={{ fontSize: 13, fontWeight: 700, color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.courseTitle}</div>
-                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 }}>
-                                <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)' }}>{a.courseCode}</span>
-                                <span style={{ color: color, textShadow: `0 0 8px ${color}`, fontWeight: 800, fontSize: 12 }}>{pct}%</span>
+                        return (
+                          <motion.div 
+                            key={a.courseCode || i} 
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: i * 0.04 }}
+                            className="att-mini-card glass" 
+                            style={{ borderLeft: `3px solid ${color}`, padding: '16px' }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                              <CircleProgress pct={pct} size={42} />
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontSize: 13, fontWeight: 700, color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.courseTitle}</div>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 }}>
+                                  <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)' }}>{a.courseCode}</span>
+                                  <span style={{ color: color, textShadow: `0 0 8px ${color}`, fontWeight: 800, fontSize: 12 }}>
+                                    <CountUp end={pct} decimals={1} suffix="%" duration={1} />
+                                  </span>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 12, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                             <span style={{ color: advice.color, fontSize: 14 }}>{advice.icon}</span>
-                             <span style={{ color: advice.color, fontSize: 12, fontWeight: 600 }}>{advice.text}</span>
-                          </div>
-                        </div>
-                      );
-                    })}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 12, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                               <span style={{ color: advice.color, fontSize: 14 }}>{advice.icon}</span>
+                               <span style={{ color: advice.color, fontSize: 12, fontWeight: 600 }}>{advice.text}</span>
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+
+                    <StreakTracker attendance={uniqueAttendance} />
                   </div>
+                )}
 
-                  <StreakTracker attendance={uniqueAttendance} />
-                  <SmartAlerts attendance={uniqueAttendance} marks={marks} />
-                </div>
-              )}
-
-
-              {/* ═══════════════════════════════
-                  ATTENDANCE TAB
-              ═══════════════════════════════ */}
-              {tab === 'attendance' && (
-                <div className="tab-panel animate-in">
-                  <div className="page-hd">
-                    <div className="sc-titles-group">
-                      <div className="page-title-bar">
+                {/* ═══════════════════════════════
+                    ATTENDANCE TAB
+                ═══════════════════════════════ */}
+                {tab === 'attendance' && (
+                  <div className="tab-panel">
+                    <div className="page-hd">
+                      <div className="sc-titles-group">
                         <h1 className="page-title">Attendance</h1>
+                        <p className="section-helper">
+                          Minimum 75% required to be safe. 85% recommended for buffer.
+                        </p>
                       </div>
-                      <p className="section-helper">
-                        View detailed breakdown of your attendance per subject.
-                        Minimum 75% required to be safe. 85% recommended for buffer.
-                      </p>
+                      <span className="tag tag-accent">{uniqueAttendance.length} subjects</span>
                     </div>
-                    <span className="tag tag-accent">{uniqueAttendance.length} subjects</span>
-                  </div>
 
-                  {/* ── Summary strip ─────────────────── */}
-                  <div className="sum-strip">
-                    {[
-                      { v: `${avgAtt}%`, l: 'Average', c: 'var(--neon-cyan)', icon: 'M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16z' },
-                      { v: safeAtt, l: 'ON TRACK', c: 'var(--neon-green)', icon: 'M22 11.08V12a10 10 0 1 1-5.93-9.14M22 4L12 14.01l-3-3' },
-                      { v: below75, l: 'BELOW 75%', c: 'var(--neon-red)', icon: 'M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zm0-7v-2m0-4h.01' },
-                      { v: uniqueAttendance.length, l: 'Subjects', c: 'var(--neon-yellow)', icon: 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z' },
-                    ].map((s, i) => (
-                      <div key={i} className="sum-pill glass-raised animate-up" style={{ 
-                        animationDelay: `${i * 45}ms`,
-                        boxShadow: `0 0 15px ${s.c}15`,
-                        borderColor: `${s.c}30`
-                      }}>
-                        <div className="sp-icon" style={{ color: s.c, background: `${s.c}12`, border: `1px solid ${s.c}20`, boxShadow: `0 0 10px ${s.c}20` }}>
-                          <Ico d={s.icon} size={13} />
+                    <div className="sum-strip">
+                      {[
+                        { v: avgAtt, l: 'Average', c: 'var(--neon-cyan)', icon: 'M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16z', s: '%' },
+                        { v: safeAtt, l: 'ON TRACK', c: 'var(--neon-green)', icon: 'M22 11.08V12a10 10 0 1 1-5.93-9.14M22 4L12 14.01l-3-3', s: '' },
+                        { v: below75, l: 'BELOW 75%', c: 'var(--neon-red)', icon: 'M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zm0-7v-2m0-4h.01', s: '' },
+                        { v: uniqueAttendance.length, l: 'Subjects', c: 'var(--neon-yellow)', icon: 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z', s: '' },
+                      ].map((s, i) => (
+                        <div key={i} className="sum-pill glass-raised" style={{ borderColor: `${s.c}30` }}>
+                          <div className="sp-icon" style={{ color: s.c, background: `${s.c}12` }}>
+                            <Ico d={s.icon} size={13} />
+                          </div>
+                          <div className="sum-val" style={{ color: s.c }}>
+                            <CountUp end={parseFloat(s.v)} decimals={s.s === '%' ? 1 : 0} suffix={s.s} duration={1} />
+                          </div>
+                          <div className="sum-lbl">{s.l}</div>
                         </div>
-                        <div className="sum-val" style={{ color: s.c, textShadow: `0 0 8px ${s.c}60` }}>{s.v}</div>
-                        <div className="sum-lbl">{s.l}</div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
 
-                  {/* ── Attendance cards ──────────────── */}
-                  <div className="att-cards">
-                    {uniqueAttendance.length === 0 ? (
-                      <div className="empty-state">No attendance records found.</div>
-                    ) : uniqueAttendance.map((a, i) => {
-                      const conducted = parseFloat(a.hoursConducted) || 0;
-                      const absent = parseFloat(a.hoursAbsent) || 0;
-                      const attended = conducted - absent;
-                      const percentage = conducted > 0 ? (attended / conducted) * 100 : 0;
-                      const pct = parseFloat(percentage.toFixed(2));
-                      const neon = getNeonColor(pct);
+                    <div className="att-cards">
+                      {uniqueAttendance.map((a, i) => {
+                        const conducted = parseFloat(a.hoursConducted) || 0;
+                        const absent = parseFloat(a.hoursAbsent) || 0;
+                        const attended = conducted - absent;
+                        const pct = conducted > 0 ? parseFloat(((attended / conducted) * 100).toFixed(2)) : 0;
+                        const statusClr = getRingColor(pct);
+                        const canSkip = Math.floor((attended - 0.75 * conducted) / 0.75);
+                        const needed = canSkip < 0 ? Math.ceil((0.75 * conducted - attended) / 0.25) : 0;
 
-                      // Margin (classes can skip while staying ABOVE 75%):
-                      const classesNeeded = canSkip < 0 ? Math.ceil((0.75 * conducted - attended) / 0.25) : 0;
-
-                      const dataStatus = pct >= 85 ? 'safe' : pct >= 75 ? 'caution' : 'atrisk';
-                      const statusLabel = pct >= 85 ? 'EXCELLENT ✓' : pct >= 75 ? 'ON TRACK ✓' : 'BELOW 75%';
-                      const statusClr = getRingColor(pct);
-
-                      const facultyName = a.facultyName?.split('(')[0]?.trim() || '—';
-
-                      return (
-                        <div key={a.courseCode || i} className="att-card glass animate-up" data-status={dataStatus} style={{ 
-                          animationDelay: `${i * 40}ms`,
-                          borderLeft: `3px solid ${statusClr}`,
-                          boxShadow: `inset 0 0 30px ${statusClr}10, -2px 0 12px ${statusClr}40`
-                        }}>
-
-                          <div className="ac-body">
-                            {/* ── Row 1: Circle + Course info + % ── */}
-                            <div className="ac-top">
-                              <CircleProgress pct={pct} size={58} />
-
-                              <div className="ac-course">
-                                <div className="ac-title">{a.courseTitle}</div>
-                                <div className="ac-meta-row">
-                                  <span className="ac-code">{a.courseCode}</span>
-                                  <span className="ac-dot">·</span>
-                                  <span className={`tag ${a.category === 'Theory' ? 'tag-accent' : 'tag-emerald'}`} style={{ fontSize: 9, padding: '2px 7px' }}>
-                                    {a.category || 'Theory'}
-                                  </span>
-                                  <span className="ac-dot">·</span>
-                                  <span className="ac-faculty">
-                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', marginRight: 3, verticalAlign: 'middle' }}>
-                                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
-                                    </svg>
-                                    {facultyName}
-                                  </span>
+                        return (
+                          <motion.div 
+                            key={a.courseCode || i}
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: i * 0.05 }}
+                            whileHover={{ scale: 1.01 }}
+                            className="att-card glass" 
+                            style={{ borderLeft: `3px solid ${statusClr}` }}
+                          >
+                            <div className="ac-body">
+                              <div className="ac-top">
+                                <CircleProgress pct={pct} size={58} />
+                                <div className="ac-course">
+                                  <div className="ac-title">{a.courseTitle}</div>
+                                  <div className="ac-meta-row">
+                                    <span className="ac-code">{a.courseCode}</span>
+                                    <span className={`tag ${a.category === 'Theory' ? 'tag-accent' : 'tag-emerald'}`}>{a.category}</span>
+                                  </div>
+                                </div>
+                                <div className="ac-pct-block">
+                                  <div className="ac-pct" style={{ color: statusClr }}>
+                                    <CountUp end={pct} decimals={1} suffix="%" />
+                                  </div>
                                 </div>
                               </div>
-
-                              <div className="ac-pct-block">
-                                <div className="ac-pct" style={{ color: statusClr, textShadow: `0 0 8px ${statusClr}60`, fontWeight: 800 }}>{pct}%</div>
-                                <span className="ac-status-tag" style={{ color: statusClr, background: `${statusClr}15`, border: `1px solid ${statusClr}44` }}>
-                                  {statusLabel}
-                                </span>
-                              </div>
-                            </div>
-
-                            {/* ── Segmented progress bar ── */}
-                            <div className="ac-bar-wrap">
-                              <div className="ac-bar-bg">
-                                <div className="ac-bar-fill progress-fill" style={{ width: `${pct}%`, '--fill-color': statusClr }} />
-                                {/* 75% danger threshold marker */}
-                                <div className="ac-marker" style={{ left: '75%' }} title="Minimum 75% required">
-                                  <div className="ac-marker-line" style={{ background: '#ff2d55' }} />
-                                  <span className="ac-marker-lbl" style={{ color: '#ff2d55' }}>75%</span>
-                                </div>
-                                {/* 85% safe threshold marker */}
-                                <div className="ac-marker" style={{ left: '85%' }} title="85% for comfortable buffer">
-                                  <div className="ac-marker-line" style={{ background: '#39ff14' }} />
-                                  <span className="ac-marker-lbl" style={{ color: '#39ff14' }}>85%</span>
-                                </div>
-
-                              </div>
-                            </div>
-
-                            {/* ── Stats grid ─── */}
-                            <div className="ac-stats">
-                              <div className="ac-stat">
-                                <span className="ac-stat-v" style={{ color: '#39ff14', textShadow: '0 0 8px rgba(57,255,20,0.4)' }}>{attended}</span>
-                                <span className="ac-stat-l">Attended</span>
-                              </div>
-                              <div className="ac-stat-sep" />
-                              <div className="ac-stat">
-                                <span className="ac-stat-v" style={{ color: absent > 0 ? '#ff2d55' : 'var(--text-3)', textShadow: absent > 0 ? '0 0 8px rgba(255,45,85,0.4)' : 'none' }}>{absent}</span>
-                                <span className="ac-stat-l">Absent</span>
-                              </div>
-                              <div className="ac-stat-sep" />
-                              <div className="ac-stat">
-                                <span className="ac-stat-v">{conducted}</span>
-                                <span className="ac-stat-l">Total hrs</span>
-                              </div>
-                              <div className="ac-stat-sep" />
-
-                              {/* Smart advice cell */}
-                              {(() => {
-                                const advice = (conducted > 0) ? (
-                                  canSkip > 3 ? { icon: '✓', color: '#39ff14', text: `Can skip: +${canSkip} more classes safely` } :
-                                  canSkip > 0 ? { icon: '⚠', color: '#ffe600', text: `Only ${canSkip} ${canSkip === 1 ? 'skip' : 'skips'} left — don't miss` } :
-                                  canSkip === 0 ? { icon: '⚠', color: '#ffe600', text: `At the limit — attend all classes` } :
-                                  { icon: '🚨', color: '#ff2d55', text: `Deficit: ${cls(classesNeeded)} needed for 75%` }
-                                ) : { icon: 'ℹ', color: 'rgba(255,255,255,0.4)', text: 'No classes yet' };
-
-                                return (
-                                  <div className="ac-advice" style={{ 
-                                    background: `${advice.color}12`,
-                                    borderColor: `${advice.color}33`,
-                                    borderLeft: `2px solid ${advice.color}`
-                                  }}>
-                                    <span className="adv-ico" style={{ color: advice.color }}>{advice.icon}</span>
-                                    <div>
-                                      <div className="adv-main" style={{ color: advice.color }}>{advice.text}</div>
-                                      <div className="adv-sub">You're at {pct}% attendance</div>
+                              <div className="ac-stats">
+                                <div className="ac-stat"><span className="ac-stat-v">{attended}</span><span className="ac-stat-l">Attended</span></div>
+                                <div className="ac-stat"><span className="ac-stat-v">{absent}</span><span className="ac-stat-l">Absent</span></div>
+                                <div className="ac-stat"><span className="ac-stat-v">{conducted}</span><span className="ac-stat-l">Total</span></div>
+                                {conducted > 0 && (
+                                  <div className="ac-advice" style={{ borderLeftColor: canSkip >= 0 ? '#39ff14' : '#ff2d55' }}>
+                                    <div className="adv-main" style={{ color: canSkip >= 0 ? '#39ff14' : '#ff2d55' }}>
+                                      {canSkip >= 0 ? `Safe to skip ${cls(canSkip)}` : `Attend ${cls(needed)} to reach 75%`}
                                     </div>
                                   </div>
-                                );
-                              })()}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* ═══════════════════════════════
-                  MARKS TAB
-              ═══════════════════════════════ */}
-              {tab === 'marks' && (
-                <div className="tab-panel animate-in">
-                  <div className="page-hd">
-                    <div className="sc-titles-group">
-                      <h1 className="page-title">Marks</h1>
-                      <p className="section-helper">
-                        Internal marks, test performance, and grade estimation.
-                        Zero-credit courses and subjects with no data are excluded from averages.
-                      </p>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <button className="btn btn-accent" onClick={() => handleExport(attendance, marks, user)} style={{ fontSize: 11, padding: '8px 16px', borderRadius: '8px' }}>
-                        📄 Download Report
-                      </button>
-                      <span className="tag tag-accent">{(marks || []).length} subjects</span>
-                    </div>
-                  </div>
-                  <MarksSection marks={marks} courses={courses} />
-                </div>
-              )}
-
-              {/* ═══════════════════════════════
-                  COURSES TAB
-              ═══════════════════════════════ */}
-              {tab === 'courses' && (
-                <div className="tab-panel animate-in">
-                  <div className="page-hd">
-                    <div className="sc-titles-group">
-                      <h1 className="page-title">My Courses</h1>
-                      <p className="section-helper">Complete enrollment list for SRM Even Semester 2025-26.</p>
-                    </div>
-                  </div>
-
-                  {/* Summary Strip - 3 Styled Chips */}
-                  {(() => {
-                    const theoryCount = courses.filter(c => c.slotType === 'Theory').length;
-                    const labCount = courses.filter(c => c.slotType === 'Practical').length;
-                    const totalCredits = courses.reduce((acc, c) => acc + (parseFloat(c.credit) || 0), 0);
-                    return (
-                      <div style={{ display: 'flex', gap: 10, marginBottom: 24, flexWrap: 'wrap' }}>
-                        <div className="glass" style={{ padding: '8px 16px', borderRadius: 100, border: '1px solid rgba(255,255,255,.06)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--accent-light)' }}>{theoryCount}</span>
-                          <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: .5 }}>Theory</span>
-                        </div>
-                        <div className="glass" style={{ padding: '8px 16px', borderRadius: 100, border: '1px solid rgba(255,255,255,.06)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--emerald)' }}>{labCount}</span>
-                          <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: .5 }}>Practical</span>
-                        </div>
-                        <div className="glass" style={{ padding: '8px 16px', borderRadius: 100, border: '1px solid rgba(255,255,255,.06)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--amber)' }}>{totalCredits}</span>
-                          <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: .5 }}>Total Credits</span>
-                        </div>
-                      </div>
-                    );
-                  })()}
-
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(280px,1fr))', gap: 14 }}>
-                    {courses.map((c, i) => {
-                      if (!c) return null;
-                      const isTheory = c.slotType === 'Theory';
-                      const bar = isTheory ? '#6366f1' : '#10b981';
-                      const faculty = typeof c.faculty === 'string' ? c.faculty.split('(')[0]?.trim() || '—' : '—';
-                      return (
-                        <div key={i} className="cc-card glass animate-up" style={{ animationDelay: `${i * 40}ms`, borderRadius: 'var(--radius-lg)', overflow: 'hidden', padding: 0, transition: 'transform .2s,box-shadow .2s' }}
-                          onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-4px)'}
-                          onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}>
-                          <div style={{ height: 3, background: bar }} />
-                          <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--accent-light)' }}>{c.code}</span>
-                              <span className={`tag ${isTheory ? 'tag-accent' : 'tag-emerald'}`} style={{ fontSize: 9 }}>{c.slotType}</span>
-                            </div>
-                            <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text-1)', lineHeight: 1.4 }}>{c.title}</div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 9, paddingBottom: 10, borderBottom: '1px solid rgba(255,255,255,.06)' }}>
-                              <div style={{ width: 26, height: 26, borderRadius: 7, background: bar + '22', border: `1px solid ${bar}44`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: bar, flexShrink: 0 }}>
-                                {faculty[0] || '?'}
+                                )}
                               </div>
-                              <span style={{ fontSize: 12, color: 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{faculty}</span>
                             </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)' }}>
-                              {[['🏫', c.room || '—', 'Room'], ['🕐', c.slot || '—', 'Slot'], ['⭐', c.credit || '0', 'Credits']].map(([icon, val, lbl], j) => (
-                                <div key={j} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '8px 4px', borderRight: j < 2 ? '1px solid rgba(255,255,255,.05)' : 'none', gap: 2 }}>
-                                  <span style={{ fontSize: 13 }}>{icon}</span>
-                                  <strong style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-1)' }}>{val}</strong>
-                                  <small style={{ fontSize: 9, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: .4 }}>{lbl}</small>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* ═══════════════════════════════
-                  TIMETABLE TAB
-              ═══════════════════════════════ */}
-              {tab === 'timetable' && (
-                <div className="tab-panel animate-in">
-                  <div className="page-hd" style={{ marginBottom: -10 }}>
-                    <div className="sc-titles-group">
-                      <h1 className="page-title">Timetable</h1>
-                      <p className="section-helper">
-                        Your weekly schedule and class timings. Day orders follow the
-                        official SRM Even Semester 2025-26 academic calendar.
-                      </p>
+                          </motion.div>
+                        );
+                      })}
                     </div>
                   </div>
-                  <TimetableView timetableData={timetable} />
-                </div>
-              )}
+                )}
 
-              {/* ═══════════════════════════════
-                  GPA CALCULATOR TAB
-              ═══════════════════════════════ */}
-              {tab === 'gpa' && (
-                <GPACalculator courses={courses} />
-              )}
+                {/* ═══════════════════════════════
+                    MARKS TAB
+                ═══════════════════════════════ */}
+                {tab === 'marks' && (
+                  <div className="tab-panel">
+                    <MarksSection marks={marks} courses={courses} />
+                  </div>
+                )}
 
-              {/* ═══════════════════════════════
-                  ATTENDANCE PLANNER TAB
-              ═══════════════════════════════ */}
-              {tab === 'skippro' && (
-                <div className="tab-panel animate-in">
-                  {/* Warning popup */}
-                  {showAttendanceWarning && (
-                    <div className="ap-overlay">
-                      <div className="ap-warning-modal glass">
-                        <div style={{ fontSize: 36, textAlign: 'center' }}>⚠️</div>
-                        <h3 style={{ color: 'var(--amber)', textAlign: 'center', fontFamily: 'var(--font-display)', marginBottom: 12 }}>
-                          Before You Use Attendance Planner
-                        </h3>
-                        <p style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.7, marginBottom: 16 }}>
-                          This tool gives estimates based on current attendance and academic calendar.
-                          It does <strong>NOT</strong> account for cancelled classes, extra classes, or schedule changes.
-                          Use as a rough guide only.
-                        </p>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                          <button className="btn btn-primary" onClick={() => {
-                            sessionStorage.setItem('ap_warning_ok', 'true');
-                            setShowAttendanceWarning(false);
-                          }}>
-                            I Understand, Show Me →
-                          </button>
-                          <button className="btn btn-ghost" onClick={() => handleTabChange('overview')}>
-                            Go Back
-                          </button>
-                        </div>
-                      </div>
+                {/* ═══════════════════════════════
+                    COURSES TAB
+                ═══════════════════════════════ */}
+                {tab === 'courses' && (
+                  <div className="tab-panel">
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
+                      {courses.map((c, i) => (
+                        <motion.div 
+                          key={i}
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ delay: i * 0.03 }}
+                          className="glass" style={{ padding: 20, borderRadius: 16 }}
+                        >
+                          <div style={{ fontSize: 11, color: 'var(--neon-cyan)', fontWeight: 700 }}>{c.code}</div>
+                          <div style={{ fontSize: 16, fontWeight: 700, color: 'white', margin: '4px 0 12px' }}>{c.title}</div>
+                          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{c.faculty}</div>
+                        </motion.div>
+                      ))}
                     </div>
-                  )}
+                  </div>
+                )}
 
-                  {/* Actual planner content — only show if warning acknowledged */}
-                  {!showAttendanceWarning && (
-                    <AttendancePlannerContent
-                      attendance={attendance}
-                      courses={courses}
-                    />
-                  )}
-                </div>
-              )}
+                {/* ═══════════════════════════════
+                    TIMETABLE TAB
+                ═══════════════════════════════ */}
+                {tab === 'timetable' && (
+                  <div className="tab-panel">
+                    <TimetableView timetableData={timetable} />
+                  </div>
+                )}
 
-              {/* ═══════════════════════════════
-                  CALENDAR TAB
-              ═══════════════════════════════ */}
-              {tab === 'calendar' && (
-                <div className="tab-panel animate-in">
-                  <CalendarView />
-                </div>
-              )}
-              {/* ═══════════════════════════════
-                  HELP CENTER TAB
-              ═══════════════════════════════ */}
-              {tab === 'helpcenter' && (
-                <div className="tab-panel animate-in">
-                  <HelpCenterContent />
-                </div>
-              )}
+                {/* ═══════════════════════════════
+                    GPA CALCULATOR TAB
+                ═══════════════════════════════ */}
+                {tab === 'gpa' && <GPACalculator courses={courses} />}
 
-              {/* ═══════════════════════════════
-                  REPORT ISSUE TAB
-              ═══════════════════════════════ */}
-              {tab === 'reportissue' && (
-                <div className="tab-panel animate-in">
-                  <ReportIssueContent user={user} />
-                </div>
-              )}
-            </>
+                {/* ═══════════════════════════════
+                    ATTENDANCE PLANNER TAB
+                ═══════════════════════════════ */}
+                {tab === 'skippro' && (
+                  <div className="tab-panel">
+                    <AttendancePlanner attendance={attendance} courses={courses} />
+                  </div>
+                )}
+
+                {/* ═══════════════════════════════
+                    CALENDAR TAB
+                ═══════════════════════════════ */}
+                {tab === 'calendar' && <div className="tab-panel"><CalendarView /></div>}
+                
+                {/* ═══════════════════════════════
+                    HELP & REPORT
+                ═══════════════════════════════ */}
+                {tab === 'helpcenter' && <div className="tab-panel"><HelpCenterContent /></div>}
+                {tab === 'reportissue' && <div className="tab-panel"><ReportIssueContent user={user} /></div>}
+
+              </motion.div>
+            </AnimatePresence>
           )}
         </main>
 
