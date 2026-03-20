@@ -269,30 +269,23 @@ export default function MarksSection({ marks = [] }) {
     const list = marks || [];
     if (!list.length) return null;
     
-    let scoredTotal = 0, maxTotal = 0, validCount = 0;
+    let scoredTotal = 0, maxTotal = 0;
     list.forEach(m => {
-      const sc = parseFloat(m.overall?.scored || '0') || 0;
-      const tot = parseFloat(m.overall?.total || '0') || 0;
-      const course = (courses || []).find(c => c?.courseCode === m.courseCode);
-      const credits = parseFloat(course?.credit || course?.credits || '0') || 0;
-      
-      if (tot > 0 && credits > 0) {
-        scoredTotal += sc;
-        maxTotal += tot;
-        validCount++;
-      }
+      const sc  = parseFloat(m.overall?.scored || '0') || 0;
+      const tot = parseFloat(m.overall?.total  || '0') || 0;
+      if (tot > 0) { scoredTotal += sc; maxTotal += tot; }
     });
 
     const avg = maxTotal > 0 ? (scoredTotal / maxTotal) * 100 : 0;
-    const activeComp = list[0]?.testPerformance?.[0]?.test || 'CAT-2';
+    const activeComp = list[0]?.testPerformance?.slice(-1)[0]?.test || 'FT-II';
     
     return {
       avg: Math.floor(avg),
       total: `${Math.floor(scoredTotal)}/${Math.floor(maxTotal)}`,
       count: list.length,
-      active: activeComp
+      active: activeComp,
     };
-  }, [marks, courses]);
+  }, [marks]);
 
   if (!marks || marks.length === 0) {
     return (
